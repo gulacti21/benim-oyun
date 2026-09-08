@@ -1,0 +1,70 @@
+using System.IO;
+using UnityEditor;
+using UnityEditor.Build;
+using UnityEngine;
+
+public static class BuildTools
+{
+    private const string BundleIdentifier = "com.gulacti.misketr";
+    private const string ProductName = "MISKETR";
+    private const string CompanyName = "Gulacti";
+
+    private static readonly string[] Scenes =
+    {
+        "Assets/Scenes/LevelSelect.unity",
+        "Assets/Scenes/Game.unity"
+    };
+
+    public static void ApplyPlayerSettings()
+    {
+        PlayerSettings.companyName = CompanyName;
+        PlayerSettings.productName = ProductName;
+
+        PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.iOS, BundleIdentifier);
+        PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, BundleIdentifier);
+
+        PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
+        PlayerSettings.allowedAutorotateToPortrait = true;
+        PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
+        PlayerSettings.allowedAutorotateToLandscapeLeft = false;
+        PlayerSettings.allowedAutorotateToLandscapeRight = false;
+
+        PlayerSettings.iOS.targetOSVersionString = "14.0";
+        PlayerSettings.iOS.appleEnableAutomaticSigning = true;
+        PlayerSettings.iOS.targetDevice = iOSTargetDevice.iPhoneAndiPad;
+
+        PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel24;
+    }
+
+    [MenuItem("MISKETR/Build iOS Xcode Project")]
+    public static void BuildIos()
+    {
+        if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.iOS)
+        {
+            EditorUtility.DisplayDialog(
+                "Once platform degistir",
+                "Aktif platform iOS degil. File > Build Profiles ekranindan iOS'a gecip tekrar dene.",
+                "Tamam");
+            return;
+        }
+
+        ApplyPlayerSettings();
+
+        string projectRoot = Directory.GetParent(Application.dataPath).FullName;
+        string outputPath = Path.Combine(Directory.GetParent(projectRoot).FullName, "MISKETR-iOS");
+
+        BuildPlayerOptions options = new BuildPlayerOptions
+        {
+            scenes = Scenes,
+            locationPathName = outputPath,
+            target = BuildTarget.iOS,
+            targetGroup = BuildTargetGroup.iOS,
+            options = BuildOptions.None
+        };
+
+        BuildPipeline.BuildPlayer(options);
+
+        Debug.Log("[MISKETR] Xcode project written to: " + outputPath);
+        EditorUtility.RevealInFinder(outputPath);
+    }
+}

@@ -15,7 +15,7 @@ public static class SceneBootstrapper
     private const string AimIndicatorName = "AimIndicator";
     private const string SessionKey = "MISKETR_BootstrapAttempted";
     private const string VersionKey = "MISKETR_BootstrapVersion";
-    private const string BootstrapVersion = "19";
+    private const string BootstrapVersion = "20";
     private const string AudioObjectName = "Audio";
     private const string AudioFolder = "Assets/Audio";
     private const string GameCanvasName = "GameCanvas";
@@ -342,7 +342,7 @@ public static class SceneBootstrapper
 
             EnsureSfxPlayer(audioObject);
 
-            PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
+            BuildTools.ApplyPlayerSettings();
 
             Camera camera = Camera.main;
             if (camera != null)
