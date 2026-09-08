@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 public class LevelController : MonoBehaviour
 {
@@ -10,8 +11,9 @@ public class LevelController : MonoBehaviour
         Lost
     }
 
+    [SerializeField] private LevelDatabase database;
     [SerializeField] private LevelData level;
-    [SerializeField] private CircleArena arena;
+    [SerializeField] private MarbleArena arena;
     [SerializeField] private ShotController shooter;
     [SerializeField] private float settleDelay = 0.4f;
 
@@ -20,6 +22,8 @@ public class LevelController : MonoBehaviour
     private float settleTimer;
 
     public LevelState State { get; private set; } = LevelState.Playing;
+    public int LevelIndex { get; private set; }
+    public bool HasNextLevel => database != null && LevelIndex + 1 < database.Count;
     public LevelData Level => level;
     public int ShotsUsed => shotsUsed;
     public int ShotsLeft => level != null ? Mathf.Max(0, level.shotCount - shotsUsed) : 0;
@@ -64,8 +68,36 @@ public class LevelController : MonoBehaviour
         }
     }
 
+    public void LoadNextLevel()
+    {
+        if (!HasNextLevel)
+        {
+            return;
+        }
+
+        GameSession.SelectedLevelIndex = LevelIndex + 1;
+        SceneManager.LoadScene(GameSession.GameSceneName);
+    }
+
+    public void OpenLevelSelect()
+    {
+        SceneManager.LoadScene(GameSession.LevelSelectSceneName);
+    }
+
     public void RestartLevel()
     {
+        LevelIndex = GameSession.SelectedLevelIndex;
+
+        if (database != null)
+        {
+            LevelData fromDatabase = database.Get(LevelIndex);
+
+            if (fromDatabase != null)
+            {
+                level = fromDatabase;
+            }
+        }
+
         if (level == null)
         {
             Debug.LogError("[LevelController] Level data is not assigned.");
@@ -74,7 +106,7 @@ public class LevelController : MonoBehaviour
 
         if (arena != null)
         {
-            arena.Configure(level.circleRadius, level.rings);
+            arena.Configure(level.shape, level.arenaSize, level.rings, level.triangleRows);
             arena.Rebuild();
         }
 
@@ -132,6 +164,12 @@ public class LevelController : MonoBehaviour
         if (allMarblesOut || outOfShots)
         {
             State = Score >= level.oneStarTarget ? LevelState.Won : LevelState.Lost;
+
+            if (State == LevelState.Won)
+            {
+                ProgressService.SaveStars(LevelIndex, Stars);
+                ProgressService.UnlockNextAfter(LevelIndex);
+            }
 
             if (shooter != null)
             {

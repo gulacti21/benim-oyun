@@ -19,6 +19,7 @@ public class ShotController : MonoBehaviour
     [Header("References")]
     [SerializeField] private Camera gameCamera;
     [SerializeField] private AimIndicator aimIndicator;
+    [SerializeField] private ShooterLine shooterLine;
 
     private Rigidbody body;
     private Plane aimPlane;
@@ -129,6 +130,11 @@ public class ShotController : MonoBehaviour
 
         if (Vector3.Distance(world, marbleFlat) > grabRadius)
         {
+            if (shooterLine != null && shooterLine.IsNear(world))
+            {
+                ResetTo(shooterLine.ClampToLine(world, transform.position.y));
+            }
+
             return;
         }
 

@@ -10,12 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5e45d01a359eb4c55aa70593c122403f, type: 3}
-  m_Name: Level_01
+  m_Name: Level_02
   m_EditorClassIdentifier: Assembly-CSharp::LevelData
-  levelName: Mors
+  levelName: Genis Mors
   shape: 1
-  arenaSize: 2.6
-  triangleRows: 3
+  arenaSize: 3
+  triangleRows: 4
   rings:
   - count: 1
     radiusFactor: 0
@@ -27,7 +27,7 @@ MonoBehaviour:
     radiusFactor: 0.72
     angleOffset: 22.5
   shotCount: 5
-  oneStarTarget: 2
-  twoStarTarget: 4
-  threeStarTarget: 6
+  oneStarTarget: 3
+  twoStarTarget: 6
+  threeStarTarget: 9
   shooterStartPosition: {x: 0, y: 0.25, z: -4}

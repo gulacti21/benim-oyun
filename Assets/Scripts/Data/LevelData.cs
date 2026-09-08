@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [CreateAssetMenu(fileName = "Level_00", menuName = "MISKETR/Level Data")]
 public class LevelData : ScriptableObject
@@ -7,7 +8,12 @@ public class LevelData : ScriptableObject
     public string levelName = "Seviye 1";
 
     [Header("Arena")]
-    public float circleRadius = 3f;
+    public ArenaShape shape = ArenaShape.Triangle;
+
+    [FormerlySerializedAs("circleRadius")]
+    public float arenaSize = 3f;
+
+    [Min(1)] public int triangleRows = 4;
     public MarbleRing[] rings = new MarbleRing[]
     {
         new MarbleRing { count = 1, radiusFactor = 0f, angleOffset = 0f },

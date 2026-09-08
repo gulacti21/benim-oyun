@@ -13,7 +13,8 @@ public static class SceneBootstrapper
     private const string AimIndicatorName = "AimIndicator";
     private const string SessionKey = "MISKETR_BootstrapAttempted";
     private const string VersionKey = "MISKETR_BootstrapVersion";
-    private const string BootstrapVersion = "5";
+    private const string BootstrapVersion = "8";
+    private const string ShooterLineName = "ShooterLine";
     private const string GameManagerName = "GameManager";
     private const string LevelsFolder = "Assets/ScriptableObjects/Levels";
     private const string ArenaName = "Arena";
@@ -197,10 +198,12 @@ public static class SceneBootstrapper
                 arenaLine.sharedMaterial = aimLineMaterial;
             }
 
-            CircleArena arena = arenaObject.GetComponent<CircleArena>();
+            GameObjectUtility.RemoveMonoBehavioursWithMissingScript(arenaObject);
+
+            MarbleArena arena = arenaObject.GetComponent<MarbleArena>();
             if (arena == null)
             {
-                arena = arenaObject.AddComponent<CircleArena>();
+                arena = arenaObject.AddComponent<MarbleArena>();
             }
 
             if (targetPrefab != null)
@@ -216,13 +219,49 @@ public static class SceneBootstrapper
                 arenaSerialized.ApplyModifiedPropertiesWithoutUndo();
             }
 
-            LevelData firstLevel = CreateFirstLevel();
+            GameObject lineObject = FindInScene(scene, ShooterLineName);
+            if (lineObject == null)
+            {
+                lineObject = new GameObject(ShooterLineName);
+            }
+
+            lineObject.transform.SetPositionAndRotation(new Vector3(0f, 0f, -4f), Quaternion.identity);
+
+            LineRenderer shooterLineRenderer = lineObject.GetComponent<LineRenderer>();
+            if (shooterLineRenderer == null)
+            {
+                shooterLineRenderer = lineObject.AddComponent<LineRenderer>();
+            }
+
+            shooterLineRenderer.alignment = LineAlignment.View;
+            shooterLineRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            shooterLineRenderer.receiveShadows = false;
+
+            if (aimLineMaterial != null)
+            {
+                shooterLineRenderer.sharedMaterial = aimLineMaterial;
+            }
+
+            ShooterLine shooterLine = lineObject.GetComponent<ShooterLine>();
+            if (shooterLine == null)
+            {
+                shooterLine = lineObject.AddComponent<ShooterLine>();
+            }
+
+            SerializedObject shotSerialized = new SerializedObject(shot);
+            SetObjectReference(shotSerialized, "shooterLine", shooterLine);
+            shotSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+            LevelDatabase levelDatabase = CreateLevelDatabase();
+            LevelData firstLevel = levelDatabase != null ? levelDatabase.Get(0) : null;
 
             GameObject managerObject = FindInScene(scene, GameManagerName);
             if (managerObject == null)
             {
                 managerObject = new GameObject(GameManagerName);
             }
+
+            GameObjectUtility.RemoveMonoBehavioursWithMissingScript(managerObject);
 
             LevelController levelController = managerObject.GetComponent<LevelController>();
             if (levelController == null)
@@ -231,6 +270,7 @@ public static class SceneBootstrapper
             }
 
             SerializedObject controllerSerialized = new SerializedObject(levelController);
+            SetObjectReference(controllerSerialized, "database", levelDatabase);
             SetObjectReference(controllerSerialized, "level", firstLevel);
             SetObjectReference(controllerSerialized, "arena", arena);
             SetObjectReference(controllerSerialized, "shooter", shot);
@@ -275,6 +315,26 @@ public static class SceneBootstrapper
 
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
+            try
+            {
+                EnsureLevelSelectScene(levelDatabase);
+            }
+            catch (System.Exception sceneException)
+            {
+                WriteLog("EnsureLevelSelectScene failed: " + sceneException);
+                Debug.LogError("[MISKETR] EnsureLevelSelectScene failed: " + sceneException.Message);
+            }
+
+            try
+            {
+                EnsureBuildSettings();
+            }
+            catch (System.Exception buildException)
+            {
+                WriteLog("EnsureBuildSettings failed: " + buildException);
+                Debug.LogError("[MISKETR] EnsureBuildSettings failed: " + buildException.Message);
+            }
+
             EditorSceneManager.MarkSceneDirty(scene);
 
             if (saveScene)
@@ -282,10 +342,11 @@ public static class SceneBootstrapper
                 EditorSceneManager.SaveScene(scene);
             }
 
-            Debug.Log("[MISKETR] Gameplay scene built: Ground, ShooterMarble, AimIndicator, Arena, GameManager, ScoreHud and references are set.");
+            Debug.Log("[MISKETR] Gameplay scene built: Ground, ShooterMarble, AimIndicator, Arena, ShooterLine, GameManager, ScoreHud, 6 levels and LevelSelect scene are ready.");
         }
         catch (System.Exception exception)
         {
+            WriteLog("Build failed: " + exception);
             Debug.LogError("[MISKETR] Scene bootstrap failed: " + exception);
         }
     }
@@ -346,16 +407,55 @@ public static class SceneBootstrapper
         }
     }
 
-    private static LevelData CreateFirstLevel()
+    private static LevelDatabase CreateLevelDatabase()
     {
-        string path = LevelsFolder + "/Level_01.asset";
-        LevelData existing = AssetDatabase.LoadAssetAtPath<LevelData>(path);
+        EnsureLevelFolders();
 
-        if (existing != null)
+        LevelData[] levels = new LevelData[6];
+
+        levels[0] = CreateLevel("Level_01", "Mors", ArenaShape.Triangle, 2.6f, 3, null, 5, 2, 4, 6);
+        levels[1] = CreateLevel("Level_02", "Genis Mors", ArenaShape.Triangle, 3f, 4, null, 5, 3, 6, 9);
+        levels[2] = CreateLevel("Level_03", "Cember", ArenaShape.Circle, 3f, 0, CircleRings(1, 6), 4, 2, 4, 6);
+        levels[3] = CreateLevel("Level_04", "Kalabalik Mors", ArenaShape.Triangle, 3.4f, 5, null, 5, 5, 9, 13);
+        levels[4] = CreateLevel("Level_05", "Buyuk Cember", ArenaShape.Circle, 3.6f, 0, CircleRings(1, 6, 8), 5, 5, 9, 13);
+        levels[5] = CreateLevel("Level_06", "Usta Mors", ArenaShape.Triangle, 3.8f, 5, null, 4, 5, 8, 12);
+
+        string databasePath = LevelsFolder + "/LevelDatabase.asset";
+        LevelDatabase database = AssetDatabase.LoadAssetAtPath<LevelDatabase>(databasePath);
+
+        if (database == null)
         {
-            return existing;
+            database = ScriptableObject.CreateInstance<LevelDatabase>();
+            AssetDatabase.CreateAsset(database, databasePath);
         }
 
+        database.levels = levels;
+        EditorUtility.SetDirty(database);
+        AssetDatabase.SaveAssets();
+
+        return database;
+    }
+
+    private static MarbleRing[] CircleRings(params int[] counts)
+    {
+        MarbleRing[] rings = new MarbleRing[counts.Length];
+        float[] factors = new float[] { 0f, 0.38f, 0.72f, 0.9f };
+
+        for (int i = 0; i < counts.Length; i++)
+        {
+            rings[i] = new MarbleRing
+            {
+                count = counts[i],
+                radiusFactor = i < factors.Length ? factors[i] : 0.9f,
+                angleOffset = i % 2 == 0 ? 0f : 22.5f
+            };
+        }
+
+        return rings;
+    }
+
+    private static void EnsureLevelFolders()
+    {
         if (!AssetDatabase.IsValidFolder("Assets/ScriptableObjects"))
         {
             AssetDatabase.CreateFolder("Assets", "ScriptableObjects");
@@ -365,18 +465,110 @@ public static class SceneBootstrapper
         {
             AssetDatabase.CreateFolder("Assets/ScriptableObjects", "Levels");
         }
+    }
 
-        LevelData level = ScriptableObject.CreateInstance<LevelData>();
-        level.levelName = "Seviye 1";
-        level.circleRadius = 3f;
-        level.shotCount = 5;
-        level.oneStarTarget = 4;
-        level.twoStarTarget = 8;
-        level.threeStarTarget = 12;
+    private static LevelData CreateLevel(string fileName, string displayName, ArenaShape shape, float size, int rows, MarbleRing[] rings, int shots, int oneStar, int twoStar, int threeStar)
+    {
+        string path = LevelsFolder + "/" + fileName + ".asset";
+        LevelData level = AssetDatabase.LoadAssetAtPath<LevelData>(path);
+        bool created = false;
+
+        if (level == null)
+        {
+            level = ScriptableObject.CreateInstance<LevelData>();
+            created = true;
+        }
+
+        level.levelName = displayName;
+        level.shape = shape;
+        level.arenaSize = size;
+        level.triangleRows = rows > 0 ? rows : level.triangleRows;
+        level.shotCount = shots;
+        level.oneStarTarget = oneStar;
+        level.twoStarTarget = twoStar;
+        level.threeStarTarget = threeStar;
         level.shooterStartPosition = new Vector3(0f, 0.25f, -4f);
 
-        AssetDatabase.CreateAsset(level, path);
+        if (rings != null && rings.Length > 0)
+        {
+            level.rings = rings;
+        }
+
+        if (created)
+        {
+            AssetDatabase.CreateAsset(level, path);
+        }
+        else
+        {
+            EditorUtility.SetDirty(level);
+        }
+
         return level;
+    }
+
+    private static void EnsureLevelSelectScene(LevelDatabase database)
+    {
+        string path = "Assets/Scenes/LevelSelect.unity";
+
+        if (AssetDatabase.LoadAssetAtPath<SceneAsset>(path) != null)
+        {
+            return;
+        }
+
+        Scene newScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+
+        GameObject cameraObject = new GameObject("Main Camera");
+        cameraObject.tag = "MainCamera";
+        Camera menuCamera = cameraObject.AddComponent<Camera>();
+        menuCamera.clearFlags = CameraClearFlags.SolidColor;
+        menuCamera.backgroundColor = new Color(0.11f, 0.12f, 0.16f, 1f);
+        SceneManager.MoveGameObjectToScene(cameraObject, newScene);
+
+        GameObject selectObject = new GameObject("LevelSelect");
+        LevelSelectController selectController = selectObject.AddComponent<LevelSelectController>();
+
+        SerializedObject selectSerialized = new SerializedObject(selectController);
+        SetObjectReference(selectSerialized, "database", database);
+        selectSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+        SceneManager.MoveGameObjectToScene(selectObject, newScene);
+
+        EditorSceneManager.SaveScene(newScene, path);
+        EditorSceneManager.CloseScene(newScene, true);
+    }
+
+    private static void EnsureBuildSettings()
+    {
+        string selectPath = "Assets/Scenes/LevelSelect.unity";
+        string gamePath = "Assets/Scenes/Game.unity";
+
+        if (AssetDatabase.LoadAssetAtPath<SceneAsset>(selectPath) == null)
+        {
+            WriteLog("EnsureBuildSettings skipped: LevelSelect scene asset missing.");
+            return;
+        }
+
+        EditorBuildSettings.scenes = new EditorBuildSettingsScene[]
+        {
+            new EditorBuildSettingsScene(selectPath, true),
+            new EditorBuildSettingsScene(gamePath, true)
+        };
+
+        WriteLog("Build settings set: LevelSelect + Game.");
+    }
+
+    private static void WriteLog(string message)
+    {
+        try
+        {
+            string directory = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "Logs");
+            System.IO.Directory.CreateDirectory(directory);
+            string file = System.IO.Path.Combine(directory, "misketr-bootstrap.log");
+            System.IO.File.AppendAllText(file, System.DateTime.Now.ToString("HH:mm:ss") + "  " + message + "\n");
+        }
+        catch
+        {
+        }
     }
 
     private static GameObject FindInScene(Scene scene, string name)
