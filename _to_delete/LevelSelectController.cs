@@ -22,7 +22,7 @@ public class LevelSelectController : MonoBehaviour
         EnsureStyles();
 
         GUI.Label(new Rect(0f, 40f, Screen.width, 60f), "MISKETR", titleStyle);
-        GUI.Label(new Rect(0f, 100f, Screen.width, 40f), "Toplam yildiz: " + ProgressService.TotalStars(database.Count), lockedStyle);
+        GUI.Label(new Rect(0f, 100f, Screen.width, 40f), "Toplam yıldız: " + ProgressService.TotalStars(database.Count), lockedStyle);
 
         int count = database.Count;
         int rows = Mathf.CeilToInt(count / (float)columns);
@@ -67,7 +67,7 @@ public class LevelSelectController : MonoBehaviour
             GUI.enabled = true;
         }
 
-        if (GUI.Button(new Rect(20f, Screen.height - 70f, 220f, 50f), "Ilerlemeyi sifirla"))
+        if (GUI.Button(new Rect(20f, Screen.height - 70f, 220f, 50f), "İlerlemeyi sıfırla"))
         {
             ProgressService.ResetProgress(database.Count);
         }

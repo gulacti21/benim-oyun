@@ -1,8 +1,10 @@
+using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 [InitializeOnLoad]
 public static class SceneBootstrapper
@@ -13,7 +15,10 @@ public static class SceneBootstrapper
     private const string AimIndicatorName = "AimIndicator";
     private const string SessionKey = "MISKETR_BootstrapAttempted";
     private const string VersionKey = "MISKETR_BootstrapVersion";
-    private const string BootstrapVersion = "8";
+    private const string BootstrapVersion = "19";
+    private const string AudioObjectName = "Audio";
+    private const string AudioFolder = "Assets/Audio";
+    private const string GameCanvasName = "GameCanvas";
     private const string ShooterLineName = "ShooterLine";
     private const string GameManagerName = "GameManager";
     private const string LevelsFolder = "Assets/ScriptableObjects/Levels";
@@ -63,9 +68,9 @@ public static class SceneBootstrapper
         {
             Scene scene = EditorSceneManager.GetActiveScene();
 
-            Material groundMaterial = CreateLitMaterial("GroundLitMaterial", new Color(0.55f, 0.45f, 0.33f));
-            Material marbleMaterial = CreateLitMaterial("MarbleLitMaterial", new Color(0.25f, 0.55f, 0.9f));
-            Material targetMaterial = CreateLitMaterial("TargetMarbleLitMaterial", new Color(0.85f, 0.35f, 0.75f));
+            Material groundMaterial = CreateLitMaterial("GroundLitMaterial", new Color(0.40f, 0.30f, 0.21f));
+            Material marbleMaterial = CreateLitMaterial("MarbleLitMaterial", new Color(0.90f, 0.58f, 0.20f));
+            Material targetMaterial = CreateLitMaterial("TargetMarbleLitMaterial", new Color(0.16f, 0.58f, 0.56f));
             Material aimLineMaterial = CreateAimLineMaterial();
 
             PhysicsMaterial groundPhysics = CreatePhysicsMaterial("GroundMaterial", 0.5f, 0.5f, 0.1f);
@@ -126,6 +131,11 @@ public static class SceneBootstrapper
             body.angularDamping = 0.5f;
             body.interpolation = RigidbodyInterpolation.Interpolate;
             body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+
+            if (marble.GetComponent<MarbleSfx>() == null)
+            {
+                marble.AddComponent<MarbleSfx>();
+            }
 
             GameObject aimObject = FindInScene(scene, AimIndicatorName);
             if (aimObject == null)
@@ -276,27 +286,81 @@ public static class SceneBootstrapper
             SetObjectReference(controllerSerialized, "shooter", shot);
             controllerSerialized.ApplyModifiedPropertiesWithoutUndo();
 
-            GameObject hudObject = FindInScene(scene, ScoreHudName);
-            if (hudObject == null)
+            GameObject legacyHud = FindInScene(scene, ScoreHudName);
+            if (legacyHud != null)
             {
-                hudObject = new GameObject(ScoreHudName);
+                Object.DestroyImmediate(legacyHud);
             }
 
-            ScoreHud hud = hudObject.GetComponent<ScoreHud>();
-            if (hud == null)
+            GameObject oldCanvas = FindInScene(scene, GameCanvasName);
+            if (oldCanvas != null)
             {
-                hud = hudObject.AddComponent<ScoreHud>();
+                Object.DestroyImmediate(oldCanvas);
             }
 
-            SerializedObject hudSerialized = new SerializedObject(hud);
+            UiBuilder.EnsureEventSystem();
+
+            GameObject canvasObject = UiBuilder.CreateCanvas(GameCanvasName);
+            UiBuilder.BuildGameHud(canvasObject, out GameHudView hudView);
+            UiBuilder.GameHudReferences hudRefs = UiBuilder.LastReferences;
+
+            SerializedObject hudSerialized = new SerializedObject(hudView);
             SetObjectReference(hudSerialized, "controller", levelController);
+            SetObjectReference(hudSerialized, "levelLabel", hudRefs.LevelLabel);
+            SetObjectReference(hudSerialized, "scoreLabel", hudRefs.ScoreLabel);
+            SetObjectReference(hudSerialized, "shotsLabel", hudRefs.ShotsLabel);
+            SetObjectReference(hudSerialized, "pauseButton", hudRefs.PauseButton);
+            SetObjectReference(hudSerialized, "pausePanel", hudRefs.PausePanel);
+            SetObjectReference(hudSerialized, "resumeButton", hudRefs.ResumeButton);
+            SetObjectReference(hudSerialized, "pauseRestartButton", hudRefs.PauseRestartButton);
+            SetObjectReference(hudSerialized, "pauseMapButton", hudRefs.PauseMapButton);
+            SetObjectReference(hudSerialized, "resultPanel", hudRefs.ResultPanel);
+            SetObjectReference(hudSerialized, "resultTitle", hudRefs.ResultTitle);
+            SetObjectReference(hudSerialized, "resultScore", hudRefs.ResultScore);
+            SetObjectReference(hudSerialized, "retryButton", hudRefs.RetryButton);
+            SetObjectReference(hudSerialized, "nextButton", hudRefs.NextButton);
+            SetObjectReference(hudSerialized, "resultMapButton", hudRefs.ResultMapButton);
+            SerializedProperty starsProperty = hudSerialized.FindProperty("starIcons");
+
+            if (starsProperty != null && hudRefs.StarIcons != null)
+            {
+                starsProperty.arraySize = hudRefs.StarIcons.Length;
+
+                for (int i = 0; i < hudRefs.StarIcons.Length; i++)
+                {
+                    starsProperty.GetArrayElementAtIndex(i).objectReferenceValue = hudRefs.StarIcons[i];
+                }
+            }
+
             hudSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+            GameObject audioObject = FindInScene(scene, AudioObjectName);
+            if (audioObject == null)
+            {
+                audioObject = new GameObject(AudioObjectName);
+            }
+
+            EnsureSfxPlayer(audioObject);
+
+            PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
 
             Camera camera = Camera.main;
             if (camera != null)
             {
                 camera.transform.SetPositionAndRotation(new Vector3(0f, 13f, -8.5f), Quaternion.Euler(56f, 0f, 0f));
                 camera.fieldOfView = 50f;
+                camera.clearFlags = CameraClearFlags.SolidColor;
+                camera.backgroundColor = new Color(0.10f, 0.075f, 0.06f, 1f);
+            }
+
+            Light sceneLight = Object.FindFirstObjectByType<Light>();
+
+            if (sceneLight != null && sceneLight.type == LightType.Directional)
+            {
+                sceneLight.color = new Color(1f, 0.95f, 0.86f, 1f);
+                sceneLight.intensity = 1.25f;
+                sceneLight.transform.rotation = Quaternion.Euler(52f, -28f, 0f);
+                sceneLight.shadows = LightShadows.Soft;
             }
 
             SerializedObject serialized = new SerializedObject(shot);
@@ -342,7 +406,7 @@ public static class SceneBootstrapper
                 EditorSceneManager.SaveScene(scene);
             }
 
-            Debug.Log("[MISKETR] Gameplay scene built: Ground, ShooterMarble, AimIndicator, Arena, ShooterLine, GameManager, ScoreHud, 6 levels and LevelSelect scene are ready.");
+            Debug.Log("[MISKETR] Gameplay scene built: Ground, ShooterMarble, AimIndicator, Arena, ShooterLine, GameManager, ScoreHud, 6 levels, LevelSelect scene and Canvas HUD are ready.");
         }
         catch (System.Exception exception)
         {
@@ -358,6 +422,15 @@ public static class SceneBootstrapper
 
         if (existing != null)
         {
+            GameObject contents = PrefabUtility.LoadPrefabContents(path);
+
+            if (contents.GetComponent<MarbleSfx>() == null)
+            {
+                contents.AddComponent<MarbleSfx>();
+                PrefabUtility.SaveAsPrefabAsset(contents, path);
+            }
+
+            PrefabUtility.UnloadPrefabContents(contents);
             return existing;
         }
 
@@ -390,6 +463,7 @@ public static class SceneBootstrapper
         body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
 
         temp.AddComponent<TargetMarble>();
+        temp.AddComponent<MarbleSfx>();
 
         GameObject prefab = PrefabUtility.SaveAsPrefabAsset(temp, path);
         Object.DestroyImmediate(temp);
@@ -414,10 +488,10 @@ public static class SceneBootstrapper
         LevelData[] levels = new LevelData[6];
 
         levels[0] = CreateLevel("Level_01", "Mors", ArenaShape.Triangle, 2.6f, 3, null, 5, 2, 4, 6);
-        levels[1] = CreateLevel("Level_02", "Genis Mors", ArenaShape.Triangle, 3f, 4, null, 5, 3, 6, 9);
-        levels[2] = CreateLevel("Level_03", "Cember", ArenaShape.Circle, 3f, 0, CircleRings(1, 6), 4, 2, 4, 6);
-        levels[3] = CreateLevel("Level_04", "Kalabalik Mors", ArenaShape.Triangle, 3.4f, 5, null, 5, 5, 9, 13);
-        levels[4] = CreateLevel("Level_05", "Buyuk Cember", ArenaShape.Circle, 3.6f, 0, CircleRings(1, 6, 8), 5, 5, 9, 13);
+        levels[1] = CreateLevel("Level_02", "Geniş Mors", ArenaShape.Triangle, 3f, 4, null, 5, 3, 6, 9);
+        levels[2] = CreateLevel("Level_03", "Çember", ArenaShape.Circle, 3f, 0, CircleRings(1, 6), 4, 2, 4, 6);
+        levels[3] = CreateLevel("Level_04", "Kalabalık Mors", ArenaShape.Triangle, 3.4f, 5, null, 5, 5, 9, 13);
+        levels[4] = CreateLevel("Level_05", "Büyük Çember", ArenaShape.Circle, 3.6f, 0, CircleRings(1, 6, 8), 5, 5, 9, 13);
         levels[5] = CreateLevel("Level_06", "Usta Mors", ArenaShape.Triangle, 3.8f, 5, null, 4, 5, 8, 12);
 
         string databasePath = LevelsFolder + "/LevelDatabase.asset";
@@ -509,32 +583,100 @@ public static class SceneBootstrapper
     private static void EnsureLevelSelectScene(LevelDatabase database)
     {
         string path = "Assets/Scenes/LevelSelect.unity";
+        SceneAsset asset = AssetDatabase.LoadAssetAtPath<SceneAsset>(path);
 
-        if (AssetDatabase.LoadAssetAtPath<SceneAsset>(path) != null)
+        Scene menuScene;
+
+        if (asset != null)
         {
-            return;
-        }
+            menuScene = EditorSceneManager.OpenScene(path, OpenSceneMode.Additive);
 
-        Scene newScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            GameObject[] roots = menuScene.GetRootGameObjects();
+
+            for (int i = 0; i < roots.Length; i++)
+            {
+                Object.DestroyImmediate(roots[i]);
+            }
+        }
+        else
+        {
+            menuScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        }
 
         GameObject cameraObject = new GameObject("Main Camera");
         cameraObject.tag = "MainCamera";
         Camera menuCamera = cameraObject.AddComponent<Camera>();
         menuCamera.clearFlags = CameraClearFlags.SolidColor;
-        menuCamera.backgroundColor = new Color(0.11f, 0.12f, 0.16f, 1f);
-        SceneManager.MoveGameObjectToScene(cameraObject, newScene);
+        menuCamera.backgroundColor = new Color(0.13f, 0.10f, 0.08f, 1f);
+        SceneManager.MoveGameObjectToScene(cameraObject, menuScene);
 
-        GameObject selectObject = new GameObject("LevelSelect");
-        LevelSelectController selectController = selectObject.AddComponent<LevelSelectController>();
+        GameObject eventSystemObject = new GameObject("EventSystem");
+        eventSystemObject.AddComponent<UnityEngine.EventSystems.EventSystem>();
+        eventSystemObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+        SceneManager.MoveGameObjectToScene(eventSystemObject, menuScene);
 
-        SerializedObject selectSerialized = new SerializedObject(selectController);
-        SetObjectReference(selectSerialized, "database", database);
-        selectSerialized.ApplyModifiedPropertiesWithoutUndo();
+        GameObject menuAudioObject = new GameObject(AudioObjectName);
+        EnsureSfxPlayer(menuAudioObject);
+        SceneManager.MoveGameObjectToScene(menuAudioObject, menuScene);
 
-        SceneManager.MoveGameObjectToScene(selectObject, newScene);
+        GameObject canvasObject = UiBuilder.CreateCanvas("LevelSelectCanvas");
 
-        EditorSceneManager.SaveScene(newScene, path);
-        EditorSceneManager.CloseScene(newScene, true);
+        LevelCardView[] cards;
+        TextMeshProUGUI totalStarsLabel;
+        Button resetButton;
+
+        LevelSelectView view = UiBuilder.BuildLevelSelect(canvasObject, database, out cards, out totalStarsLabel, out resetButton);
+
+        SceneManager.MoveGameObjectToScene(canvasObject, menuScene);
+
+        SerializedObject viewSerialized = new SerializedObject(view);
+        SetObjectReference(viewSerialized, "database", database);
+        SetObjectReference(viewSerialized, "totalStarsLabel", totalStarsLabel);
+        SetObjectReference(viewSerialized, "resetButton", resetButton);
+
+        SerializedProperty cardsProperty = viewSerialized.FindProperty("cards");
+
+        if (cardsProperty != null)
+        {
+            cardsProperty.arraySize = cards.Length;
+
+            for (int i = 0; i < cards.Length; i++)
+            {
+                cardsProperty.GetArrayElementAtIndex(i).objectReferenceValue = cards[i];
+            }
+        }
+
+        viewSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+        EditorSceneManager.MarkSceneDirty(menuScene);
+        EditorSceneManager.SaveScene(menuScene, path);
+        EditorSceneManager.CloseScene(menuScene, true);
+
+        WriteLog("LevelSelect scene rebuilt with canvas UI.");
+    }
+
+    private static void EnsureSfxPlayer(GameObject target)
+    {
+        SfxPlayer player = target.GetComponent<SfxPlayer>();
+
+        if (player == null)
+        {
+            player = target.AddComponent<SfxPlayer>();
+        }
+
+        SerializedObject serialized = new SerializedObject(player);
+        SetObjectReference(serialized, "shotClip", LoadClip("Shot"));
+        SetObjectReference(serialized, "marbleHitClip", LoadClip("MarbleHit"));
+        SetObjectReference(serialized, "marbleOutClip", LoadClip("MarbleOut"));
+        SetObjectReference(serialized, "winClip", LoadClip("Win"));
+        SetObjectReference(serialized, "loseClip", LoadClip("Lose"));
+        SetObjectReference(serialized, "uiTapClip", LoadClip("UiTap"));
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private static AudioClip LoadClip(string clipName)
+    {
+        return AssetDatabase.LoadAssetAtPath<AudioClip>(AudioFolder + "/" + clipName + ".wav");
     }
 
     private static void EnsureBuildSettings()
@@ -590,6 +732,16 @@ public static class SceneBootstrapper
         Material existing = AssetDatabase.LoadAssetAtPath<Material>(path);
         if (existing != null)
         {
+            if (existing.HasProperty("_BaseColor"))
+            {
+                existing.SetColor("_BaseColor", color);
+            }
+            else
+            {
+                existing.color = color;
+            }
+
+            EditorUtility.SetDirty(existing);
             return existing;
         }
 

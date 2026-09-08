@@ -70,6 +70,12 @@ public class MarbleArena : MonoBehaviour
             marble.MarkScored();
             activeMarbles.RemoveAt(i);
             score++;
+
+            if (SfxPlayer.Instance != null)
+            {
+                SfxPlayer.Instance.PlayMarbleOut();
+            }
+
             ScoreChanged?.Invoke(score, totalMarbles);
         }
     }

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5e45d01a359eb4c55aa70593c122403f, type: 3}
   m_Name: Level_04
   m_EditorClassIdentifier: Assembly-CSharp::LevelData
-  levelName: Kalabalik Mors
+  levelName: "Kalabal\u0131k Mors"
   shape: 1
   arenaSize: 3.4
   triangleRows: 5

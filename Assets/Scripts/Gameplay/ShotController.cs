@@ -176,6 +176,12 @@ public class ShotController : MonoBehaviour
 
         pendingImpulse = direction * (maxShotImpulse * power);
         hasPendingImpulse = true;
+
+        if (SfxPlayer.Instance != null)
+        {
+            SfxPlayer.Instance.PlayShot(power);
+        }
+
         ShotFired?.Invoke();
     }
 

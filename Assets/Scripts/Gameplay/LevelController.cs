@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
@@ -21,7 +22,10 @@ public class LevelController : MonoBehaviour
     private bool waitingForSettle;
     private float settleTimer;
 
+    public event Action StateChanged;
+
     public LevelState State { get; private set; } = LevelState.Playing;
+    public bool IsPaused { get; private set; }
     public int LevelIndex { get; private set; }
     public bool HasNextLevel => database != null && LevelIndex + 1 < database.Count;
     public LevelData Level => level;
@@ -68,6 +72,34 @@ public class LevelController : MonoBehaviour
         }
     }
 
+    public void SetPaused(bool paused)
+    {
+        if (State != LevelState.Playing && paused)
+        {
+            return;
+        }
+
+        IsPaused = paused;
+        Time.timeScale = paused ? 0f : 1f;
+
+        if (shooter != null)
+        {
+            shooter.ShootingEnabled = !paused && State == LevelState.Playing;
+        }
+
+        StateChanged?.Invoke();
+    }
+
+    public void TogglePause()
+    {
+        SetPaused(!IsPaused);
+    }
+
+    private void OnDestroy()
+    {
+        Time.timeScale = 1f;
+    }
+
     public void LoadNextLevel()
     {
         if (!HasNextLevel)
@@ -75,12 +107,14 @@ public class LevelController : MonoBehaviour
             return;
         }
 
+        Time.timeScale = 1f;
         GameSession.SelectedLevelIndex = LevelIndex + 1;
         SceneManager.LoadScene(GameSession.GameSceneName);
     }
 
     public void OpenLevelSelect()
     {
+        Time.timeScale = 1f;
         SceneManager.LoadScene(GameSession.LevelSelectSceneName);
     }
 
@@ -120,6 +154,9 @@ public class LevelController : MonoBehaviour
         waitingForSettle = false;
         settleTimer = 0f;
         State = LevelState.Playing;
+        IsPaused = false;
+        Time.timeScale = 1f;
+        StateChanged?.Invoke();
     }
 
     private void HandleShotFired()
@@ -171,11 +208,24 @@ public class LevelController : MonoBehaviour
                 ProgressService.UnlockNextAfter(LevelIndex);
             }
 
+            if (SfxPlayer.Instance != null)
+            {
+                if (State == LevelState.Won)
+                {
+                    SfxPlayer.Instance.PlayWin();
+                }
+                else
+                {
+                    SfxPlayer.Instance.PlayLose();
+                }
+            }
+
             if (shooter != null)
             {
                 shooter.ShootingEnabled = false;
             }
 
+            StateChanged?.Invoke();
             return;
         }
 
