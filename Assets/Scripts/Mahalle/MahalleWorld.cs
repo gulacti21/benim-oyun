@@ -17,6 +17,8 @@ public class MahalleWorld : MonoBehaviour
         if(decor!=null) {decor.SetActive(false);Destroy(decor);}
         decor=new GameObject("Çevre ve engeller"); decor.transform.SetParent(transform);
         int district=controller.Level.district;
+        int corner=controller.LevelIndex%12;
+        bool parkStudy=district==2 && corner<3;
         var ground=GameObject.Find("Ground");
         if(ground!=null)
         {
@@ -30,7 +32,7 @@ public class MahalleWorld : MonoBehaviour
                 groundMaterial.SetTexture("_BaseMap",texture); groundMaterial.SetTextureScale("_BaseMap",Vector2.one*12);
                 groundMaterial.SetFloat("_Smoothness",.04f);
             }
-            groundMaterial.SetColor("_BaseColor",GroundColors[district]);
+            groundMaterial.SetColor("_BaseColor",parkStudy?ParkCorners.Floors[corner]:GroundColors[district]);
             ground.GetComponent<Renderer>().sharedMaterial=groundMaterial;
         }
         var camera=Camera.main;
@@ -44,6 +46,11 @@ public class MahalleWorld : MonoBehaviour
         var light=FindFirstObjectByType<Light>();
         if(light!=null) {light.color=new Color(1,.94f,.82f);light.intensity=1.4f;light.transform.rotation=Quaternion.Euler(52,-30,0);light.shadows=LightShadows.Soft;}
         RenderSettings.ambientMode=AmbientMode.Flat;RenderSettings.ambientLight=new Color(.6f,.65f,.69f);
+        if(parkStudy)
+        {
+            decor.AddComponent<ParkCorners>().Build(corner);
+            if(light!=null)light.color=corner==1?new Color(1,.84f,.65f):corner==2?new Color(.89f,.95f,.85f):new Color(1,.97f,.88f);
+        }
         if(controller.Shooter.GetComponent<MarbleVisual>()==null) controller.Shooter.gameObject.AddComponent<MarbleVisual>();
         controller.Shooter.GetComponent<MarbleVisual>().SetSkin(MahalleProfile.Data.selectedSkin);
         var line=FindFirstObjectByType<ShooterLine>(); if(line!=null) line.SetPosition(controller.Level.shooterStartPosition);
@@ -56,7 +63,7 @@ public class MahalleWorld : MonoBehaviour
             stone.GetComponent<Renderer>().sharedMaterial=stoneMaterial;
         }
         // Small pebbles live outside the aiming corridor and have no colliders.
-        for(int i=0;i<18;i++)
+        for(int i=0;i<(parkStudy?0:18);i++)
         {
             var pebble=GameObject.CreatePrimitive(PrimitiveType.Sphere);pebble.name="Çevre taşı";Destroy(pebble.GetComponent<Collider>());
             pebble.transform.SetParent(decor.transform);float z=-3.5f+(i%9)*.85f;

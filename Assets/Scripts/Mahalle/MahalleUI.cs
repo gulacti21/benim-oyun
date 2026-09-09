@@ -175,6 +175,7 @@ public class MahalleUI : MonoBehaviour
         ClearPage();lastScore=lastShots=-1;resultShown=false;
         var top=Panel(page,"Oyun başlığı",24,12,1032,246,Ink);top.radius=30;
         string title=Campaign.Districts[controller.Level.district]+"  /  "+(controller.LevelIndex%12+1).ToString("00");
+        if(controller.Level.district==2 && controller.LevelIndex%12<3)title+=" · "+controller.Level.levelName;
         Text(top.transform,title,28,14,830,59,36,Cream);
         LabelButton(top.transform,"II",902,16,104,92,new Color(.28f,.38f,.31f),Cream,Pause,42);
         var score=Panel(top.transform,"Misket sayacı",24,92,330,100,new Color(.24f,.34f,.29f));

@@ -37,6 +37,7 @@ public static class Campaign
                 int district = i / PerDistrict, local = i % PerDistrict;
                 var level = ScriptableObject.CreateInstance<LevelData>();
                 level.levelName = names[local];
+                if(district==2 && local<3)level.levelName=new[]{"Giriş Yolu","Bank Yanı","Ağaç Dibi"}[local];
                 level.district = district;
                 level.mastery = local == 11;
                 level.shape = (local == 2 || local == 4 || local == 6 || local == 10) ? ArenaShape.Circle : ArenaShape.Triangle;

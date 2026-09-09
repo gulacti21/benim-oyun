@@ -12,6 +12,8 @@ Unity'de kilitli bölümleri denemek için Play sırasında `MISKETR → Preview
 
 ## Uygulananlar
 
+Park'ın ilk üç bölümü ortam taslağı olarak ayrıldı: **Giriş Yolu** (taş döşeme, bordür ve çiçekler), **Bank Yanı** (ahşap bank, yapraklar ve sıcak ışık), **Ağaç Dibi** (gövde, kökler, yeşillik ve koyu toprak). Unity telefon önizlemesinde üçü de kontrol edildi; iOS hedefli C# derlemesi geçti. Çevre objeleri dekoratiftir ve çarpışmaz. Bu çalışma bölüm bulmacalarını ve atış dengelerini henüz yeniden tasarlamaz. Gerçek cihazda yeni ortamların performansı ayrıca kontrol edilmelidir.
+
 - Renkli iç kıvrımlar, parlak yansımalar ve yumuşak temas gölgeleriyle stilize cam misketler.
 - Hafif dokulu toprak, düzensiz tebeşir çizgileri ve telefonun çentik alanına uyan arayüz.
 - Hareketli el öğreticisi, güç göstergesi, +1 geri bildirimi, iOS titreşimi ve animasyonlu sonuç yıldızları.
