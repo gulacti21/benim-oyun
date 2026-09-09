@@ -32,6 +32,14 @@ public static class MahalleProfile
     private static MahalleSave data;
 #if UNITY_EDITOR
     public static bool TestMode { get; set; }
+    public static bool PreviewMode { get; private set; }
+    public static void BeginPreview()
+    {
+        if (PreviewMode) return;
+        data = JsonUtility.FromJson<MahalleSave>(JsonUtility.ToJson(Data));
+        PreviewMode = true;
+    }
+    public static void EndPreview() { PreviewMode = false; Reload(); }
     public static void SetTestData(MahalleSave save) { data = save; Normalize(data); }
 #endif
     public static event Action Changed;
@@ -70,13 +78,20 @@ public static class MahalleProfile
     public static void Save()
     {
 #if UNITY_EDITOR
-        if (TestMode) { Changed?.Invoke(); return; }
+        if (TestMode || PreviewMode) { Changed?.Invoke(); return; }
 #endif
         PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(Data));
         PlayerPrefs.Save();
         Changed?.Invoke();
     }
-    public static bool Unlocked(int index) => index >= 0 && index < Campaign.Count && (index == 0 || Data.stars[index - 1] > 0);
+    public static bool Unlocked(int index)
+    {
+        if (index < 0 || index >= Campaign.Count) return false;
+#if UNITY_EDITOR
+        if (PreviewMode) return true;
+#endif
+        return index == 0 || Data.stars[index - 1] > 0;
+    }
     public static int TotalStars { get { int n = 0; foreach (int s in Data.stars) n += s; return n; } }
     public static int NextLevel { get { for (int i = 0; i < Campaign.Count; i++) if (Data.stars[i] == 0 && Unlocked(i)) return i; return Campaign.Count - 1; } }
     public static bool CanUse(MarblePower power) => power != MarblePower.None && (Data.stock[(int)power] > 0 || Data.beads >= Campaign.PowerPrices[(int)power]);

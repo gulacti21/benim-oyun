@@ -8,6 +8,8 @@ Unity Hub'da bu klasörü açın. `Assets/Scenes/LevelSelect.unity` sahnesini a�
 
 İlk atış: alt çizgideki misketi geriye çekip bırakın. Atıcıyı taşımak için alt çizginin başka bir noktasına dokunun. Güç çubuğu atış kuvvetini gösterir. Normal misket her zaman ücretsizdir.
 
+Unity'de kilitli bölümleri denemek için Play sırasında `MISKETR → Preview → Unlock all levels temporarily` seçin. Tüm 60 bölüm açılır; deneme ilerlemesi ve harcamaları diske kaydedilmez. Play'i durdurunca veya `Return to saved progress` seçince gerçek kayıt geri yüklenir. Bu özellik telefon sürümüne dahil edilmez.
+
 ## Uygulananlar
 
 - Renkli iç kıvrımlar, parlak yansımalar ve yumuşak temas gölgeleriyle stilize cam misketler.

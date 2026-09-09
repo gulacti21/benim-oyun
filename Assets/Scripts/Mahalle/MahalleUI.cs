@@ -59,6 +59,9 @@ public class MahalleUI : MonoBehaviour
     {var g=Panel(page,"Zemin",0,0,1080,2500,color);g.radius=0;Stretch(g.rectTransform);}
     private void Header(string subtitle)
     {
+#if UNITY_EDITOR
+        if(MahalleProfile.PreviewMode)subtitle="ÖNİZLEME · TÜM BÖLÜMLER AÇIK · KAYIT YAPILMAZ";
+#endif
         Text(page,"MİSKETR",48,24,630,76,64,Ink);
         Text(page,subtitle,50,104,740,42,27,Muted);
         var wallet=Panel(page,"Boncuk",805,35,225,76,Ink);
