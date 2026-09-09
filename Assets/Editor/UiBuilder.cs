@@ -216,7 +216,7 @@ public static class UiBuilder
         text.color = color;
         text.characterSpacing = characterSpacing;
         text.raycastTarget = false;
-        text.enableWordWrapping = false;
+        text.textWrappingMode = TextWrappingModes.NoWrap;
 
         TMP_FontAsset fontAsset = GetFontAsset();
 

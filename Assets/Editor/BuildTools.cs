@@ -33,7 +33,7 @@ public static class BuildTools
         PlayerSettings.iOS.appleEnableAutomaticSigning = true;
         PlayerSettings.iOS.targetDevice = iOSTargetDevice.iPhoneAndiPad;
 
-        PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel24;
+        PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel25;
     }
 
     [MenuItem("MISKETR/Build iOS Xcode Project")]
