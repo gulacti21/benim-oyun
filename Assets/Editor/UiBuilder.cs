@@ -55,7 +55,7 @@ public static class UiBuilder
             return cachedFont;
         }
 
-        string assetPath = "Assets/Fonts/Nunito SDF.asset";
+        string assetPath = "Assets/Resources/Mahalle/Nunito SDF.asset";
         cachedFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(assetPath);
 
         if (cachedFont != null)

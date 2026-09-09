@@ -6,6 +6,9 @@ public class LevelData : ScriptableObject
 {
     [Header("Identity")]
     public string levelName = "Seviye 1";
+    public int district;
+    public bool mastery;
+    public int obstacleCount;
 
     [Header("Arena")]
     public ArenaShape shape = ArenaShape.Triangle;

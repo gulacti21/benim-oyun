@@ -68,6 +68,7 @@ public class MarbleArena : MonoBehaviour
             }
 
             marble.MarkScored();
+            MahalleFeedback.Score(marble.transform.position);
             activeMarbles.RemoveAt(i);
             score++;
 
@@ -201,12 +202,15 @@ public class MarbleArena : MonoBehaviour
 
         if (shape == ArenaShape.Triangle)
         {
-            outline.positionCount = 3;
-
-            for (int i = 0; i < 3; i++)
+            outline.positionCount = 72;
+            for (int i = 0; i < 72; i++)
             {
-                float angle = (270f + (i * 120f)) * Mathf.Deg2Rad;
-                outline.SetPosition(i, new Vector3(Mathf.Cos(angle) * size, outlineHeight, Mathf.Sin(angle) * size));
+                int edge = i / 24; float t = (i % 24) / 24f;
+                float a = (270f + edge * 120f) * Mathf.Deg2Rad;
+                float b = (270f + (edge + 1) * 120f) * Mathf.Deg2Rad;
+                var p = Vector3.Lerp(new Vector3(Mathf.Cos(a)*size, outlineHeight, Mathf.Sin(a)*size), new Vector3(Mathf.Cos(b)*size, outlineHeight, Mathf.Sin(b)*size), t);
+                p.x += Mathf.Sin(i * 5.7f) * .014f; p.z += Mathf.Cos(i * 4.3f) * .014f;
+                outline.SetPosition(i, p);
             }
 
             return;
@@ -218,7 +222,8 @@ public class MarbleArena : MonoBehaviour
         for (int i = 0; i < segments; i++)
         {
             float angle = (i / (float)segments) * Mathf.PI * 2f;
-            outline.SetPosition(i, new Vector3(Mathf.Cos(angle) * size, outlineHeight, Mathf.Sin(angle) * size));
+            float chalkSize = size + Mathf.Sin(i * 5.7f) * .014f;
+            outline.SetPosition(i, new Vector3(Mathf.Cos(angle) * chalkSize, outlineHeight, Mathf.Sin(angle) * chalkSize));
         }
     }
 
@@ -228,6 +233,7 @@ public class MarbleArena : MonoBehaviour
         {
             if (spawnedMarbles[i] != null)
             {
+                spawnedMarbles[i].gameObject.SetActive(false);
                 Destroy(spawnedMarbles[i].gameObject);
             }
         }
@@ -317,6 +323,8 @@ public class MarbleArena : MonoBehaviour
         GameObject instance = Instantiate(targetMarblePrefab, position, Quaternion.identity, transform);
         instance.name = instanceName;
 
+        var visual = instance.AddComponent<MarbleVisual>();
+        visual.SetSkin(1 + spawnedMarbles.Count % 4);
         TargetMarble marble = instance.GetComponent<TargetMarble>();
 
         if (marble != null)

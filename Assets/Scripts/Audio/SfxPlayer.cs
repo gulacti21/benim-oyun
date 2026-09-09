@@ -43,7 +43,7 @@ public class SfxPlayer : MonoBehaviour
 
     public void Play(AudioClip clip, float volume, float pitch)
     {
-        if (clip == null || voices == null)
+        if (!MahalleProfile.Data.sound || clip == null || voices == null)
         {
             return;
         }

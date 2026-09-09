@@ -1,6 +1,7 @@
 using System.IO;
 using UnityEditor;
 using UnityEditor.Build;
+using UnityEditor.Build.Reporting;
 using UnityEngine;
 
 public static class BuildTools
@@ -51,7 +52,7 @@ public static class BuildTools
         ApplyPlayerSettings();
 
         string projectRoot = Directory.GetParent(Application.dataPath).FullName;
-        string outputPath = Path.Combine(Directory.GetParent(projectRoot).FullName, "MISKETR-iOS");
+        string outputPath = Path.Combine(projectRoot, "Builds", "iOS");
 
         BuildPlayerOptions options = new BuildPlayerOptions
         {
@@ -62,7 +63,12 @@ public static class BuildTools
             options = BuildOptions.None
         };
 
-        BuildPipeline.BuildPlayer(options);
+        BuildReport report = BuildPipeline.BuildPlayer(options);
+        if (report.summary.result != BuildResult.Succeeded)
+        {
+            Debug.LogError("[MISKETR] iOS export failed: " + report.summary.result + ". See Console for build errors.");
+            return;
+        }
 
         Debug.Log("[MISKETR] Xcode project written to: " + outputPath);
         EditorUtility.RevealInFinder(outputPath);

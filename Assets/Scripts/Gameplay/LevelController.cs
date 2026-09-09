@@ -21,6 +21,11 @@ public class LevelController : MonoBehaviour
     private int shotsUsed;
     private bool waitingForSettle;
     private float settleTimer;
+    private float shotElapsed;
+    public RoundReward LastReward { get; private set; }
+    public ShotController Shooter => shooter;
+    public bool WaitingForSettle => waitingForSettle;
+    private void Awake() { database = Campaign.Database; }
 
     public event Action StateChanged;
 
@@ -84,7 +89,7 @@ public class LevelController : MonoBehaviour
 
         if (shooter != null)
         {
-            shooter.ShootingEnabled = !paused && State == LevelState.Playing;
+            shooter.ShootingEnabled = !paused && !waitingForSettle && State == LevelState.Playing;
         }
 
         StateChanged?.Invoke();
@@ -120,7 +125,8 @@ public class LevelController : MonoBehaviour
 
     public void RestartLevel()
     {
-        LevelIndex = GameSession.SelectedLevelIndex;
+        LevelIndex = Mathf.Clamp(GameSession.SelectedLevelIndex, 0, database.Count - 1);
+        if (!MahalleProfile.Unlocked(LevelIndex)) LevelIndex = MahalleProfile.NextLevel;
 
         if (database != null)
         {
@@ -150,6 +156,8 @@ public class LevelController : MonoBehaviour
             shooter.ShootingEnabled = true;
         }
 
+        MahalleWorld.Apply(this);
+        LastReward = new RoundReward();
         shotsUsed = 0;
         waitingForSettle = false;
         settleTimer = 0f;
@@ -162,6 +170,7 @@ public class LevelController : MonoBehaviour
     private void HandleShotFired()
     {
         shotsUsed++;
+        shotElapsed = 0f;
         waitingForSettle = true;
         settleTimer = 0f;
     }
@@ -173,6 +182,12 @@ public class LevelController : MonoBehaviour
             return;
         }
 
+        if (IsPaused) return;
+        shotElapsed += Time.deltaTime;
+        if (shotElapsed > 12f)
+        {
+            foreach (var b in FindObjectsByType<Rigidbody>(FindObjectsSortMode.None)) { b.linearVelocity = Vector3.zero; b.angularVelocity = Vector3.zero; b.Sleep(); }
+        }
         bool shooterResting = shooter == null || shooter.AtRest;
         bool marblesResting = arena == null || arena.AllMarblesAtRest();
 
@@ -204,9 +219,10 @@ public class LevelController : MonoBehaviour
 
             if (State == LevelState.Won)
             {
-                ProgressService.SaveStars(LevelIndex, Stars);
-                ProgressService.UnlockNextAfter(LevelIndex);
+                // Rewards and unlocks are persisted together by the campaign profile.
             }
+
+            LastReward = MahalleProfile.Finish(LevelIndex, State == LevelState.Won ? Stars : 0, Score);
 
             if (SfxPlayer.Instance != null)
             {
@@ -232,6 +248,8 @@ public class LevelController : MonoBehaviour
         if (shooter != null)
         {
             shooter.ResetTo(level.shooterStartPosition);
+            shooter.ShootingEnabled = true;
         }
+        StateChanged?.Invoke();
     }
 }
