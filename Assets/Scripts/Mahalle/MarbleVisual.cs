@@ -27,21 +27,20 @@ public class MarbleVisual : MonoBehaviour
     private void Start()
     {
         SetSkin(skin);
+        if (shadowMaterial == null)
+        {
+            // Load an included, fixed transparent pass; runtime URP keywords can be stripped in players.
+            var shader = Resources.Load<Shader>("Mahalle/ContactShadow");
+            if (shader == null || !shader.isSupported)
+            {
+                Debug.LogWarning("MISKETR: Contact shadow shader unavailable; skipping shadow.");
+                return;
+            }
+            shadowMaterial = new Material(shader);
+        }
         var go = GameObject.CreatePrimitive(PrimitiveType.Quad); go.name="Misket gölgesi";
         Destroy(go.GetComponent<Collider>()); shadow=go.transform;
         shadow.rotation=Quaternion.Euler(90,0,0);
-        if (shadowMaterial == null)
-        {
-            var tex = new Texture2D(32,32,TextureFormat.RGBA32,false);
-            for(int y=0;y<32;y++) for(int x=0;x<32;x++)
-            { float d=Vector2.Distance(new Vector2(x,y),new Vector2(15.5f,15.5f))/16f; tex.SetPixel(x,y,new Color(.08f,.05f,.03f,Mathf.Pow(Mathf.Clamp01(1-d),1.4f)*.44f)); }
-            tex.Apply();
-            shadowMaterial = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-            shadowMaterial.SetTexture("_BaseMap",tex); shadowMaterial.SetFloat("_Surface",1);
-            shadowMaterial.SetFloat("_SrcBlend",5); shadowMaterial.SetFloat("_DstBlend",10);
-            shadowMaterial.SetFloat("_ZWrite",0); shadowMaterial.renderQueue=3000;
-            shadowMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-        }
         go.GetComponent<Renderer>().sharedMaterial=shadowMaterial;
     }
     private void LateUpdate()
