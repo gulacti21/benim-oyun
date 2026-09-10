@@ -52,13 +52,38 @@ public class MahalleWorld : MonoBehaviour
             if(light!=null)light.color=corner==1?new Color(1,.84f,.65f):corner==2?new Color(.89f,.95f,.85f):new Color(1,.97f,.88f);
         }
         if(controller.Shooter.GetComponent<MarbleVisual>()==null) controller.Shooter.gameObject.AddComponent<MarbleVisual>();
-        controller.Shooter.GetComponent<MarbleVisual>().SetSkin(MahalleProfile.Data.selectedSkin);
-        var line=FindFirstObjectByType<ShooterLine>(); if(line!=null) line.SetPosition(controller.Level.shooterStartPosition);
+        controller.Shooter.GetComponent<MarbleVisual>().SetSkin(MahalleProfile.EffectiveSkin);
+        var line=FindFirstObjectByType<ShooterLine>();
+        if(line!=null)
+        {
+            // Bölüm hattı daraltabilir veya yana kaydırabilir.
+            line.ApplyLevel(controller.Level.shooterHalfWidth,controller.Level.shooterOffsetX);
+            line.SetPosition(controller.Level.shooterStartPosition);
+            // Kenarda parmak payı: misketi geri çekmek için ekranda yer kalsın.
+            line.FitToCamera(camera,1.05f);
+        }
         if(stoneMaterial==null) {stoneMaterial=new Material(Shader.Find("Universal Render Pipeline/Lit"));stoneMaterial.SetColor("_BaseColor",new Color(.3f,.32f,.28f));}
-        for(int i=0;i<controller.Level.obstacleCount;i++)
+        var arena=FindFirstObjectByType<MarbleArena>();
+        Vector3 centre=arena!=null?arena.transform.position:Vector3.zero;
+        var designed=controller.Level.obstacles;
+        if(designed!=null && designed.Length>0)
+        {
+            // Bölüme özel engeller. Bunlar dekor değil: misket çarpar ve seker.
+            for(int i=0;i<designed.Length;i++)
+            {
+                var spot=designed[i];
+                var stone=GameObject.CreatePrimitive(PrimitiveType.Cube);stone.name="Engel "+(i+1);
+                stone.transform.SetParent(decor.transform);
+                stone.transform.position=new Vector3(centre.x+spot.x,.22f,centre.z+spot.z);
+                stone.transform.localScale=new Vector3(Mathf.Max(.2f,spot.width),.44f,Mathf.Max(.2f,spot.depth));
+                stone.transform.rotation=Quaternion.Euler(0,spot.angle,0);
+                stone.GetComponent<Renderer>().sharedMaterial=stoneMaterial;
+            }
+        }
+        else for(int i=0;i<controller.Level.obstacleCount;i++)
         {
             var stone=GameObject.CreatePrimitive(PrimitiveType.Cube);stone.name="Park taşı";stone.transform.SetParent(decor.transform);
-            stone.transform.position=new Vector3(i==0?-1.4f:1.4f,.22f,-2.5f);
+            stone.transform.position=new Vector3(centre.x+(i==0?-1.4f:1.4f),.22f,centre.z-2.5f);
             stone.transform.localScale=new Vector3(.65f,.44f,.42f); stone.transform.rotation=Quaternion.Euler(0,i==0?12:-8,0);
             stone.GetComponent<Renderer>().sharedMaterial=stoneMaterial;
         }

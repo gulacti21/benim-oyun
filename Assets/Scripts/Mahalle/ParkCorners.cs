@@ -25,6 +25,7 @@ public class ParkCorners : MonoBehaviour
     {
         var go=GameObject.CreatePrimitive(type); go.name=name; go.transform.SetParent(transform,false);
         var collider=go.GetComponent<Collider>(); collider.enabled=false; Destroy(collider);
+        p.x += Mathf.Sign(p.x) * (Mathf.Abs(p.x) > 2.3f ? .65f : 0f);
         go.transform.localPosition=p; go.transform.localScale=size; go.transform.localRotation=Quaternion.Euler(0,yaw,0);
         go.GetComponent<Renderer>().sharedMaterial=m; return go.transform;
     }

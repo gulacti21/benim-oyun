@@ -27,8 +27,18 @@ public class MahalleUI : MonoBehaviour
         root=Rect("SafeArea",transform);Stretch(root);root.gameObject.AddComponent<SafeAreaFit>();
         Canvas.ForceUpdateCanvases();
         controller=FindFirstObjectByType<LevelController>();
+        if(controller!=null)controller.AnchorRefunded+=()=>Toast("Misketin işe yarar bir yerde kalmadı. Hakkın iade edildi.");
         district=MahalleProfile.NextLevel/Campaign.PerDistrict;
         if(controller==null)ShowHome();else ShowGame();
+        // Test yapisi damgasi. Bu yazi ekranda goruniyorsa bu build yayinlanamaz.
+        if(MahalleProfile.TestUnlockAllLevels)
+        {
+            var stamp=Text(root,"TEST · TÜM BÖLÜMLER AÇIK",0,0,700,44,26,new Color(1f,.45f,.25f,.85f),TextAlignmentOptions.Center);
+            stamp.rectTransform.anchorMin=stamp.rectTransform.anchorMax=new Vector2(.5f,0f);
+            stamp.rectTransform.pivot=new Vector2(.5f,0f);
+            stamp.rectTransform.anchoredPosition=new Vector2(0,6);
+            stamp.transform.SetAsLastSibling();
+        }
     }
     private RectTransform Rect(string name,Transform parent)
     {var go=new GameObject(name,typeof(RectTransform));go.transform.SetParent(parent,false);return (RectTransform)go.transform;}
@@ -70,14 +80,34 @@ public class MahalleUI : MonoBehaviour
     }
     private void Nav()
     {
-        var bg=Panel(page,"Alt menü",24,0,1032,112,Ink);Bottom(bg.rectTransform,24,18,1032,112);
+        var bg=Panel(page,"Alt menü",24,0,1032,132,new Color(.21f,.32f,.28f));
+        bg.colorB=new Color(.11f,.18f,.16f);bg.radius=34;bg.shadow=14;bg.highlight=true;
+        Bottom(bg.rectTransform,24,18,1032,132);
         string[] names={"MAHALLE","KESEM","GÖREVLER"};
-        for(int i=0;i<3;i++){int id=i;var b=LabelButton(bg.transform,names[i],i*344+8,8,328,96,i==tab?new Color(.25f,.37f,.32f):Ink,i==tab?Gold:Cream,()=>{tab=id;ShowHome();},29);}
+        var shapes=new[]{MahalleGraphic.Shape.TabMap,MahalleGraphic.Shape.Bag,MahalleGraphic.Shape.TabTask};
+        var faded=new Color(1,.97f,.89f,.6f);
+        for(int i=0;i<3;i++)
+        {
+            int id=i;bool on=i==tab;
+            var b=Button(bg.transform,names[i],10+i*337,10,331,112,on?new Color(1,1,1,.1f):new Color(1,1,1,0),()=>{tab=id;ShowHome();});
+            b.GetComponent<MahalleGraphic>().radius=26;
+            b.gameObject.AddComponent<MahalleTap>();
+            var icon=Art(b.transform,"Simge",shapes[i],131,12,70,64,on?Gold:faded);
+            icon.accent=on?Gold:faded;
+            Text(b.transform,names[i],10,80,311,36,24,on?Gold:faded,TextAlignmentOptions.Center);
+        }
     }
     private void ShowHome()
     {
-        ClearPage();Background(Paper);Header(tab==0?"MAHALLENİN MİSKET USTASI OL":tab==1?"HER MİSKETİN BİR HİKÂYESİ VAR":"KÜÇÜK HEDEFLER, YENİ BONCUKLAR");
-        if(tab==0)Map();else if(tab==1)Collection();else Missions();Nav();
+        ClearPage();
+        if(tab==0){Background(new Color(.14f,.12f,.10f));MapScreen();}
+        else
+        {
+            Background(Paper);
+            Header(tab==1?"HER MİSKETİN BİR HİKÂYESİ VAR":"KÜÇÜK HEDEFLER, YENİ BONCUKLAR");
+            if(tab==1)Collection();else Missions();
+        }
+        Nav();
     }
     private RectTransform HomeScroll(float height)
     {
@@ -91,62 +121,151 @@ public class MahalleUI : MonoBehaviour
         var inner=Rect("Düzen",content);Place(inner,0,-171,1080,height+171);
         return inner;
     }
-    private void Map()
+    // Mahalle haritası. Zemin, yol ve duraklar MahalleMapView içinde çizilir.
+    private void MapScreen()
     {
-        var content=HomeScroll(1510);
+        var theme=MahalleTheme.Get(district);
+
+        // Harita bütün ekranı kaplar. Başlık üstte durur, harita altından kayıp geçer.
+        var viewport=Rect("Harita",page);
+        Stretch(viewport);
+        viewport.gameObject.AddComponent<RectMask2D>();
+        var catcher=viewport.gameObject.AddComponent<Image>();catcher.color=Color.clear;catcher.raycastTarget=true;
+
+        var content=Rect("Harita içeriği",viewport);
+        content.anchorMin=new Vector2(0,1);content.anchorMax=new Vector2(1,1);content.pivot=new Vector2(.5f,1);
+        content.sizeDelta=new Vector2(0,MahalleMapView.ContentHeight);content.anchoredPosition=Vector2.zero;
+
+        var scroll=viewport.gameObject.AddComponent<ScrollRect>();
+        scroll.viewport=viewport;scroll.content=content;scroll.horizontal=false;scroll.vertical=true;
+        scroll.movementType=ScrollRect.MovementType.Elastic;scroll.elasticity=.09f;
+        scroll.scrollSensitivity=45;scroll.decelerationRate=.12f;
+
+        MahalleMapView.Build(content,district,font,OpenLevel,Toast);
+
+        // Ekran, oyuncunun sıradaki bölümüne bakarak açılır.
+        Canvas.ForceUpdateCanvases();
+        float visible=viewport.rect.height;
+        int local=Mathf.Clamp(MahalleProfile.NextLevel-district*Campaign.PerDistrict,0,Campaign.PerDistrict-1);
+        float focus=MahalleMapView.StopOffset(local)-visible*.5f;   // başlık ve alt çubuk eşit yükseklikte
+        content.anchoredPosition=new Vector2(0,Mathf.Clamp(focus,0,Mathf.Max(0,MahalleMapView.ContentHeight-visible)));
+
+        MapHeader(theme);
+        MapDock();
+    }
+
+    private void MapHeader(MahalleTheme theme)
+    {
+        var head=Panel(page,"Başlık",0,0,1080,300,Paper);head.radius=0;head.shadow=18;head.raycastTarget=true;
+
+        // Sol üstte kuşandığın misket durur; dokununca koleksiyona gider.
+        int skin=Mathf.Clamp(MahalleProfile.EffectiveSkin,0,Campaign.SkinNames.Length-1);
+        var mine=Button(head.transform,"Kuşandığın misket",48,26,326,78,new Color(.24f,.36f,.31f),()=>{tab=1;ShowHome();});
+        var mineFace=mine.GetComponent<MahalleGraphic>();
+        mineFace.colorB=new Color(.10f,.18f,.16f);mineFace.radius=39;mineFace.shadow=9;mineFace.highlight=true;
+        mine.gameObject.AddComponent<MahalleTap>();
+        var art=Art(mine.transform,"Misket",MahalleGraphic.Shape.Marble,16,17,44,44,Campaign.SkinColors[skin]);
+        art.accent=SpecialMarbles.Accent(skin);
+        Text(mine.transform,Campaign.SkinNames[skin],76,0,238,78,28,Cream);
+
+        // Üst sıranın ortasında mahallenin yıldız ilerlemesi.
+        int stars=0;
+        for(int i=district*Campaign.PerDistrict;i<(district+1)*Campaign.PerDistrict;i++)stars+=MahalleProfile.Data.stars[i];
+        int full=Campaign.PerDistrict*3;
+        var meter=Panel(head.transform,"Yıldız ilerlemesi",390,26,396,78,new Color(.88f,.84f,.73f));
+        meter.colorB=new Color(.83f,.79f,.67f);meter.radius=39;meter.highlight=true;
+        Art(meter.transform,"Yıldız",MahalleGraphic.Shape.Star,20,19,40,40,Gold);
+        Text(meter.transform,stars+" / "+full,68,19,116,40,30,Ink);
+        var track=Panel(meter.transform,"Yol",190,33,186,12,new Color(.16f,.25f,.23f,.24f));track.radius=6;
+        var fill=Panel(meter.transform,"Dolu",190,33,Mathf.Max(12f,186f*stars/full),12,Gold);
+        fill.colorB=new Color(.85f,.53f,.15f);fill.radius=6;
+
+        var wallet=Panel(head.transform,"Boncuk",802,26,230,78,new Color(.24f,.36f,.31f));
+        wallet.colorB=new Color(.10f,.18f,.16f);wallet.radius=39;wallet.shadow=9;wallet.highlight=true;
+        Art(wallet.transform,"Boncuk simgesi",MahalleGraphic.Shape.Marble,16,17,44,44,Gold);
+        beadsLabel=Text(wallet.transform,MahalleProfile.Data.beads.ToString(),76,0,140,78,36,Cream);
+
+        var prev=Button(head.transform,"Önceki mahalle",48,144,96,96,new Color(.88f,.85f,.76f),()=>{district=(district+4)%5;ShowHome();});
+        prev.GetComponent<MahalleGraphic>().radius=30;prev.gameObject.AddComponent<MahalleTap>();
+        Art(prev.transform,"Sol",MahalleGraphic.Shape.Chevron,26,26,44,44,Ink).mirror=true;
+
+        var next=Button(head.transform,"Sonraki mahalle",936,144,96,96,new Color(.88f,.85f,.76f),()=>{district=(district+1)%5;ShowHome();});
+        next.GetComponent<MahalleGraphic>().radius=30;next.gameObject.AddComponent<MahalleTap>();
+        Art(next.transform,"Sağ",MahalleGraphic.Shape.Chevron,26,26,44,44,Ink);
+
+        Text(head.transform,theme.title,164,140,752,62,46,Ink,TextAlignmentOptions.Center);
+        Text(head.transform,theme.subtitle,164,202,752,44,26,Muted,TextAlignmentOptions.Center);
+
         for(int i=0;i<5;i++)
         {
-            int d=i;bool unlocked=MahalleProfile.Unlocked(i*12);
-            var b=Button(content,"Mahalle "+i,48+i*198,185,186,84,district==i?Ink:new Color(.88f,.85f,.76f),()=>{district=d;ShowHome();});
-            Text(b.transform,Campaign.Districts[i],10,7,166,70,25,district==i?Cream:Muted,TextAlignmentOptions.Center);
-            if(!unlocked)Art(b.transform,"Kilit",MahalleGraphic.Shape.Lock,156,5,20,25,district==i?Gold:Muted);
+            bool on=i==district;
+            Art(head.transform,"Nokta "+i,MahalleGraphic.Shape.Circle,483+i*26,on?254:256,on?14:10,on?14:10,
+                on?Gold:new Color(.16f,.25f,.23f,.22f));
         }
-        var hero=Panel(content,"Mahalle kartı",48,297,984,167,new Color(.87f,.82f,.68f));
-        var house=Art(hero.transform,"Mahalle evi",MahalleGraphic.Shape.House,32,22,117,123,Ink);house.accent=Gold;
-        Text(hero.transform,Campaign.Districts[district],182,17,744,59,45,Ink);
-        Text(hero.transform,Campaign.Descriptions[district],184,81,720,60,28,Muted);
-        int earned=0;for(int i=district*12;i<(district+1)*12;i++)earned+=MahalleProfile.Data.stars[i];
-        Text(content,"12 BÖLÜM  /  "+earned+" · 36 YILDIZ",52,479,950,40,24,Muted);
-        for(int row=0;row<4;row++)
-        {
-            for(int col=0;col<3;col++)
-            {
-                int local=row*3+col,index=district*12+local;var level=Campaign.Database.Get(index);
-                bool unlocked=MahalleProfile.Unlocked(index),current=index==MahalleProfile.NextLevel;
-                Color bg=current?Ink:unlocked?Cream:new Color(.89f,.86f,.78f);
-                float x=48+col*334,y=540+row*280;
-                var card=Button(content,"Bölüm "+(index+1),x,y,316,258,bg,()=>{if(unlocked)OpenLevel(index);else Toast("Önce bir önceki bölümü tamamla.");});
-                Text(card.transform,(local+1).ToString("00"),22,12,110,66,48,current?Gold:unlocked?Ink:Muted);
-                var mini=Art(card.transform,"Arena önizlemesi",level.shape==ArenaShape.Triangle?MahalleGraphic.Shape.Triangle:MahalleGraphic.Shape.Ring,204,24,88,88,current?Cream:Muted);mini.accent=current?Gold:new Color(.12f,.58f,.55f);
-                Text(card.transform,level.mastery?"USTALIK SINAVI":level.levelName,24,128,268,64,30,current?Cream:Muted);
-                if(unlocked)
-                {
-                    for(int s=0;s<3;s++)Art(card.transform,"Yıldız "+s,MahalleGraphic.Shape.Star,24+s*34,217,25,25,MahalleProfile.Data.stars[index]>s?Gold:current?new Color(.4f,.49f,.41f):Line);
-                    if(current)Text(card.transform,"OYNA",170,207,115,37,23,Gold,TextAlignmentOptions.MidlineRight);
-                }
-                else Art(card.transform,"Kilitli",MahalleGraphic.Shape.Lock,26,215,25,28,Muted);
-            }
-        }
-        var play=LabelButton(page,"KALDIĞIN YERDEN DEVAM ET",48,0,984,100,Ink,Cream,()=>OpenLevel(MahalleProfile.NextLevel),34);
-        Bottom((RectTransform)play.transform,48,160,984,100);
     }
+
+    private void MapDock()
+    {
+        // Harita alt çubuğun altında düz kesilmez, koyu zemine doğru erir.
+        var dark=new Color(.14f,.12f,.10f);
+        // Koyu zemin sadece alt menünün arkasında; devam çubuğu haritanın üstünde durur.
+        var blend=Panel(page,"Alt geçiş",0,0,1080,250,new Color(dark.r,dark.g,dark.b,0));
+        blend.radius=0;blend.colorB=dark;
+        Bottom(blend.rectTransform,0,158,1080,250);
+        var floor=Panel(page,"Alt zemin",0,0,1080,158,dark);
+        floor.radius=0;floor.raycastTarget=true;
+        Bottom(floor.rectTransform,0,0,1080,158);
+
+        int next=MahalleProfile.NextLevel;
+        var level=Campaign.Database.Get(next);
+        var resume=Button(page,"Devam et",48,0,984,120,Gold,()=>OpenLevel(next));
+        var face=resume.GetComponent<MahalleGraphic>();
+        face.colorB=new Color(.85f,.53f,.15f);face.radius=32;face.shadow=14;face.highlight=true;
+        Bottom((RectTransform)resume.transform,48,166,984,120);
+        resume.gameObject.AddComponent<MahalleTap>();
+        Text(resume.transform,"DEVAM ET",34,16,700,36,23,new Color(.15f,.2f,.17f,.72f));
+        Text(resume.transform,(next%Campaign.PerDistrict+1).ToString("00")+" · "+level.levelName,34,48,700,54,36,new Color(.13f,.18f,.15f));
+        Art(resume.transform,"Ok",MahalleGraphic.Shape.Chevron,878,36,48,48,new Color(.13f,.18f,.15f));
+    }
+
     private void Collection()
     {
-        var content=HomeScroll(1240);
-        var title=Text(content,"Misket koleksiyonun",48,182,984,65,47,Ink);
-        Text(content,"Görünümünü seç. Özel atış güçleri oyun içindeki kesende.",48,256,984,76,30,Muted);
-        for(int i=0;i<6;i++)
+        var content=HomeScroll(2840);
+        Text(content,"Misket koleksiyonun",48,182,984,65,47,Ink);
+        Text(content,"Klasik misketler aşınmaz. Özellikli misketler aşağıda.",48,256,984,76,30,Muted);
+        for(int i=0;i<SpecialMarbles.FirstSkin;i++) CollectionCard(content,i,363+(i/2)*302);
+
+        Text(content,"ÖZELLİKLİ MİSKETLER",48,1300,984,58,38,Ink);
+        Text(content,"400 boncuk · 150 atış ömür · Tam yenileme 100 boncuk.",48,1368,984,82,29,Muted);
+        for(int i=SpecialMarbles.FirstSkin;i<Campaign.SkinCount;i++)
+            CollectionCard(content,i,1478+((i-SpecialMarbles.FirstSkin)/2)*532);
+
+        Text(content,"Normal misket her zaman ücretsiz ve aşınmaz.",48,2610,984,76,29,Muted,TextAlignmentOptions.Center);
+        var settings=LabelButton(page,"AYARLAR",48,0,984,86,new Color(.88f,.85f,.76f),Ink,Settings,28);
+        Bottom((RectTransform)settings.transform,48,160,984,86);
+    }
+
+    private void CollectionCard(RectTransform content,int skin,float y)
+    {
+        bool special=SpecialMarbles.IsSpecial(skin),owned=MahalleProfile.Data.skins[skin];
+        bool selected=MahalleProfile.EffectiveSkin==skin,worn=special&&owned&&MahalleProfile.RemainingLife(skin)==0;
+        var card=Panel(content,Campaign.SkinNames[skin],48+(skin%2)*508,y,476,special?508:278,selected?Ink:Cream);
+        var marble=Art(card.transform,"Cam misket",MahalleGraphic.Shape.Marble,24,24,150,150,Campaign.SkinColors[skin]);marble.accent=SpecialMarbles.Accent(skin);
+        Text(card.transform,Campaign.SkinNames[skin],193,32,265,90,33,selected?Cream:Ink);
+        if(special)
         {
-            int skin=i;bool owned=MahalleProfile.Data.skins[i],selected=MahalleProfile.Data.selectedSkin==i;
-            float x=48+(i%2)*508,y=363+(i/2)*302;
-            var card=Panel(content,Campaign.SkinNames[i],x,y,476,278,selected?Ink:Cream);
-            var marble=Art(card.transform,"Cam misket",MahalleGraphic.Shape.Marble,24,24,150,150,Campaign.SkinColors[i]);marble.accent=Color.Lerp(Campaign.SkinColors[(i+2)%6],Color.white,.4f);
-            Text(card.transform,Campaign.SkinNames[i],193,40,265,96,33,selected?Cream:Ink);
-            string label=selected?"KUŞANILDI":owned?"KUŞAN":Campaign.SkinPrices[i]+" BONCUK · AÇ";
-            var b=LabelButton(card.transform,label,24,194,428,62,selected?new Color(.27f,.39f,.31f):new Color(.89f,.85f,.72f),selected?Gold:Ink,()=>{if(MahalleProfile.EquipOrBuy(skin))ShowHome();else Toast("Yeterli boncuk yok. Bölümlerden ve görevlerden kazanabilirsin.");},25);
+            Text(card.transform,owned?MahalleProfile.RemainingLife(skin)+" / 150 ATIŞ":"400 BONCUK",193,126,265,48,26,selected?Gold:Muted);
+            Text(card.transform,SpecialMarbles.Descriptions[skin-SpecialMarbles.FirstSkin],24,184,428,70,26,selected?Cream:Muted);
         }
-        Text(content,"Ustalık sınavları da yeni misket görünümleri kazandırır.",48,1304,984,80,29,Muted,TextAlignmentOptions.Center);
-        var settings=LabelButton(page,"AYARLAR",48,0,984,86,new Color(.88f,.85f,.76f),Ink,Settings,28);Bottom((RectTransform)settings.transform,48,160,984,86);
+        string label=worn?"AŞINDI":selected?"KUŞANILDI":owned?"KUŞAN":Campaign.SkinPrices[skin]+" BONCUK · AL";
+        var buy=LabelButton(card.transform,label,24,special?270:194,428,62,selected?new Color(.27f,.39f,.31f):new Color(.89f,.85f,.72f),selected?Gold:Ink,()=>{if(MahalleProfile.EquipOrBuy(skin))ShowHome();else Toast("Yeterli boncuk yok veya misket yenilenmeli.");},25);
+        buy.interactable=!selected&&!worn;
+        if(special)
+        {
+            var repair=LabelButton(card.transform,"TAM YENİLE · 100 BONCUK",24,350,428,62,new Color(.89f,.85f,.72f),Ink,()=>{if(MahalleProfile.RepairMarble(skin))ShowHome();else Toast("Yenilemek için 100 boncuk gerekiyor.");},23);
+            repair.interactable=owned&&MahalleProfile.RemainingLife(skin)<SpecialMarbles.MaxLife;
+            Text(card.transform,"Özel güç atışında özelliği durur, ömrü azalmaz.",24,426,428,62,23,selected?Cream:Muted,TextAlignmentOptions.Center);
+        }
     }
     private void Missions()
     {
@@ -166,7 +285,7 @@ public class MahalleUI : MonoBehaviour
         }
         Text(content,"USTALIK ROZETLERİ",48,1203,984,48,28,Muted);
         for(int i=0;i<5;i++)
-        {bool won=MahalleProfile.Data.stars[i*12+11]>0;var star=Art(content,"Ustalık rozeti",MahalleGraphic.Shape.Star,75+i*198,1280,116,116,won?Gold:Line);Text(content,Campaign.Districts[i],48+i*198,1410,186,70,24,won?Ink:Muted,TextAlignmentOptions.Center);}
+        {bool won=MahalleProfile.DistrictCompleted(i);var star=Art(content,"Ustalık rozeti",MahalleGraphic.Shape.Star,75+i*198,1280,116,116,won?Gold:Line);Text(content,Campaign.Districts[i],48+i*198,1410,186,70,24,won?Ink:Muted,TextAlignmentOptions.Center);}
     }
     private void OpenLevel(int index)
     {if(!MahalleProfile.Unlocked(index))return;GameSession.SelectedLevelIndex=index;Time.timeScale=1;SceneManager.LoadScene(GameSession.GameSceneName);}
@@ -211,8 +330,8 @@ public class MahalleUI : MonoBehaviour
         if(shooter!=null)
         {
             powerFill.rectTransform.sizeDelta=new Vector2(Mathf.Max(1,610*shooter.Power),16);
-            powerLabel.SetText(shooter.SelectedPower==MarblePower.None?"NORMAL MİSKET":Campaign.PowerNames[(int)shooter.SelectedPower].ToUpper(new System.Globalization.CultureInfo("tr-TR")));
-            hintLabel.SetText(controller.WaitingForSettle?"Misketler duruluyor…":shooter.IsAiming?"Gücü ayarla ve bırak":"Çizgiye dokunarak atıcının yerini değiştirebilirsin.");
+            powerLabel.SetText(shooter.SelectedPower==MarblePower.None?(SpecialMarbles.IsSpecial(shooter.ActiveSkin)?Campaign.SkinNames[shooter.ActiveSkin]+" · "+MahalleProfile.RemainingLife(shooter.ActiveSkin)+"/150":"NORMAL MİSKET"):Campaign.PowerNames[(int)shooter.SelectedPower].ToUpper(new System.Globalization.CultureInfo("tr-TR")));
+            hintLabel.SetText(controller.WaitingForSettle?"Misketler duruluyor…":shooter.IsAiming?"Gücü ayarla ve bırak":shooter.PositionLocked?"Misketin durduğu yerden atıyorsun.":"Çizgiye dokunarak atıcının yerini değiştirebilirsin.");
             if(hand!=null)
             {
                 hand.gameObject.SetActive(!MahalleProfile.Data.tutorialDone && !controller.IsPaused);
@@ -245,23 +364,24 @@ public class MahalleUI : MonoBehaviour
     private void OpenBag()
     {
         if(controller.WaitingForSettle||controller.State!=LevelController.LevelState.Playing){Toast("Atışın tamamlanmasını bekle.");return;}
-        controller.SetPaused(true);var box=Modal("Misket kesen",940);
+        controller.SetPaused(true);var box=Modal("Misket kesen",1130);
         Text(box,"Misket kesen",36,28,810,65,49,Ink);
         Text(box,"Seçim ücretsiz. Bir kullanım yalnızca atışta harcanır.",36,108,912,74,28,Muted);
-        for(int i=0;i<3;i++)
+        var powerColors=new[]{Gold,Campaign.SkinColors[5],Campaign.SkinColors[1],Campaign.SkinColors[3]};
+        for(int i=0;i<Campaign.PowerNames.Length;i++)
         {
             int power=i;bool usable=MahalleProfile.CanUse((MarblePower)i),selected=controller.Shooter.SelectedPower==(MarblePower)i;
             var b=Button(box,Campaign.PowerNames[i],30,215+i*190,924,166,selected?Ink:Cream,()=>{
                 if(!usable){Toast("Boncuk kazanmak için normal misketle oynayabilirsin.");return;}
                 CloseModal();controller.Shooter.SelectPower((MarblePower)power);
             });
-            var m=Art(b.transform,"Özel misket",MahalleGraphic.Shape.Marble,22,30,i==0?100:82,i==0?100:82,i==1?Campaign.SkinColors[5]:i==2?Campaign.SkinColors[1]:Gold);
+            var m=Art(b.transform,"Özel misket",MahalleGraphic.Shape.Marble,22,30,i==0?100:82,i==0?100:82,powerColors[i]);
             Text(b.transform,Campaign.PowerNames[i],145,17,730,47,36,selected?Cream:Ink);
             Text(b.transform,Campaign.PowerDescriptions[i],145,64,740,52,25,selected?Cream:Muted);
             string cost=MahalleProfile.Data.stock[i]>0?"ÜCRETSİZ HAK: "+MahalleProfile.Data.stock[i]:Campaign.PowerPrices[i]+" BONCUK / ATIŞ";
             Text(b.transform,selected?"SEÇİLİ · DOKUNARAK VAZGEÇ":cost,145,119,740,33,24,selected?Gold:usable?Ink:Muted);
         }
-        LabelButton(box,"OYUNA DÖN",30,819,924,87,Ink,Cream,()=>CloseModal(),30);
+        LabelButton(box,"OYUNA DÖN",30,1009,924,87,Ink,Cream,()=>CloseModal(),30);
     }
     private void Pause()
     {
@@ -274,19 +394,23 @@ public class MahalleUI : MonoBehaviour
     }
     private void Results()
     {
-        bool won=controller.State==LevelController.LevelState.Won;var box=Modal("Bölüm sonucu",1010);
-        Text(box,won?controller.Level.mastery?"MAHALLE USTASI!":"GÜZEL ATIŞLAR!":"BİR DAHA DENE",30,34,924,77,51,Ink,TextAlignmentOptions.Center);
+        bool won=controller.State==LevelController.LevelState.Won;
+        int need=MahalleProfile.Required(controller.LevelIndex);
+        bool passed=won&&controller.Stars>=need;
+        var box=Modal("Bölüm sonucu",1010);
+        Text(box,won?(controller.LastReward.newBadge||(controller.Level.mastery&&passed)?"MAHALLE USTASI!":"GÜZEL ATIŞLAR!"):"BİR DAHA DENE",30,34,924,77,51,Ink,TextAlignmentOptions.Center);
         Text(box,controller.Level.levelName,30,114,924,47,31,Muted,TextAlignmentOptions.Center);
         for(int i=0;i<3;i++){var star=Art(box,"Sonuç yıldızı "+i,MahalleGraphic.Shape.Star,259+i*163,i==1?184:201,i==1?142:115,i==1?142:115,Line);if(i<controller.Stars&&won)StartCoroutine(RevealStar(star,i));}
         Text(box,controller.Score+" / "+controller.TotalMarbles+" misket çıkardın",30,366,924,64,40,Ink,TextAlignmentOptions.Center);
         string reward=won?"+"+controller.LastReward.beads+" BONCUK":"Kesendeki güçler yardımcı olabilir. Normal misketle de geçebilirsin.";
         Text(box,reward,60,448,864,82,won?38:28,won?Ink:Muted,TextAlignmentOptions.Center);
-        if(controller.LastReward.newBadge)Text(box,Campaign.Districts[controller.Level.district]+" Ustası\n"+(controller.LastReward.newSkin??"Koleksiyonun parlıyor!")+" · KOLEKSİYON ÖDÜLÜ",30,538,924,100,28,Muted,TextAlignmentOptions.Center);
+        if(controller.LastReward.newBadge)Text(box,"MAHALLE TAMAMLANDI · "+controller.LastReward.districtBonus+" BONCUK BONUS\n"+(controller.LastReward.newSkin??"Mahalle misketi zaten kesende")+" · KOLEKSİYON ÖDÜLÜ",30,538,924,100,28,Muted,TextAlignmentOptions.Center);
+        else if(won&&!passed)Text(box,"Sonraki bölümü açmak için "+need+" yıldız gerekiyor.",60,552,864,72,29,new Color(.72f,.32f,.24f),TextAlignmentOptions.Center);
         else Text(box,won?"Yeni rekorlar ve görevler daha fazla boncuk kazandırır.":"İpucu: Alt çizgide yer değiştirip kümeye yandan vur.",60,556,864,68,27,Muted,TextAlignmentOptions.Center);
-        if(won&&controller.HasNextLevel)LabelButton(box,"SONRAKİ BÖLÜM",36,669,912,98,Ink,Cream,()=>controller.LoadNextLevel());
-        else LabelButton(box,won?"MAHALLEYE DÖN":"TEKRAR DENE",36,669,912,98,Ink,Cream,()=>{if(won)controller.OpenLevelSelect();else{CloseModal();controller.RestartLevel();ShowGame();}});
-        LabelButton(box,won?"REKORUNU GELİŞTİR":"MAHALLEYE DÖN",36,791,912,86,new Color(.88f,.83f,.69f),Ink,()=>{if(won){CloseModal();controller.RestartLevel();ShowGame();}else controller.OpenLevelSelect();},30);
-        if(won&&controller.HasNextLevel)LabelButton(box,"MAHALLE HARİTASI",36,898,912,76,Paper,Muted,()=>controller.OpenLevelSelect(),27);
+        if(passed&&controller.HasNextLevel)LabelButton(box,"SONRAKİ BÖLÜM",36,669,912,98,Ink,Cream,()=>controller.LoadNextLevel());
+        else LabelButton(box,passed?"MAHALLEYE DÖN":"TEKRAR DENE",36,669,912,98,Ink,Cream,()=>{if(passed)controller.OpenLevelSelect();else{CloseModal();controller.RestartLevel();ShowGame();}});
+        LabelButton(box,passed?"REKORUNU GELİŞTİR":"MAHALLEYE DÖN",36,791,912,86,new Color(.88f,.83f,.69f),Ink,()=>{if(passed){CloseModal();controller.RestartLevel();ShowGame();}else controller.OpenLevelSelect();},30);
+        if(passed&&controller.HasNextLevel)LabelButton(box,"MAHALLE HARİTASI",36,898,912,76,Paper,Muted,()=>controller.OpenLevelSelect(),27);
     }
     private IEnumerator RevealStar(MahalleGraphic star,int index)
     {

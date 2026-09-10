@@ -146,7 +146,7 @@ public class LevelController : MonoBehaviour
 
         if (arena != null)
         {
-            arena.Configure(level.shape, level.arenaSize, level.rings, level.triangleRows);
+            arena.Configure(level.shape, level.arenaSize, level.rings, level.triangleRows, level.marbles);
             arena.Rebuild();
         }
 
@@ -247,9 +247,29 @@ public class LevelController : MonoBehaviour
 
         if (shooter != null)
         {
-            shooter.ResetTo(level.shooterStartPosition);
+            SettleShooter();
             shooter.ShootingEnabled = true;
         }
         StateChanged?.Invoke();
     }
+
+    // "Yerinde Kal" sadece misket işe yarar bir yerde durduysa geçerlidir.
+    // Çizgiden daha kötü bir noktada kaldıysa hak boşa gitmez, iade edilir.
+    private void SettleShooter()
+    {
+        if (!shooter.KeepsPosition) { shooter.ResetTo(level.shooterStartPosition); return; }
+
+        Vector3 centre = arena != null ? arena.transform.position : Vector3.zero;
+        float fromLine = Vector3.Distance(centre, level.shooterStartPosition);
+        float fromRest = Vector3.Distance(centre, shooter.transform.position);
+        bool worthwhile = fromRest < fromLine - .15f;
+
+        if (worthwhile) { shooter.HoldPosition(); return; }
+
+        MahalleProfile.Refund(MarblePower.Anchor, shooter.AnchorUsedStock);
+        AnchorRefunded?.Invoke();
+        shooter.ResetTo(level.shooterStartPosition);
+    }
+
+    public event Action AnchorRefunded;
 }

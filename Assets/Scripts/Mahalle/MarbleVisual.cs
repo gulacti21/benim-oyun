@@ -8,21 +8,32 @@ public class MarbleVisual : MonoBehaviour
     private int skin;
     public void SetSkin(int index)
     {
-        skin = Mathf.Clamp(index, 0, 5);
-        if (materials == null || materials[0] == null)
+        skin = Mathf.Clamp(index, 0, Campaign.SkinCount - 1);
+        // Materyaller static: sahneler arasi yasiyorlar. Unity sahne degisiminde
+        // kullanilmayan bir materyali temizlerse o slot null kalir ve o desendeki
+        // misket MOR cizilir. Eskiden yalnizca materials[0] kontrol ediliyordu,
+        // bu yuzden hata tek bir miskette gorunuyordu. Artik hepsi kontrol ediliyor.
+        bool rebuild = materials == null || materials.Length != Campaign.SkinCount;
+        if (!rebuild)
+            for (int i = 0; i < materials.Length; i++)
+                if (materials[i] == null) { rebuild = true; break; }
+        if (rebuild)
         {
-            materials = new Material[6];
+            materials = new Material[Campaign.SkinCount];
             Shader shader = Resources.Load<Shader>("Mahalle/Marble");
             if (shader == null) shader = Shader.Find("Universal Render Pipeline/Lit");
-            for (int i=0;i<6;i++)
+            for (int i=0;i<Campaign.SkinCount;i++)
             {
                 materials[i] = new Material(shader);
                 materials[i].SetColor("_BaseColor", Campaign.SkinColors[i]);
-                materials[i].SetColor("_SwirlColor", Color.Lerp(Campaign.SkinColors[(i+2)%6],Color.white,.4f));
+                materials[i].SetColor("_SwirlColor", SpecialMarbles.Accent(i));
                 if (materials[i].HasProperty("_Smoothness")) materials[i].SetFloat("_Smoothness",.95f);
             }
         }
-        var renderer = GetComponent<Renderer>(); if (renderer != null) renderer.sharedMaterial = materials[skin];
+        var renderer = GetComponent<Renderer>();
+        // Null materyal = mor obje. Olmasi gerekmiyor ama olursa sessizce mor birakmayalim.
+        if (renderer != null && materials[skin] != null) renderer.sharedMaterial = materials[skin];
+        else if (renderer != null) Debug.LogWarning("MISKETR: misket materyali yok, desen "+skin);
     }
     private void Start()
     {

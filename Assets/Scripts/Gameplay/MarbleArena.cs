@@ -81,8 +81,11 @@ public class MarbleArena : MonoBehaviour
         }
     }
 
-    public void Configure(ArenaShape newShape, float newSize, MarbleRing[] rings, int rows)
+    private MarbleSpot[] handPlaced;
+
+    public void Configure(ArenaShape newShape, float newSize, MarbleRing[] rings, int rows, MarbleSpot[] spots = null)
     {
+        handPlaced = spots;
         shape = newShape;
         size = Mathf.Max(0.5f, newSize);
 
@@ -252,7 +255,11 @@ public class MarbleArena : MonoBehaviour
             return;
         }
 
-        if (shape == ArenaShape.Triangle)
+        if (handPlaced != null && handPlaced.Length > 0)
+        {
+            SpawnHandPlaced();
+        }
+        else if (shape == ArenaShape.Triangle)
         {
             SpawnTriangleRack();
         }
@@ -263,6 +270,18 @@ public class MarbleArena : MonoBehaviour
 
         totalMarbles = activeMarbles.Count;
         ScoreChanged?.Invoke(score, totalMarbles);
+    }
+
+    // Tasarımcının elle koyduğu yerleşim. Formül yok, her misket bilerek oraya konmuştur.
+    private void SpawnHandPlaced()
+    {
+        Vector3 center = transform.position;
+        for (int i = 0; i < handPlaced.Length; i++)
+        {
+            MarbleSpot spot = handPlaced[i];
+            Vector3 position = new Vector3(center.x + spot.x, spawnHeight, center.z + spot.z);
+            SpawnMarbleAt(position, "TargetMarble_h" + i);
+        }
     }
 
     private void SpawnTriangleRack()

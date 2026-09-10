@@ -10,19 +10,29 @@ public class ShotController : MonoBehaviour
     [SerializeField] private float grabRadius = 1.15f;
     [SerializeField] private float minPullDistance = .15f;
     [SerializeField] private float maxPullDistance = 2.6f;
-    [SerializeField] private float maxShotImpulse = .5f;
+    [SerializeField] private float maxShotImpulse = .65f;
     [SerializeField] private float restSpeedThreshold = .2f;
     [SerializeField] private Camera gameCamera;
     [SerializeField] private AimIndicator aimIndicator;
     [SerializeField] private ShooterLine shooterLine;
     private Rigidbody body;
+    private SpecialMarblePhysics special;
+    private int pendingWearSkin;
+    private MarblePower pendingWearPower;
+    public int ActiveSkin=>special!=null?special.ActiveSkin:MahalleProfile.EffectiveSkin;
     private Plane aimPlane;
     private bool isAiming, hasPendingImpulse, shootingEnabled = true;
     private Vector3 pullPoint, pendingImpulse, defaultScale;
     private float defaultMass;
     private readonly List<RaycastResult> uiHits = new List<RaycastResult>();
+    private bool keepsPosition, positionLocked, anchorUsedStock;
     public event Action ShotFired;
     public bool IsAiming => isAiming;
+    // Bu atıştan sonra misket çizgiye dönmeyecek mi?
+    public bool KeepsPosition => keepsPosition;
+    public bool AnchorUsedStock => anchorUsedStock;
+    // Misket çemberin içinde beklerken çizgiye dokunarak yer değiştirilemez.
+    public bool PositionLocked => positionLocked;
     public float Power { get; private set; }
     public MarblePower SelectedPower { get; private set; } = MarblePower.None;
     public bool ShootingEnabled
@@ -35,27 +45,43 @@ public class ShotController : MonoBehaviour
     {
         body = GetComponent<Rigidbody>(); defaultScale = transform.localScale; defaultMass = body.mass;
         if (gameCamera == null) gameCamera = Camera.main;
+        special=GetComponent<SpecialMarblePhysics>();if(special==null)special=gameObject.AddComponent<SpecialMarblePhysics>();
         grabRadius = 1.15f; maxPullDistance = 2.6f;
     }
     public void ResetTo(Vector3 position)
     {
         CancelAim(); hasPendingImpulse = false; pendingImpulse = Vector3.zero;
         if (body == null) Awake();
-        SelectedPower = MarblePower.None; transform.localScale = defaultScale; body.mass = defaultMass;
+        SelectedPower = MarblePower.None; special.Apply(SelectedPower);
+        keepsPosition = false; positionLocked = false; anchorUsedStock = false;
         body.linearVelocity = Vector3.zero; body.angularVelocity = Vector3.zero;
+        position.y=transform.localScale.y*.5f+.01f;
         transform.SetPositionAndRotation(position, Quaternion.identity); body.position = position; body.rotation = Quaternion.identity;
-        var visual = GetComponent<MarbleVisual>(); if (visual != null) visual.SetSkin(MahalleProfile.Data.selectedSkin);
+        var visual = GetComponent<MarbleVisual>(); if (visual != null) visual.SetSkin(MahalleProfile.EffectiveSkin);
+    }
+
+    // "Yerinde Kal" kullanıldığında misket bulunduğu noktada bırakılır.
+    // Sadece bir tur geçerlidir: sonraki atıştan sonra yine çizgiye döner.
+    public void HoldPosition()
+    {
+        CancelAim(); hasPendingImpulse = false; pendingImpulse = Vector3.zero;
+        if (body == null) Awake();
+        SelectedPower = MarblePower.None; special.Apply(SelectedPower);
+        keepsPosition = false; anchorUsedStock = false; positionLocked = true;
+        body.linearVelocity = Vector3.zero; body.angularVelocity = Vector3.zero;
+        Vector3 rest = body.position; rest.y = transform.localScale.y * .5f + .01f;
+        body.position = rest; transform.position = rest; body.rotation = Quaternion.identity;
+        var visual = GetComponent<MarbleVisual>(); if (visual != null) visual.SetSkin(MahalleProfile.EffectiveSkin);
     }
     public bool SelectPower(MarblePower power)
     {
         if (!ShootingEnabled || isAiming || !AtRest) return false;
         if (power != MarblePower.None && !MahalleProfile.CanUse(power)) return false;
         SelectedPower = SelectedPower == power ? MarblePower.None : power;
-        transform.localScale = defaultScale * (SelectedPower == MarblePower.Big ? 1.65f : 1f);
-        body.mass = defaultMass * (SelectedPower == MarblePower.Big ? 2f : SelectedPower == MarblePower.Iron ? 2.6f : 1f);
+        special.Apply(SelectedPower);
         Vector3 p = body.position; p.y = transform.localScale.y * .5f + .01f; body.position = p; transform.position = p;
         var visual = GetComponent<MarbleVisual>();
-        if (visual != null) visual.SetSkin(SelectedPower == MarblePower.Iron ? 5 : MahalleProfile.Data.selectedSkin);
+        if (visual != null) visual.SetSkin(SelectedPower == MarblePower.Iron ? 5 : MahalleProfile.EffectiveSkin);
         return true;
     }
     public void CancelAim() { isAiming = false; Power = 0; if (aimIndicator != null) aimIndicator.Hide(); }
@@ -72,7 +98,9 @@ public class ShotController : MonoBehaviour
     private void FixedUpdate()
     {
         if (!hasPendingImpulse) return;
-        hasPendingImpulse = false; body.AddForce(pendingImpulse, ForceMode.Impulse);
+        hasPendingImpulse = false;
+        MahalleProfile.RecordMarbleShot(pendingWearSkin,pendingWearPower);
+        body.AddForce(pendingImpulse, ForceMode.Impulse);
     }
     private bool OverUI(Vector2 point)
     {
@@ -86,7 +114,7 @@ public class ShotController : MonoBehaviour
         Vector3 flat = transform.position; flat.y = world.y;
         if (Vector3.Distance(world, flat) > grabRadius)
         {
-            if (shooterLine != null && shooterLine.IsNear(world))
+            if (!positionLocked && shooterLine != null && shooterLine.IsNear(world))
             {
                 var position = shooterLine.ClampToLine(world, transform.position.y);
                 body.position = position; transform.position = position;
@@ -105,9 +133,15 @@ public class ShotController : MonoBehaviour
     {
         GetShot(out var direction, out var power);
         CancelAim();
-        if (power <= 0 || !MahalleProfile.Consume(SelectedPower)) return;
+        bool usedStock;
+        MarblePower fired = SelectedPower;
+        if (power <= 0 || !MahalleProfile.Consume(fired, out usedStock)) return;
+        keepsPosition = fired == MarblePower.Anchor;
+        anchorUsedStock = usedStock;
+        positionLocked = false;
         float multiplier = SelectedPower == MarblePower.Big ? 2.3f : SelectedPower == MarblePower.Iron ? 2.5f : 1f;
-        pendingImpulse = direction * (maxShotImpulse * power * multiplier); hasPendingImpulse = true;
+        pendingWearSkin=special.ActiveSkin;pendingWearPower=fired;
+        pendingImpulse = direction * (maxShotImpulse * power * multiplier * special.ImpulseMultiplier); hasPendingImpulse = true;
         if (SfxPlayer.Instance != null) SfxPlayer.Instance.PlayShot(power);
         MahalleFeedback.Tap();
         shootingEnabled = false;
