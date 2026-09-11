@@ -20,13 +20,13 @@ public static class DistrictRewardVerify
                 var r=MahalleProfile.Finish(final,1,1);
                 Check(!r.newBadge&&r.districtBonus==0&&!data.districtRewards[d]&&!data.skins[d+1],"One-star final no milestone "+d);
                 r=MahalleProfile.Finish(final,2,Campaign.Database.Get(final).twoStarTarget);
-                Check(r.newBadge&&r.districtBonus==35&&r.beads==43&&data.districtRewards[d]&&data.skins[d+1],"Two-star improvement grants milestone once "+d);
+                Check(r.newBadge&&r.districtBonus==35&&r.beads==38&&data.districtRewards[d]&&data.skins[d+1],"Two-star improvement grants milestone once "+d);
                 int wallet=data.beads;
                 r=MahalleProfile.Finish(final,2,1);
-                Check(!r.newBadge&&r.districtBonus==0&&data.beads==wallet+3,"Replay only pays normal replay reward "+d);
+                Check(!r.newBadge&&r.districtBonus==0&&data.beads==wallet,"Replay pays nothing without a new star "+d);
                 var saved=JsonUtility.FromJson<MahalleSave>(JsonUtility.ToJson(data));MahalleProfile.SetTestData(saved);
                 r=MahalleProfile.Finish(final,3,1);
-                Check(!r.newBadge&&r.districtBonus==0&&r.beads==8&&saved.districtRewards[d],"Reload and star upgrade cannot repeat milestone "+d);
+                Check(!r.newBadge&&r.districtBonus==0&&r.beads==3&&saved.districtRewards[d],"Reload and star upgrade cannot repeat milestone "+d);
             }
             var missing=new MahalleSave();MahalleProfile.SetTestData(missing);
             for(int i=24;i<36;i++)missing.stars[i]=MahalleProfile.Required(i);
@@ -46,7 +46,7 @@ public static class DistrictRewardVerify
             var run=new MahalleSave();MahalleProfile.SetTestData(run);
             int bonus=0;
             for(int i=0;i<36;i++) bonus+=MahalleProfile.Finish(i,MahalleProfile.Required(i),1).districtBonus;
-            Check(run.beads==1080&&bonus==105,"Minimum first-three-district income is 1080 before spending and missions");
+            Check(run.beads==478&&bonus==105,"Minimum first-three-district income is 478 before spending and missions");
             return count;
         }
         finally { MahalleProfile.SetTestData(previous);MahalleProfile.TestMode=wasTest; }

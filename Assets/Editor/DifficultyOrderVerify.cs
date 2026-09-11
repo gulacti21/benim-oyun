@@ -11,7 +11,7 @@ using UnityEngine;
 public static class DifficultyOrderVerify
 {
     private static int passed, failed;
-    private static readonly string[] Districts = { "Apartman Onu", "Okul Bahcesi", "Park" };
+    private static readonly string[] Districts = { "Apartman Onu", "Okul Bahcesi", "Park", "Toprak Saha", "Mahalle Meydani" };
 
     [MenuItem("MISKETR/Verify Difficulty Order")]
     public static void Run()
@@ -19,8 +19,8 @@ public static class DifficultyOrderVerify
         passed = 0; failed = 0;
         var db = Campaign.Database;
 
-        // Elle tasarlanmis ilk uc mahalle. Toprak Saha ve Meydan hala formulle uretiliyor.
-        for (int district = 0; district < 3; district++)
+        // Bes mahallenin altmis bolumu de artik elle tasarlandi.
+        for (int district = 0; district < Districts.Length; district++)
             for (int local = 0; local < 12; local++)
             {
                 var l = db.Get(district * 12 + local);

@@ -8,7 +8,7 @@ public class MahalleGraphic : MaskableGraphic
     public enum Shape
     {
         Panel, Circle, Star, Marble, Lock, Bag, House, Arrow, Triangle, Ring, Hand,
-        ChalkRing, Chevron, TabMap, TabTask
+        ChalkRing, ChalkTriangle, Chevron, TabMap, TabTask
     }
 
     public Shape shape;
@@ -25,10 +25,21 @@ public class MahalleGraphic : MaskableGraphic
     public bool dashed;
     [Tooltip("Tebeşir çemberinin kalınlığı. 0 ise genişliğe göre hesaplanır.")]
     public float stroke;
+    [Tooltip("Tebeşir çemberinin ne kadarının çizildiği. 1 = tam çember. Açılış animasyonu bunu 0'dan 1'e götürür.")]
+    [Range(0f, 1f)] public float progress = 1f;
     [Tooltip("Oku yatayda çevirir. Kutunun ortasına göre aynalar.")]
     public bool mirror;
 
     private Color Bottom { get { return colorB.a > .001f ? colorB : color; } }
+
+    // Açılış animasyonu bunu çağırır: değeri yazar ve çizimi tazeler.
+    public void SetProgress(float value)
+    {
+        value = Mathf.Clamp01(value);
+        if (Mathf.Approximately(progress, value)) return;
+        progress = value;
+        SetVerticesDirty();
+    }
 
     protected override void OnPopulateMesh(VertexHelper vh)
     {
@@ -135,15 +146,66 @@ public class MahalleGraphic : MaskableGraphic
                 float rx = w * .5f, ry = h * .5f;
                 float tw = stroke > 0f ? stroke : Mathf.Max(2f, w * .045f);
                 const int seg = 72;
+                float p = Mathf.Clamp01(progress);
+                if (p <= 0f) break;
+                float drawn = seg * p;
+                const float top = Mathf.PI * .5f;
                 for (int i = 0; i < seg; i++)
                 {
+                    if (i >= drawn) break;
                     if (dashed && (i % 6) >= 4) continue;
-                    float a = i * Mathf.PI * 2 / seg, b = (i + 1) * Mathf.PI * 2 / seg;
-                    float k1 = 1f + Mathf.Sin(i * 2.3f) * .022f + Mathf.Sin(i * .7f) * .012f;
-                    float k2 = 1f + Mathf.Sin((i + 1) * 2.3f) * .022f + Mathf.Sin((i + 1) * .7f) * .012f;
-                    float t1 = tw * (.82f + .3f * Mathf.Abs(Mathf.Sin(i * 1.7f)));
+                    // Son parça kesirli çizilir: tebeşir kesik kesik değil akıcı ilerler.
+                    float f = Mathf.Min(1f, drawn - i);
+                    float a = top - i * Mathf.PI * 2 / seg;
+                    float b = top - (i + f) * Mathf.PI * 2 / seg;
+                    float k1 = 1f + Mathf.Sin(i * 2.3f) * .005f + Mathf.Sin(i * .7f) * .003f;
+                    float kn = 1f + Mathf.Sin((i + 1) * 2.3f) * .005f + Mathf.Sin((i + 1) * .7f) * .003f;
+                    float k2 = Mathf.Lerp(k1, kn, f);
+                    // Tebeşir dokusu artık yamuklukta değil kalınlık ve koyulukta:
+                    // çizgi gerçek bir yuvarlak ama bastırma gücü boyunca değişiyor.
+                    float t1 = tw * (.70f + .45f * Mathf.Abs(Mathf.Sin(i * 1.7f)));
+                    var ink = color; ink.a *= .72f + .28f * Mathf.Abs(Mathf.Sin(i * 3.1f + 1.2f));
                     Stroke(vh, c + new Vector2(Mathf.Cos(a) * rx * k1, Mathf.Sin(a) * ry * k1),
-                               c + new Vector2(Mathf.Cos(b) * rx * k2, Mathf.Sin(b) * ry * k2), t1, color);
+                               c + new Vector2(Mathf.Cos(b) * rx * k2, Mathf.Sin(b) * ry * k2), t1, ink);
+                }
+                break;
+            }
+
+            // Çemberin içindeki misket üçgeni. Tepe noktasından başlar, saat
+            // yönünde çizilir; progress ile üç kenar sırayla tamamlanır.
+            case Shape.ChalkTriangle:
+            {
+                float pt = Mathf.Clamp01(progress);
+                if (pt <= 0f) break;
+                float tt = stroke > 0f ? stroke : Mathf.Max(2f, w * .04f);
+                Vector2[] corner =
+                {
+                    c + new Vector2(0, h * .42f),
+                    c + new Vector2(w * .40f, -h * .28f),
+                    c + new Vector2(-w * .40f, -h * .28f)
+                };
+                const int per = 16;                 // kenar başına parça
+                float total = 3 * per * pt;
+                for (int side = 0; side < 3; side++)
+                {
+                    Vector2 from = corner[side], to = corner[(side + 1) % 3];
+                    Vector2 dir = (to - from).normalized;
+                    Vector2 nrm = new Vector2(-dir.y, dir.x);
+                    for (int i = 0; i < per; i++)
+                    {
+                        int step = side * per + i;
+                        if (step >= total) { side = 3; break; }
+                        float f = Mathf.Min(1f, total - step);
+                        float u0 = i / (float)per, u1 = (i + f) / per;
+                        // Elle çizilmiş çizgi: kenar boyunca minik sapma.
+                        float w0 = Mathf.Sin(step * 1.9f) * tt * .22f;
+                        float w1 = Mathf.Sin((step + 1) * 1.9f) * tt * .22f;
+                        Vector2 a0 = Vector2.Lerp(from, to, u0) + nrm * w0;
+                        Vector2 a1 = Vector2.Lerp(from, to, u1) + nrm * Mathf.Lerp(w0, w1, f);
+                        float th = tt * (.70f + .45f * Mathf.Abs(Mathf.Sin(step * 1.3f)));
+                        var ink = color; ink.a *= .72f + .28f * Mathf.Abs(Mathf.Sin(step * 2.7f));
+                        Stroke(vh, a0, a1, th, ink);
+                    }
                 }
                 break;
             }

@@ -23,7 +23,7 @@ public static class Campaign
         "Küçük ve ağır. Dar aralıktan sert vurur.",
         "İlk temas noktasını gösterir. Hassas nişan al.",
         "Bu atıştan sonra çizgiye dönmezsin. Misketin durduğu yerden devam edersin, sadece bir tur." };
-    public static readonly int[] PowerPrices = { 12, 10, 8, 25 };
+    public static readonly int[] PowerPrices = { 16, 14, 10, 32 };
     private static LevelDatabase cached;
 
     public static LevelDatabase Database

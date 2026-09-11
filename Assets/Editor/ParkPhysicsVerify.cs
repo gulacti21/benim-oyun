@@ -95,6 +95,8 @@ public static class ParkPhysicsVerify
     private static bool testSpecials = true;
     // Kalibrasyon modu: ayni bolumu farkli atis guclerinde tarar.
     private static bool calibrating;
+    // Batchmode pompasi icin: is devam ediyor mu?
+    private static bool busy;
     private static readonly float[] CalibrationImpulses = { .55f, .65f, .75f, .85f };
 
     [MenuItem("MISKETR/Verify Park Physics Routes")]
@@ -120,7 +122,17 @@ public static class ParkPhysicsVerify
 
     // Sadece son turda degisen bolumler. Degismeyenlerin tavani zaten olculdu,
     // tekrar taramak bosuna. Her yerlesim degisikliginden sonra bu liste guncellenir.
-    private static readonly int[] ChangedLevels = { 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47 };  // Toprak Saha
+    private static readonly int[] ChangedLevels = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59 };  // TAM DENETIM: 60 bolum, guc ve ozel misketlerle
+
+    // Mahalle Meydani (5. mahalle) tek basina.
+    [MenuItem("MISKETR/Verify Mahalle Meydani")]
+    public static void RunMeydan()
+    {
+        var list = new int[12];
+        for (int i = 0; i < 12; i++) list[i] = 48 + i;
+        testSpecials = true; calibrating = false;
+        Begin(list, "MeydanPhysicsVerify.txt");
+    }
 
     [MenuItem("MISKETR/Verify Changed Levels")]
     public static void RunChanged()
@@ -129,11 +141,33 @@ public static class ParkPhysicsVerify
         Begin(ChangedLevels, "ChangedLevelsVerify.txt");
     }
 
+    // ---------- Batchmode girisleri ----------
+    // Unity'yi komut satirindan (-batchmode -executeMethod) calistirinca
+    // EditorApplication.update hic tiklamaz, is hic baslamaz. Bu yuzden
+    // batchmode'da Step()'i burada elle donduruyoruz. Menuden calistirmayi
+    // hicbir sekilde degistirmez.
+    public static void BatchChanged() { RunChanged(); Pump(); }
+    public static void BatchMeydan()  { RunMeydan();  Pump(); }
+    public static void BatchAll()     { RunAll();     Pump(); }
+    public static void BatchPark()    { RunPark();    Pump(); }
+    public static void BatchFinals()  { RunFinals();  Pump(); }
+
+    private static void Pump()
+    {
+        EditorApplication.update -= Step;   // kuyrugu biz suruyoruz
+        long guard = 0;
+        while (busy)
+        {
+            Step();
+            if (++guard > 200000000L) { Debug.LogError("PHYSICS_ABORT: pompa guvenlik siniri."); Finish(); break; }
+        }
+    }
+
     [MenuItem("MISKETR/Verify All Designed Levels")]
     public static void RunAll()
     {
-        var list = new int[48];   // Apartman, Okul, Park, Toprak Saha
-        for (int i = 0; i < 48; i++) list[i] = i;
+        var list = new int[Campaign.Count];   // bes mahalle, 60 bolum
+        for (int i = 0; i < list.Length; i++) list[i] = i;
         testSpecials = false; calibrating = false; // 36 bolum x 5 misket cok uzun surer
         Begin(list, "AllLevelsPhysicsVerify.txt");
     }
@@ -159,6 +193,7 @@ public static class ParkPhysicsVerify
                              "). Sonuclar oyunla ayni fizigi anlatmaz.");
 
         Cleanup();
+        busy = true;
         levelQueue = levels; levelQ = 0; outputName = fileName;
         report.Clear(); variantsLeft.Clear(); variantNotes.Clear(); ledger.Clear();
         level = null; simCount = 0; normalScore = -1;
@@ -281,7 +316,7 @@ public static class ParkPhysicsVerify
         else if (normalScore >= three) verdict = "SARI · 3 yildiz da normal misketle aliniyor, ozel misket bu bolumde bir sey katmiyor";
         else
         {
-            bool any = false; foreach (var n in variantNotes) if (n.EndsWith(" VAR")) any = true;
+            bool any = false; foreach (var n in variantNotes) if (n.Contains("(3y)")) any = true;
             verdict = any ? "YESIL · gecis normal misketle, 3 yildiz ozel miskete birakilmis"
                           : "SARI · 3 yildizi hicbir misket bulamadi, hedef fazla yuksek olabilir";
         }
@@ -349,6 +384,7 @@ public static class ParkPhysicsVerify
 
     private static void Finish()
     {
+        busy = false;
         EditorApplication.update -= Step;
         EditorUtility.ClearProgressBar();
         EndRun();

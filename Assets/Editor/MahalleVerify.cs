@@ -33,22 +33,22 @@ public static class MahalleVerify
             }
             Check(MahalleProfile.Unlocked(0)&&!MahalleProfile.Unlocked(1),"New profile only unlocks first level");
             var reward=MahalleProfile.Finish(0,2,4);
-            Check(reward.beads==30&&data.beads==90&&MahalleProfile.Unlocked(1),"First win rewards and unlocks atomically");
+            Check(reward.beads==12&&data.beads==52&&MahalleProfile.Unlocked(1),"First win rewards and unlocks atomically");
             reward=MahalleProfile.Finish(0,1,3);
-            Check(reward.beads==3&&data.stars[0]==2,"Replay cannot lower record or repeat first win reward");
+            Check(reward.beads==0&&data.stars[0]==2,"Replay cannot lower record or repeat first win reward");
             reward=MahalleProfile.Finish(0,3,6);
-            Check(reward.beads==8&&data.stars[0]==3,"Only incremental stars are rewarded");
+            Check(reward.beads==3&&data.stars[0]==3,"Only incremental stars are rewarded");
             int wallet=data.beads;Check(MahalleProfile.Consume(MarblePower.Big)&&data.stock[0]==0&&data.beads==wallet,"Free trial precedes spending");
-            Check(MahalleProfile.Consume(MarblePower.Big)&&data.beads==wallet-12,"Power charged once");
+            Check(MahalleProfile.Consume(MarblePower.Big)&&data.beads==wallet-16,"Power charged once");
             data.beads=0;Check(!MahalleProfile.Consume(MarblePower.Big)&&data.beads==0,"Insufficient funds never go negative");
             Check(MahalleProfile.Consume(MarblePower.None)&&data.beads==0,"Normal shot always available");
             data.beads=100;Check(MahalleProfile.EquipOrBuy(1)&&data.beads==60&&data.selectedSkin==1,"Skin purchase equips");
             Check(MahalleProfile.EquipOrBuy(1)&&data.beads==60,"Owned skin never charged twice");
             Check(!MahalleProfile.EquipOrBuy(5)&&data.beads==60,"Unaffordable skin refused");
-            data.wins=3;Check(MahalleProfile.Claim(0)&&data.beads==90,"Completed mission reward");
+            data.wins=10;Check(MahalleProfile.Claim(0)&&data.beads==90,"Completed mission reward");
             Check(!MahalleProfile.Claim(0)&&data.beads==90,"Mission cannot be claimed twice");
             reward=MahalleProfile.Finish(11,1,3);Check(!reward.newBadge&&reward.districtBonus==0,"Incomplete final never awards district bonus");
-            reward=MahalleProfile.Finish(11,1,3);Check(!reward.newBadge&&reward.beads==3,"Mastery bonus paid once");
+            reward=MahalleProfile.Finish(11,1,3);Check(!reward.newBadge&&reward.beads==0,"Mastery bonus paid once");
             var roundTrip=JsonUtility.FromJson<MahalleSave>(JsonUtility.ToJson(data));
             Check(roundTrip.beads==data.beads&&roundTrip.stars[11]==1&&roundTrip.selectedSkin==1&&roundTrip.claimed[0],"Save round trip retains economy, progression and collection");
             checks += SpecialMarblesVerify.RunChecks();

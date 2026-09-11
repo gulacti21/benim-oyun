@@ -16,6 +16,11 @@ public class MahalleUI : MonoBehaviour
     private MahalleGraphic powerFill;
     private RectTransform hand;
     private int district,tab,lastScore=-1,lastShots=-1;
+    // Açılış ekranı uygulama başına BİR kez gösterilir. Bölümden çıkıp
+    // mahalleye dönmek LevelSelect sahnesini yeniden yüklüyor; bu bayrak
+    // olmadan oyuncu her dönüşünde tebeşir animasyonunu baştan izlerdi.
+    // static olduğu için sahne değişimlerini aşar, uygulama kapanınca sıfırlanır.
+    private static bool titleShown;
     private bool resultShown;
     public RectTransform Root => root;
     private void Start()
@@ -29,7 +34,7 @@ public class MahalleUI : MonoBehaviour
         controller=FindFirstObjectByType<LevelController>();
         if(controller!=null)controller.AnchorRefunded+=()=>Toast("Misketin işe yarar bir yerde kalmadı. Hakkın iade edildi.");
         district=MahalleProfile.NextLevel/Campaign.PerDistrict;
-        if(controller==null)ShowHome();else ShowGame();
+        if(controller!=null)ShowGame();else if(titleShown)ShowHome();else ShowTitle();
         // Test yapisi damgasi. Bu yazi ekranda goruniyorsa bu build yayinlanamaz.
         if(MahalleProfile.TestUnlockAllLevels)
         {
@@ -97,6 +102,156 @@ public class MahalleUI : MonoBehaviour
             Text(b.transform,names[i],10,80,311,36,24,on?Gold:faded,TextAlignmentOptions.Center);
         }
     }
+    // ---------------------------------------------------------------
+    // AÇILIŞ EKRANI
+    // Mahallede biri yere tebeşirle çemberi çiziyor, misketler çembere
+    // düşüyor, sonra menü açılıyor. Hiçbir görsel dosya kullanılmaz;
+    // çember de misketler de MahalleGraphic ile çizilir.
+    // ---------------------------------------------------------------
+    private void ShowTitle()
+    {
+        titleShown=true;
+        ClearPage();
+        Background(new Color(.14f, .12f, .10f));
+
+        var ring = Art(page, "Tebeşir çemberi", MahalleGraphic.Shape.ChalkRing, 190, 430, 700, 700, new Color(1, .98f, .92f, .92f));
+        ring.stroke = 9f;
+        ring.progress = 0f;
+
+        // Tebeşirin ucu: çizerken çemberin üstünde gezer, bitince kaybolur.
+        var tip = Art(page, "Tebeşir ucu", MahalleGraphic.Shape.Circle, 0, 0, 26, 26, new Color(1, 1, .96f, .9f));
+        tip.radius = 13;
+
+        // Çemberin içindeki misket üçgeni, o da tebeşirle.
+        var tri = Art(page, "Tebeşir üçgeni", MahalleGraphic.Shape.ChalkTriangle, 320, 580, 440, 400, new Color(1, .98f, .92f, .78f));
+        tri.stroke = 7f;
+        tri.progress = 0f;
+
+        // Üçgenin içine dizilen altı misket: 1-2-3 ıstaka.
+        float[,] spots = { { 540, 682 }, { 499, 764 }, { 581, 764 }, { 458, 846 }, { 540, 846 }, { 622, 846 } };
+        var marbles = new MahalleGraphic[spots.GetLength(0)];
+        for (int i = 0; i < marbles.Length; i++)
+        {
+            var col = Campaign.SkinColors[i % 6];
+            marbles[i] = Art(page, "Misket " + i, MahalleGraphic.Shape.Marble, spots[i, 0] - 37, spots[i, 1] - 37, 74, 74, col);
+            marbles[i].accent = Color.Lerp(col, Color.white, .55f);
+            marbles[i].transform.localScale = Vector3.zero;
+        }
+
+        // Başlık ve menü: çember kapanana kadar görünmezler.
+        var head = Rect("Başlık", page); Stretch(head);
+        var headFade = head.gameObject.AddComponent<CanvasGroup>(); headFade.alpha = 0f;
+        Text(head, "MİSKETR", 0, 150, 1080, 150, 116, new Color(1, .98f, .92f), TextAlignmentOptions.Center);
+        Text(head, "mahallenin en iyi nişancısı kim?", 0, 292, 1080, 50, 31, new Color(1, .97f, .89f, .62f), TextAlignmentOptions.Center);
+
+        var menu = Rect("Menü", page); Stretch(menu);
+        var menuFade = menu.gameObject.AddComponent<CanvasGroup>(); menuFade.alpha = 0f; menuFade.interactable = false; menuFade.blocksRaycasts = false;
+
+        int next = MahalleProfile.NextLevel;
+        bool resume = next > 0 && MahalleProfile.Data.stars[0] > 0;
+        string playText = resume
+            ? "DEVAM ET · " + Campaign.Districts[next / Campaign.PerDistrict].ToUpperInvariant() + " " + (next % Campaign.PerDistrict + 1).ToString("00")
+            : "OYNA";
+        LabelButton(menu, playText, 90, 1245, 900, 132, Gold, new Color(.16f, .20f, .16f), () => { tab = 0; district = next / Campaign.PerDistrict; ShowHome(); }, resume ? 38 : 46);
+        LabelButton(menu, "KESEM", 90, 1398, 435, 104, new Color(.24f, .34f, .30f), Cream, () => { tab = 1; ShowHome(); }, 32);
+        LabelButton(menu, "GÖREVLER", 555, 1398, 435, 104, new Color(.24f, .34f, .30f), Cream, () => { tab = 2; ShowHome(); }, 32);
+        LabelButton(menu, "AYARLAR", 90, 1523, 900, 96, new Color(.20f, .25f, .23f), new Color(1, .97f, .89f, .82f), Settings, 30);
+
+        // Boncuk kesesi sağ üstte.
+        var wallet = Panel(menu, "Boncuk", 805, 35, 225, 76, new Color(.20f, .25f, .23f));
+        Art(wallet.transform, "Boncuk simgesi", MahalleGraphic.Shape.Marble, 18, 16, 44, 44, Gold);
+        beadsLabel = Text(wallet.transform, MahalleProfile.Data.beads.ToString(), 78, 0, 130, 76, 36, Cream);
+
+        StartCoroutine(DrawTitle(ring, tri, tip, marbles, headFade, menuFade));
+    }
+
+    private IEnumerator DrawTitle(MahalleGraphic ring, MahalleGraphic tri, MahalleGraphic tip, MahalleGraphic[] marbles, CanvasGroup head, CanvasGroup menu)
+    {
+        var ringRect = ring.rectTransform;
+        Vector2 centre = ringRect.anchoredPosition + new Vector2(ringRect.sizeDelta.x * .5f, -ringRect.sizeDelta.y * .5f);
+        float rx = ringRect.sizeDelta.x * .5f, ry = ringRect.sizeDelta.y * .5f;
+        var tipRect = tip.rectTransform;
+
+        // 1) Çember çiziliyor. Sona doğru yavaşlar: el kalemi kaldırıyormuş gibi.
+        const float draw = 1.15f;
+        for (float t = 0f; t < draw; t += Time.unscaledDeltaTime)
+        {
+            float k = Mathf.SmoothStep(0f, 1f, t / draw);
+            ring.SetProgress(k);
+            float a = Mathf.PI * .5f - k * Mathf.PI * 2f;
+            tipRect.anchoredPosition = centre + new Vector2(Mathf.Cos(a) * rx, Mathf.Sin(a) * ry) - new Vector2(13, -13);
+            yield return null;
+        }
+        ring.SetProgress(1f);
+        if (SfxPlayer.Instance != null) SfxPlayer.Instance.PlayUiTap();
+
+        yield return new WaitForSecondsRealtime(.1f);
+
+        // 2) Tebeşir üçgene geçiyor. Uç, üç kenarı sırayla yürüyor.
+        var triRect = tri.rectTransform;
+        Vector2 triCentre = triRect.anchoredPosition + new Vector2(triRect.sizeDelta.x * .5f, -triRect.sizeDelta.y * .5f);
+        float tw2 = triRect.sizeDelta.x, th2 = triRect.sizeDelta.y;
+        Vector2[] corner =
+        {
+            triCentre + new Vector2(0, th2 * .42f),
+            triCentre + new Vector2(tw2 * .40f, -th2 * .28f),
+            triCentre + new Vector2(-tw2 * .40f, -th2 * .28f)
+        };
+        const float triDraw = .7f;
+        for (float t = 0f; t < triDraw; t += Time.unscaledDeltaTime)
+        {
+            float k = t / triDraw;
+            tri.SetProgress(k);
+            float walk = k * 3f;
+            int side = Mathf.Min(2, (int)walk);
+            tipRect.anchoredPosition = Vector2.Lerp(corner[side], corner[(side + 1) % 3], walk - side) - new Vector2(13, -13);
+            yield return null;
+        }
+        tri.SetProgress(1f);
+        tip.color = new Color(1, 1, .96f, 0);
+        if (SfxPlayer.Instance != null) SfxPlayer.Instance.PlayUiTap();
+
+        yield return new WaitForSecondsRealtime(.12f);
+
+        // 3) Misketler üçgene diziliyor, biri diğerinin ardından.
+        for (int i = 0; i < marbles.Length; i++)
+        {
+            StartCoroutine(PopMarble(marbles[i].transform));
+            yield return new WaitForSecondsRealtime(.07f);
+        }
+
+        yield return new WaitForSecondsRealtime(.18f);
+
+        // 4) Başlık, sonra menü.
+        yield return Fade(head, .35f);
+        yield return Fade(menu, .3f);
+        menu.interactable = true; menu.blocksRaycasts = true;
+    }
+
+    private IEnumerator PopMarble(Transform marble)
+    {
+        const float dur = .26f;
+        for (float t = 0f; t < dur; t += Time.unscaledDeltaTime)
+        {
+            float k = t / dur;
+            // Hafif taşan bir yay: misket yere düşüp bir kez zıplıyormuş gibi.
+            float scale = 1f + Mathf.Sin(k * Mathf.PI) * .22f - Mathf.Pow(1f - k, 2f);
+            marble.localScale = Vector3.one * Mathf.Max(0f, scale);
+            yield return null;
+        }
+        marble.localScale = Vector3.one;
+    }
+
+    private IEnumerator Fade(CanvasGroup group, float duration)
+    {
+        for (float t = 0f; t < duration; t += Time.unscaledDeltaTime)
+        {
+            group.alpha = Mathf.Clamp01(t / duration);
+            yield return null;
+        }
+        group.alpha = 1f;
+    }
+
     private void ShowHome()
     {
         ClearPage();
@@ -262,7 +417,7 @@ public class MahalleUI : MonoBehaviour
         buy.interactable=!selected&&!worn;
         if(special)
         {
-            var repair=LabelButton(card.transform,"TAM YENİLE · 100 BONCUK",24,350,428,62,new Color(.89f,.85f,.72f),Ink,()=>{if(MahalleProfile.RepairMarble(skin))ShowHome();else Toast("Yenilemek için 100 boncuk gerekiyor.");},23);
+            var repair=LabelButton(card.transform,"TAM YENİLE · "+SpecialMarbles.RepairPrice+" BONCUK",24,350,428,62,new Color(.89f,.85f,.72f),Ink,()=>{if(MahalleProfile.RepairMarble(skin))ShowHome();else Toast("Yenilemek için "+SpecialMarbles.RepairPrice+" boncuk gerekiyor.");},23);
             repair.interactable=owned&&MahalleProfile.RemainingLife(skin)<SpecialMarbles.MaxLife;
             Text(card.transform,"Özel güç atışında özelliği durur, ömrü azalmaz.",24,426,428,62,23,selected?Cream:Muted,TextAlignmentOptions.Center);
         }
@@ -402,7 +557,7 @@ public class MahalleUI : MonoBehaviour
         Text(box,controller.Level.levelName,30,114,924,47,31,Muted,TextAlignmentOptions.Center);
         for(int i=0;i<3;i++){var star=Art(box,"Sonuç yıldızı "+i,MahalleGraphic.Shape.Star,259+i*163,i==1?184:201,i==1?142:115,i==1?142:115,Line);if(i<controller.Stars&&won)StartCoroutine(RevealStar(star,i));}
         Text(box,controller.Score+" / "+controller.TotalMarbles+" misket çıkardın",30,366,924,64,40,Ink,TextAlignmentOptions.Center);
-        string reward=won?"+"+controller.LastReward.beads+" BONCUK":"Kesendeki güçler yardımcı olabilir. Normal misketle de geçebilirsin.";
+        string reward=!won?"Kesendeki güçler yardımcı olabilir. Normal misketle de geçebilirsin.":controller.LastReward.beads>0?"+"+controller.LastReward.beads+" BONCUK":"Bu bölümden boncuk aldın. Yeni yıldız daha fazla kazandırır.";
         Text(box,reward,60,448,864,82,won?38:28,won?Ink:Muted,TextAlignmentOptions.Center);
         if(controller.LastReward.newBadge)Text(box,"MAHALLE TAMAMLANDI · "+controller.LastReward.districtBonus+" BONCUK BONUS\n"+(controller.LastReward.newSkin??"Mahalle misketi zaten kesende")+" · KOLEKSİYON ÖDÜLÜ",30,538,924,100,28,Muted,TextAlignmentOptions.Center);
         else if(won&&!passed)Text(box,"Sonraki bölümü açmak için "+need+" yıldız gerekiyor.",60,552,864,72,29,new Color(.72f,.32f,.24f),TextAlignmentOptions.Center);

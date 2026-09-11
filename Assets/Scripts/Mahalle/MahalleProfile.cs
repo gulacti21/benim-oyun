@@ -7,7 +7,7 @@ public class MahalleSave
     public int version = 3;
     public int[] marbleLife = new int[SpecialMarbles.Count];
     public bool[] districtRewards = new bool[5];
-    public int beads = 60;
+    public int beads = 40;
     public int[] stars = new int[Campaign.Count];
     public int[] stock = { 1, 1, 1, 1 };
     public bool[] skins = NewSkins();
@@ -214,7 +214,12 @@ public static class MahalleProfile
         {
             int old = Data.stars[levelIndex];
             reward.firstWin = old == 0;
-            reward.beads = (reward.firstWin ? 20 : 3) + Mathf.Max(0, stars - old) * 5;
+            // EKONOMI DENGESI:
+            //   ilk gecis 20 -> 6, yildiz basina 5 -> 3, TEKRAR OYNAMA 3 -> 0.
+            // Tekrar oynamanin 3 boncuk vermesi bir delikti: APARTMAN 01 uc misketlik
+            // ve 15 saniye suruyor, yani saatte ~700 boncuk farmlanabiliyordu. Artik
+            // gecilmis bir bolumu tekrar oynamak sadece YENI yildiz icin oduyor.
+            reward.beads = (reward.firstWin ? 6 : 0) + Mathf.Max(0, stars - old) * 3;
             Data.stars[levelIndex] = Mathf.Max(old, stars);
             Data.wins++;
             int district = levelIndex / Campaign.PerDistrict;
@@ -237,7 +242,7 @@ public static class MahalleProfile
         if (id == 1) return Data.knocked;
         int count = 0; foreach (int s in Data.stars) if (s == 3) count++; return count;
     }
-    public static readonly int[] MissionTargets = { 3, 20, 3 };
+    public static readonly int[] MissionTargets = { 10, 150, 8 };
     public static readonly int[] MissionRewards = { 30, 50, 60 };
     public static readonly string[] MissionNames = { "Üç kez bölüm kazan", "Toplam 20 misket çıkar", "Üç bölümde üç yıldız al" };
     public static bool Claim(int id)

@@ -53,8 +53,8 @@ public static class SpecialMarblesVerify
                 finally{UnityEngine.Object.DestroyImmediate(ball);}
                 var saved=JsonUtility.FromJson<MahalleSave>(JsonUtility.ToJson(d));MahalleProfile.SetTestData(saved);
                 Check(MahalleProfile.RemainingLife(skin)==0,"Reload cannot restore exhausted marble");
-                saved.beads=99;Check(!MahalleProfile.RepairMarble(skin)&&saved.beads==99,"Repair requires 100");
-                saved.beads=100;Check(MahalleProfile.RepairMarble(skin)&&saved.beads==0&&MahalleProfile.RemainingLife(skin)==150,"100 full renewal");
+                saved.beads=129;Check(!MahalleProfile.RepairMarble(skin)&&saved.beads==129,"Repair requires 130");
+                saved.beads=130;Check(MahalleProfile.RepairMarble(skin)&&saved.beads==0&&MahalleProfile.RemainingLife(skin)==150,"130 full renewal");
                 Check(!MahalleProfile.RepairMarble(skin),"No repeated full repair");
                 Check(MahalleProfile.EquipOrBuy(skin)&&saved.beads==0,"Reequip never charges purchase twice");
             }

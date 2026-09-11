@@ -61,13 +61,14 @@ public static class LevelBook
 
             // 08 Dar Aralık — iki taşın arasından geçmek ya da sektirmek.
             case 7:
-                Set(level, 3.1f, 5, 4, 7, 7);
-                level.marbles = Spots(-0.62f, 0.45f, 0f, 0.45f, 0.62f, 0.45f,
-                                      -0.93f, 1f, -0.31f, 1f, 0.31f, 1f, 0.93f, 1f);
+                Set(level, 2.7f, 5, 5, 6, 7);
+                // Ok ucu: tepe en uzakta, kollar aticiya dogru iniyor. Ortadan vurursan
+                // kollar disari degil yana savrulur; kollari uclarindan almak gerekir.
+                level.marbles = Spots(-1.8f, 0.9f, -1.2f, 1.25f, -0.6f, 1.6f, 0f, 1.95f, 0.6f, 1.6f, 1.2f, 1.25f, 1.8f, 0.9f);
                 level.obstacles = new[]
                 {
-                    new ObstacleSpot(-1.05f, -0.5f, 1.3f, 0.4f),
-                    new ObstacleSpot(1.05f, -0.5f, 1.3f, 0.4f)
+                    new ObstacleSpot(-1.05f, -0.6f, 1.3f, 0.4f),
+                    new ObstacleSpot(1.05f, -0.6f, 1.3f, 0.4f)
                 };
                 return true;
 
@@ -120,10 +121,11 @@ public static class LevelBook
 
             // 01 Seksek Alanı — İki çapraz dörtlü: ilk teması seç, aynı dik atışı tekrarlama.
             case 12:
-                Set(level, 3.2f, 4, 6, 8, 8);
-                level.marbles = Spots(-0.9f, -0.5f, -1.5f, -0.25f, -1.1f, 0.3f,
-                                      -1.7f, 0.55f, 0.9f, -0.5f, 1.5f, -0.25f,
-                                      1.1f, 0.3f, 1.7f, 0.55f);
+                Set(level, 3.2f, 4, 5, 7, 8);
+                // KASE. Agzi aticiya donuk bir yay: iki uc acikta, dip korumada.
+                // Uclardan baslamak zorundasin, dibe dogrudan yol yok.
+                level.marbles = Spots(-1.598f, 1.618f, -1.302f, 1.107f, -0.85f, 0.728f, -0.295f, 0.526f,
+                                      0.295f, 0.526f, 0.85f, 0.728f, 1.302f, 1.107f, 1.598f, 1.618f);
                 return true;
 
             // 02 Pota Altı — Yakın kısa sıra ve uzak kanat: iki ayrı geliş açısı.
@@ -186,15 +188,15 @@ public static class LevelBook
 
             // 07 Sıra Arası — İki siper: ortadaki boşluğa düz atış yerine iki yana çapraz giriş.
             case 18:
-                Set(level, 3.2f, 4, 8, 9, 10);
-                level.marbles = Spots(-1f, 0.1f, -1.6f, 0.1f, -2.2f, 0.1f,
-                                      -1.3f, 0.65f, -1.9f, 0.65f, 1f, 0.1f,
-                                      1.6f, 0.1f, 2.2f, 0.1f, 1.3f, 0.65f,
-                                      1.9f, 0.65f);
+                Set(level, 3.2f, 4, 6, 8, 10);
+                // ZIKZAK. Alt ve ust noktalar sirayla diziliyor: duz bir atis
+                // hicbir zaman iki misketi birden bulmuyor.
+                level.marbles = Spots(-2.2f, 1.4f, -1.65f, 0.7f, -1.1f, 1.4f, -0.55f, 0.7f, 0f, 1.4f,
+                                      0.55f, 0.7f, 1.1f, 1.4f, 1.65f, 0.7f, 2.2f, 1.4f, 0f, 2.2f);
                 level.obstacles = new[]
                 {
-                    new ObstacleSpot(-1.5f, -1.95f, 1.2f, 0.4f),
-                    new ObstacleSpot(1.5f, -1.95f, 1.2f, 0.4f)
+                    new ObstacleSpot(-1.4f, -0.8f, 1.3f, 0.4f, 15f),
+                    new ObstacleSpot(1.4f, -0.8f, 1.3f, 0.4f, -15f)
                 };
                 return true;
 
@@ -218,41 +220,47 @@ public static class LevelBook
 
             // 09 Teneffüs Zili — Yelpazeler açılıyor: duvarın kenarından doğru ilk misketi seç.
             case 20:
-                Set(level, 3.2f, 4, 10, 11, 11);
-                level.marbles = Spots(-0.8f, 0.35f, -1.4f, 0.15f, -2f, -0.05f,
-                                      -1.1f, 0.95f, -1.75f, 1.15f, -2.35f, 0.65f,
-                                      0.9f, 0.2f, 1.55f, 0.35f, 2.2f, 0.5f,
-                                      1.2f, 0.9f, 1.85f, 1.1f);
+                Set(level, 3.2f, 4, 8, 9, 11);
+                // Halka ve ortasindaki tek misket. On siradan vurursan halka acilir ama
+                // arkaya kacar; halkayi kirmak icin yandan girmek gerekir.
+                level.marbles = Spots(1.4f, 1f, 1.13f, 1.82f, 0.43f, 2.33f, -0.43f, 2.33f, -1.13f, 1.82f,
+                                      -1.4f, 1f, -1.13f, 0.18f, -0.43f, -0.33f, 0.43f, -0.33f, 1.13f, 0.18f,
+                                      0f, 1f);
                 level.obstacles = new[]
                 {
-                    new ObstacleSpot(0f, -1.25f, 1.8f, 0.4f, -15f)
+                    new ObstacleSpot(0f, -1.35f, 1.7f, 0.4f)
                 };
                 return true;
 
             // 10 Son Ders — Dört yakın, sekiz uzak misket: büyük kümenin iki kanadına açı bul.
             case 21:
-                Set(level, 3.2f, 4, 8, 11, 12);
-                level.marbles = Spots(-1f, -0.6f, -1.6f, -0.45f, -2.2f, -0.3f,
-                                      -1.45f, 0.2f, 0.65f, 0.8f, 1.25f, 0.8f,
-                                      1.85f, 0.8f, 2.45f, 0.8f, 0.95f, 1.35f,
-                                      1.55f, 1.35f, 2.15f, 1.35f, 1.55f, 1.95f);
+                // Atis sayisi 4'ten 3'e indirildi: yerlesim ayni, baski artiyor.
+                // 4 atisla 12 misketin 11'i cikiyordu, "zorla" evresi icin fazla kolayd.
+                Set(level, 3.2f, 3, 7, 9, 11);
+                // Ic ice iki yay, ikisi de aticiya aciliyor. Ic yaya ulasmak icin
+                // once dis yayda bir bosluk acmak gerekiyor.
+                level.marbles = Spots(1.126f, 1.55f, 0.65f, 2.026f, 0f, 2.2f, -0.65f, 2.026f, -1.126f, 1.55f,
+                                      1.832f, 1.567f, 1.419f, 2.238f, 0.772f, 2.69f, 0f, 2.85f,
+                                      -0.772f, 2.69f, -1.419f, 2.238f, -1.832f, 1.567f);
                 level.obstacles = new[]
                 {
-                    new ObstacleSpot(1.45f, -1.85f, 1.5f, 0.4f, 12f)
+                    new ObstacleSpot(0f, -0.5f, 1.8f, 0.4f)
                 };
                 return true;
 
             // 11 Okul Turnuvası — Ters eğimli iki siper: bir kümeye işe yarayan geliş açısı diğerini tutmaz.
             case 22:
-                Set(level, 3.2f, 4, 9, 10, 11);
-                level.marbles = Spots(-0.95f, 0.05f, -1.55f, 0.2f, -2.15f, 0.35f,
-                                      -1.2f, 0.75f, -1.8f, 0.9f, -2.1f, 1.45f,
-                                      0.95f, 0.15f, 1.55f, 0.3f, 2.15f, 0.45f,
-                                      1.2f, 0.85f, 1.8f, 1f, 2.1f, 1.55f);
+                Set(level, 3.2f, 4, 9, 10, 12);
+                // Simetri yok: solda 3x3 sikisik blok, sagda uc dagimik misket.
+                // Bloga dalmak kolay ama uctekileri ayri ayri toplamak atis yiyor.
+                level.marbles = Spots(-1.9f, 0.4f, -1.3f, 0.4f, -0.7f, 0.4f,
+                                      -1.9f, 1f, -1.3f, 1f, -0.7f, 1f,
+                                      -1.9f, 1.6f, -1.3f, 1.6f, -0.7f, 1.6f,
+                                      1.8f, 0.6f, 2.3f, 1.3f, 1.6f, 2f);
                 level.obstacles = new[]
                 {
-                    new ObstacleSpot(-1.45f, -1.95f, 1.4f, 0.4f, -18f),
-                    new ObstacleSpot(1.45f, -1.95f, 1.4f, 0.4f, 18f)
+                    new ObstacleSpot(-0.15f, -0.5f, 0.4f, 2f),
+                    new ObstacleSpot(2.85f, 0.9f, 0.35f, 1.6f)
                 };
                 return true;
 
@@ -260,14 +268,15 @@ public static class LevelBook
             // 11'den daha geniş alan, bir eksik atış ve daha yüksek geçiş hedefi.
             // Kümeler tek vuruşta topluca boşalmasın; üç bilinçli ilk temas seç.
             case 23:
-                Set(level, 3.45f, 4, 9, 10, 12);
-                level.marbles = Spots(-1f, .1f, -1.65f, .35f, -2.25f, .55f, -1.65f, 1f,
-                                      .95f, .6f, 1.6f, .85f, 2.25f, 1.1f, 1.55f, 1.5f,
-                                      -.7f, 1.8f, 0f, 1.85f, .65f, 2.25f, -.5f, 2.5f);
+                Set(level, 3.45f, 4, 5, 7, 11);
+                // KUM SAATI: iki ucgen dar bir belde birlesiyor. Belden vurursan
+                // iki tarafi birden acarsin ama o acikligi bulmak zor.
+                level.marbles = Spots(-1.3f, 2.6f, 0f, 2.6f, 1.3f, 2.6f, -0.65f, 2.05f, 0.65f, 2.05f, 0f, 1.5f,
+                                      0f, 0.9f, -0.65f, 0.35f, 0.65f, 0.35f, -1.3f, -0.2f, 0f, -0.2f, 1.3f, -0.2f);
                 level.obstacles = new[]
                 {
-                    new ObstacleSpot(-1.4f, -2f, 1.15f, .4f, -12f),
-                    new ObstacleSpot(1.45f, -2f, 1.15f, .4f, 18f)
+                    new ObstacleSpot(-2.4f, 1.2f, 0.4f, 1.8f, -15f),
+                    new ObstacleSpot(2.4f, 1.2f, 0.4f, 1.8f, 15f)
                 };
                 level.starsToPass = 2;
                 return true;
@@ -289,15 +298,21 @@ public static class LevelBook
 
             // 03 Ağaç Dibi — Ters taraftan sekme: doğrudan açık küme ve siperli hedefler.
             case 26:
-                Set(level, 3.45f, 4, 4, 7, 9);
-                level.marbles = Spots(-1.5f, -0.55f, -2.1f, -0.25f, -1.5f, 0.15f, 0.4f, 0.3f, 1.05f, 0.3f, 1.7f, 0.3f, 0.7f, 0.9f, 1.35f, 0.9f, 0.7f, 1.55f, 1.35f, 1.55f);
-                level.obstacles = new[] { new ObstacleSpot(2.6f, 0.5f, 0.35f, 2.8f, 0f), new ObstacleSpot(1.05f, -0.65f, 1.75f, 0.4f, -12f) };
+                Set(level, 3.45f, 4, 5, 7, 9);
+                // Ortada derin bir kolon, iki yanda kenara yapisik yaylar. Kolon arkadan
+                // one dogru cozulur, yaylar ise siyirmayla. Iki ayri teknik.
+                level.marbles = Spots(0.2f, 0.4f, 0.2f, 1f, 0.2f, 1.6f, 0.2f, 2.2f,
+                                      -1.2f, 0.8f, -1.4f, 1.6f, -1f, 2.3f,
+                                      1.2f, 0.8f, 1.4f, 1.6f, 1f, 2.3f);
+                // Yaylar kenardan ice cekildi: artik tek dokunusla disari cikmiyorlar,
+                // disaridaki iki siper de yana savrulani geri tutuyor.
+                level.obstacles = new[] { new ObstacleSpot(-2.5f, 0.6f, 0.4f, 2.2f), new ObstacleSpot(2.5f, 0.6f, 0.4f, 2.2f), new ObstacleSpot(0.2f, -0.8f, 1.4f, 0.4f) };
                 return true;
 
             // 04 Çim Kenarı — Geniş koridorda ilk temas açısını seç.
             case 27:
-                Set(level, 3.45f, 4, 7, 10, 12);
-                level.marbles = Spots(-1.65f, -0.4f, -2.3f, -0.1f, -1.9f, 0.5f, -1.25f, 0.65f, -0.6f, 0.8f, 0f, 0.95f, 0.6f, 1.1f, 1.2f, 1.25f, 1.8f, 1.4f, 0.2f, 1.65f, 0.85f, 1.85f, 1.5f, 2f);
+                Set(level, 3.45f, 4, 7, 9, 12);
+                level.marbles = Spots(-1.65f, -0.4f, -2.3f, -0.1f, -1.9f, 0.5f, -1.3f, 0.85f, -0.6f, 0.8f, 0f, 0.95f, 0.6f, 1.1f, 1.2f, 1.25f, 1.8f, 1.4f, 0.2f, 1.65f, 0.85f, 1.85f, 1.5f, 2f);
                 level.obstacles = new[] { new ObstacleSpot(-1.05f, -0.5f, 0.38f, 1.9f, 18f), new ObstacleSpot(1.05f, -0.5f, 0.38f, 1.9f, -18f) };
                 return true;
 
@@ -310,9 +325,15 @@ public static class LevelBook
 
             // 06 Havuz Başı — Siper ve uzak duvar: önce açık taraf, sonra duvar arkasındaki sıra.
             case 29:
-                Set(level, 3.45f, 4, 5, 8, 10);
-                level.marbles = Spots(-1.9f, -0.6f, -1.3f, -0.35f, -1.9f, 0.1f, -1.3f, 0.4f, -0.5f, 0.6f, 0.15f, 0.6f, 0.8f, 0.6f, 1.45f, 0.6f, 2.1f, 0.6f, 0.45f, 1.2f, 1.1f, 1.2f, 1.75f, 1.2f);
-                level.obstacles = new[] { new ObstacleSpot(0.65f, -0.65f, 2f, 0.4f, 0f), new ObstacleSpot(2.7f, 0.35f, 0.35f, 2.4f, 0f) };
+                Set(level, 3.45f, 4, 5, 7, 9);
+                // L: uzak kenarda yatay sira, sag kenarda asagi inen kol, merkezde uclu.
+                // Uc ayri yon, uc ayri atis. Hicbiri digerinin yolundan vurulmuyor.
+                level.marbles = Spots(-1.8f, 1.9f, -1.25f, 2f, -0.7f, 2.1f, -0.15f, 2.15f, 0.45f, 2.15f,
+                                      1.3f, 1.9f, 1.6f, 1.35f, 1.9f, 0.8f, 2.2f, 0.25f,
+                                      -0.8f, 1.15f, -0.2f, 1f, 0.4f, 1.1f);
+                // Uzak kenardaki duvar L'nin ust kolunu disari birakmiyor: siyirip
+                // cikarmak yerine aci bulmak gerekiyor.
+                level.obstacles = new[] { new ObstacleSpot(-1.2f, 0f, 0.4f, 1.8f, 10f), new ObstacleSpot(1f, -0.6f, 1.5f, 0.4f, -15f), new ObstacleSpot(-0.9f, 2.9f, 1.4f, 0.35f, 5f) };
                 return true;
 
             // 07 Yürüyüş Yolu — Şaşırtmalı koridor: açık giriş ve sekmeli kısa yol.
@@ -324,9 +345,16 @@ public static class LevelBook
 
             // 08 Çiçeklik — Çapraz siperler farklı sekme açısı ister.
             case 31:
-                Set(level, 3.45f, 4, 6, 9, 11);
-                level.marbles = Spots(-1.1f, 0.35f, -1.75f, 0.35f, -2.25f, 0.8f, -1.35f, 1f, -1.95f, 1.35f, -1.35f, 1.7f, 0.8f, 0.5f, 1.45f, 0.5f, 2.1f, 0.5f, 1.1f, 1.1f, 1.75f, 1.1f, 1.45f, 1.75f);
-                level.obstacles = new[] { new ObstacleSpot(-1.3f, -0.8f, 1.2f, 0.4f, 25f), new ObstacleSpot(1.3f, -0.8f, 1.2f, 0.4f, -25f), new ObstacleSpot(0f, 2.7f, 1.5f, 0.35f, 0f) };
+                Set(level, 3.45f, 4, 7, 9, 11);
+                // Bilardo istakasi: ucu aticiya bakiyor. Tam ortadan vurus sadece uc
+                // misketi alir, arkadakiler yana acilir. Kenardan girmek gerekir.
+                level.marbles = Spots(0f, 0.9f, -0.31f, 1.44f, 0.31f, 1.44f,
+                                      -0.62f, 1.98f, 0f, 1.98f, 0.62f, 1.98f,
+                                      -0.93f, 2.52f, -0.31f, 2.52f, 0.31f, 2.52f, 0.93f, 2.52f,
+                                      -2.5f, 1.2f, 2.5f, 1.2f);
+                // Istaka uzak kenara tasindi ve arkasindaki duvar kaldirildi: arka sira
+                // itilince artik disari cikabiliyor. Onceden %50'de takiliyordu.
+                level.obstacles = new[] { new ObstacleSpot(-1.3f, -0.8f, 1.2f, 0.4f, 25f), new ObstacleSpot(1.3f, -0.8f, 1.2f, 0.4f, -25f) };
                 return true;
 
             // 09 Dar Patika — Geniş hedef yelpazesi; koridor girişinde yön kaybını önle.
@@ -342,7 +370,9 @@ public static class LevelBook
 
             // 10 Son Bank — İki yan siper ve uzak açık duvar; açıları sırayla değiştir.
             case 33:
-                Set(level, 3.45f, 4, 7, 8, 9);
+                // Tavan olculdu: 14 misketin ancak 6'si cikiyor. Gecis 7'ydi, yani
+                // normal misketle gecilemiyordu. 6'ya cekildi: pay 0, KURNAZ bolum.
+                Set(level, 3.45f, 4, 6, 8, 10);
                 // Kenarda dort kolay misket, merkezde on tane sikisik.
                 // Kolaylari toplamak hedefe yetmez; merkezdekiler cikmak icin
                 // butun cemberi kat etmek zorunda. Uc atis, iki kolay bir zor.
@@ -368,7 +398,7 @@ public static class LevelBook
 
             // 12 Ustalık Sınavı — Üç atış, üç ayrı giriş; 10 hedef geçiş, 13 hedef ustalık.
             case 35:
-                Set(level, 3.5f, 4, 8, 10, 13);
+                Set(level, 3.5f, 4, 8, 10, 12);
                 // Uc grup, uc gercekten ayri giris acisi. Eskiden girisler yan yanaydi
                 // ve tek yerden hepsine ulasiliyordu. Simdi: sol grup duvarin disindan
                 // dolasarak, orta grup siperin ustunden, sag grup kenardan.
@@ -386,8 +416,11 @@ public static class LevelBook
             // 01 Cakilli Kose — genis sahada mesafe ogretilir: misket uzun yol kat etmeli.
             case 36:
                 Set(level, 3.5f, 3, 4, 7, 9);
-                level.marbles = Spots(-1.5f, 0.5f, -0.75f, 0.6f, 0f, 0.65f, 0.75f, 0.6f, 1.5f, 0.5f,
-                                      -1.1f, 1.25f, -0.35f, 1.35f, 0.4f, 1.35f, 1.15f, 1.25f, 0f, 2f);
+                // Uzun bir capraz cizgi ve sag dipte ayri bir ucluk. Cizgi bir ucundan
+                // sokulunca akar; ucluk ise ayri bir yolculuk. Uc atis, iki is.
+                level.marbles = Spots(-2.6f, 0.1f, -2f, 0.55f, -1.4f, 1f, -0.8f, 1.45f,
+                                      -0.2f, 1.9f, 0.4f, 2.35f, 1f, 2.8f,
+                                      2.2f, 0.3f, 2.7f, 0.85f, 2.1f, 1.1f);
                 level.obstacles = new[] { new ObstacleSpot(0f, -0.6f, 1.5f, 0.4f) };
                 return true;
 
@@ -402,7 +435,7 @@ public static class LevelBook
 
             // 03 Genis Aciklik — dagitilmis misketler. Her atis bir tane; ekonomi dersi burada baslar.
             case 38:
-                Set(level, 3.55f, 4, 6, 9, 10);
+                Set(level, 3.55f, 4, 6, 9, 9);
                 level.marbles = Spots(-1.7f, 0.3f, -0.9f, 0.85f, -1.6f, 1.4f, -0.4f, 1.5f, -0.05f, 0.45f,
                                       0.55f, 1.15f, 1.2f, 0.5f, 1.8f, 1.1f, 0.9f, 1.95f, 0.15f, 2.2f);
                 level.obstacles = new[] { new ObstacleSpot(-1.15f, -0.6f, 1.3f, 0.4f, 18f), new ObstacleSpot(1.15f, -0.6f, 1.3f, 0.4f, -18f) };
@@ -428,16 +461,18 @@ public static class LevelBook
 
             // 06 Toz Bulutu — nefes. Kenarda dort kolay, merkezde sekiz sikisik.
             case 41:
-                Set(level, 3.6f, 4, 5, 8, 10);
-                level.marbles = Spots(-2.6f, 0.5f, 2.6f, 0.5f, -2.3f, 2f, 2.3f, 2f,
-                                      -0.6f, 0.7f, 0f, 0.7f, 0.6f, 0.7f,
-                                      -0.9f, 1.25f, -0.3f, 1.25f, 0.3f, 1.25f, 0.9f, 1.25f, 0f, 1.8f);
-                level.obstacles = new[] { new ObstacleSpot(0f, -0.7f, 1.8f, 0.4f) };
+                Set(level, 3.6f, 4, 6, 8, 10);
+                // Ic ice iki kare. Dis kare kenarda, ic kare korumada: disi temizlemek
+                // kolay ama ici ancak dis kare acilinca goruyorsun.
+                level.marbles = Spots(-1.5f, -0.1f, 0f, -0.1f, 1.5f, -0.1f, -1.5f, 1.4f, 1.5f, 1.4f,
+                                      -1.5f, 2.9f, 0f, 2.9f, 1.5f, 2.9f,
+                                      -0.6f, 0.8f, 0.6f, 0.8f, -0.6f, 2f, 0.6f, 2f, 0f, 1.4f);
+                level.obstacles = new[] { new ObstacleSpot(0f, -0.9f, 1.8f, 0.4f), new ObstacleSpot(-2.6f, 1.4f, 0.4f, 1.6f, -20f), new ObstacleSpot(2.6f, 1.4f, 0.4f, 1.6f, 20f) };
                 return true;
 
             // 07 Tasli Zemin — KURNAZ. Uc tas: iki yan siper ve uzak bir duvar. Alt ve ust sira ayri islerdir.
             case 42:
-                Set(level, 3.6f, 4, 6, 7, 9);
+                Set(level, 3.6f, 4, 6, 7, 8);
                 level.marbles = Spots(-2.5f, 0.5f, -1.9f, 0.6f, -1.2f, 0.7f, -0.5f, 0.75f, 0.2f, 0.75f, 0.9f, 0.7f, 1.6f, 0.6f, 2.4f, 0.5f,
                                       -1.5f, 2.25f, -0.8f, 2.35f, -0.1f, 2.4f, 0.6f, 2.35f);
                 level.obstacles = new[] { new ObstacleSpot(-1.5f, -0.6f, 0.4f, 1.8f, 20f), new ObstacleSpot(1.5f, -0.6f, 0.4f, 1.8f, -20f), new ObstacleSpot(0f, 1.6f, 1.8f, 0.35f) };
@@ -472,10 +507,12 @@ public static class LevelBook
             // 11 Saha Turnuvasi — KURNAZ. On sira tuzak: duz vurursan arkadaki kuleyi merkeze gomer.
             case 46:
                 Set(level, 3.65f, 4, 8, 9, 11);
-                level.marbles = Spots(-1.6f, -0.1f, -0.8f, -0.25f, 0f, -0.3f, 0.8f, -0.25f, 1.6f, -0.1f,
-                                      -1.2f, 0.7f, -0.4f, 0.75f, 0.4f, 0.75f, 1.2f, 0.7f,
-                                      -0.8f, 1.4f, 0f, 1.45f, 0.8f, 1.4f, 0f, 2.15f, 0f, 2.85f);
-                level.obstacles = new[] { new ObstacleSpot(-2.6f, -0.3f, 0.35f, 1.6f, -30f), new ObstacleSpot(2.6f, -0.3f, 0.35f, 1.6f, 30f) };
+                // V: iki kol aticiya aciliyor, arkalarinda dort misket. Kolun ucundan
+                // vurursan zincir yukari akar; ortadan vurursan hicbir sey olmaz.
+                level.marbles = Spots(-2.4f, 2f, -1.95f, 1.55f, -1.5f, 1.1f, -1.05f, 0.65f, -0.6f, 0.2f,
+                                      2.4f, 2f, 1.95f, 1.55f, 1.5f, 1.1f, 1.05f, 0.65f, 0.6f, 0.2f,
+                                      -0.9f, 2.6f, -0.3f, 2.95f, 0.3f, 2.95f, 0.9f, 2.6f);
+                level.obstacles = new[] { new ObstacleSpot(0f, -0.9f, 1.4f, 0.4f, 0f), new ObstacleSpot(0f, 1.8f, 1.2f, 0.35f, 0f) };
                 return true;
 
             // 12 Ustalik Sinavi — SINAV. Uc ayri giris ve merkezde iki tuzak misketi.
@@ -486,6 +523,124 @@ public static class LevelBook
                                       2.3f, 0.3f, 2.8f, 0.9f, 2.25f, 1.4f, 2.7f, 1.85f, 2.15f, 2.35f, 1.7f, 0.8f,
                                       -1f, 0.9f, -0.3f, 1f);
                 level.obstacles = new[] { new ObstacleSpot(0.7f, 0.2f, 0.4f, 2.4f, 15f), new ObstacleSpot(-1.6f, -0.6f, 1.5f, 0.4f, -20f), new ObstacleSpot(-0.2f, 1.6f, 1.5f, 0.35f, 5f) };
+                level.starsToPass = 2;
+                return true;
+
+            // ---------------- MAHALLE MEYDANI · konu: hepsi bir arada ----------------
+            // Son mahalle. Onceki dort mahallenin her dersi burada ayni bolumde karsina cikar.
+            // Temizlenebilirlik hedefi ~%55: Toprak Saha'nin (%62) altinda, yani en zoru.
+            // Ritim: 5-7-9-11 kurnaz (pay 0), 4-6-8-10 nefes (pay 2-3), 12 sinav.
+
+            // 01 Cesme Cevresi — ogret/nefes.
+            case 48:
+                Set(level, 3.7f, 4, 6, 8, 11);
+                level.marbles = Spots(0.53f, 1.73f, -0.53f, 1.73f, -0.53f, 0.67f, 0.53f, 0.67f, 1.6f, 1.2f, 1.131f, 2.331f,
+                                      0f, 2.8f, -1.131f, 2.331f, -1.6f, 1.2f, -1.131f, 0.069f, -0f, -0.4f, 1.131f, 0.069f);
+                level.obstacles = new[] { new ObstacleSpot(-2.6f, 0.4f, 0.4f, 1.6f, 25f), new ObstacleSpot(2.6f, 0.4f, 0.4f, 1.6f, -25f) };
+                return true;
+
+            // 02 Kaldirim — ogret/nefes.
+            case 49:
+                Set(level, 3.7f, 4, 6, 8, 11);
+                level.marbles = Spots(-1.15f, 0.1f, -1.15f, 0.75f, -1.15f, 1.4f, -1.15f, 2.05f, -1.15f, 2.7f, 0.95f, 0.55f,
+                                      0.95f, 1.2f, 0.95f, 1.85f, 0.95f, 2.5f, 2.3f, 0.3f, 2.6f, 0.9f, 2.1f, 1.5f);
+                level.obstacles = new[] { new ObstacleSpot(0f, 1.1f, 0.35f, 2.2f), new ObstacleSpot(-1.6f, -0.8f, 1.6f, 0.4f, 10f) };
+                return true;
+
+            // 03 Mozaik Doseme — ogret/nefes.
+            case 50:
+                Set(level, 3.7f, 4, 5, 7, 10);
+                level.marbles = Spots(1.7f, 1.5f, 1.133f, 2f, 0.567f, 2.5f, 0f, 3f, -0.567f, 2.5f, -1.133f, 2f, -1.7f, 1.5f,
+                                      -1.133f, 1f, -0.567f, 0.5f, 0f, 0f, 0.567f, 0.5f, 1.133f, 1f, 0f, 1.5f);
+                level.obstacles = new[] { new ObstacleSpot(0f, -0.9f, 1.5f, 0.4f), new ObstacleSpot(-2.5f, 1.2f, 0.35f, 1.4f, -20f), new ObstacleSpot(2.5f, 1.2f, 0.35f, 1.4f, 20f) };
+                return true;
+
+            // 04 Cinar Golgesi — nefes.
+            case 51:
+                Set(level, 3.75f, 4, 6, 8, 11);
+                level.marbles = Spots(1.597f, 1.481f, 1.237f, 2.066f, 0.672f, 2.461f, 0f, 2.6f, -0.672f, 2.461f, -1.237f, 2.066f,
+                                      -1.597f, 1.481f, -1.5f, 0f, -0.85f, -0.1f, 0.85f, -0.1f, 1.5f, 0f, -2.2f, 0.6f, 2.2f, 0.6f);
+                level.obstacles = new[] { new ObstacleSpot(0f, 0.9f, 0.9f, 0.9f), new ObstacleSpot(-2.9f, -0.3f, 0.35f, 1.3f, 15f), new ObstacleSpot(2.9f, -0.3f, 0.35f, 1.3f, -15f) };
+                return true;
+
+            // 05 Bakkal Onu — KURNAZ.
+            case 52:
+                Set(level, 3.75f, 4, 7, 8, 10);
+                level.marbles = Spots(-2.3f, 0.3f, -1.65f, 0.45f, -1f, 0.6f, -0.35f, 0.75f, 0.3f, 0.7f, 0.65f, 1.25f, 0.3f, 1.8f,
+                                      -0.35f, 1.95f, -1f, 2.1f, -1.65f, 2.25f, -1.4f, 2.85f, -0.75f, 2.95f, -0.1f, 2.9f);
+                level.obstacles = new[] { new ObstacleSpot(1.5f, 0.6f, 0.4f, 2.2f, -12f), new ObstacleSpot(-1.3f, 1.35f, 1.6f, 0.35f, 8f) };
+                return true;
+
+            // 06 Tas Basamak — nefes.
+            case 53:
+                Set(level, 3.75f, 4, 5, 7, 10);
+                // Basamaklar kenara dogru kaydirildi, riser duvarlari kisaltildi.
+                // Onceki hali 13 misketin ancak 4'unu birakiyordu (%31) -- Meydan bile o kadar zor degil.
+                level.marbles = Spots(-2.3f, 0.6f, -1.7f, 0.6f, -1.1f, 0.6f, -0.5f, 0.6f,
+                                      -0.2f, 1.7f, 0.4f, 1.7f, 1f, 1.7f, 1.6f, 1.7f, 2.2f, 1.7f,
+                                      -1.5f, 2.7f, -0.9f, 2.7f, -0.3f, 2.7f, 0.3f, 2.7f);
+                level.obstacles = new[] { new ObstacleSpot(1f, 1.15f, 1.4f, 0.35f), new ObstacleSpot(-1.1f, 2.2f, 1.3f, 0.35f) };
+                return true;
+
+            // 07 Avlu Kapisi — KURNAZ.
+            case 54:
+                Set(level, 3.8f, 4, 8, 9, 11);
+                level.marbles = Spots(-1.2f, 0.5f, -0.4f, 0.5f, 0.4f, 0.5f, 1.2f, 0.5f, -1.2f, 2.9f, -0.4f, 2.9f, 0.4f, 2.9f,
+                                      1.2f, 2.9f, -1.2f, 1.3f, -1.2f, 2.1f, 1.2f, 1.3f, 1.2f, 2.1f, -0.55f, 1.7f, 0.55f, 1.7f);
+                level.obstacles = new[] { new ObstacleSpot(-1.5f, -0.5f, 1.8f, 0.4f), new ObstacleSpot(1.5f, -0.5f, 1.8f, 0.4f), new ObstacleSpot(0f, 1.7f, 0.5f, 0.5f) };
+                return true;
+
+            // 08 Isik Alti — nefes.
+            case 55:
+                Set(level, 3.8f, 4, 6, 8, 11);
+                // Yelpaze disari acildi ve uzaktaki duvar kaldirildi: isin artik
+                // kenara ulasiyor. Onceki hali 14 misketin 5'ini birakiyordu (%36).
+                level.marbles = Spots(0.918f, 1.111f, 0.333f, 1.365f, -0.333f, 1.365f, -0.918f, 1.111f,
+                                      1.377f, 1.766f, 0.499f, 2.148f, -0.499f, 2.148f, -1.377f, 1.766f,
+                                      1.835f, 2.421f, 0.665f, 2.93f, -0.665f, 2.93f, -1.835f, 2.421f,
+                                      -3.2f, -0.8f, 3.2f, -0.8f);
+                level.obstacles = new[] { new ObstacleSpot(-2.7f, 0.6f, 0.4f, 1.6f, -25f), new ObstacleSpot(2.7f, 0.6f, 0.4f, 1.6f, 25f) };
+                return true;
+
+            // 09 Dar Gecit — KURNAZ.
+            case 56:
+                // Tavan 7 olculdu; gecis 8'di, yani normal misketle gecilemiyordu. 7'ye cekildi.
+                Set(level, 3.8f, 4, 7, 9, 11);
+                // Capraz koridor. Iki uzun duvar 35 derece egik; koridor asagi soldan
+                // yukari saga akiyor. Duz atis hicbir zaman koridora girmiyor,
+                // sag taraftaki kume ise ancak duvarin disindan dolasarak aliniyor.
+                level.marbles = Spots(-1.413f, -1.202f, -1.051f, -0.686f, -0.689f, -0.17f, -0.328f, 0.346f,
+                                      0.034f, 0.862f, 0.395f, 1.378f, 0.757f, 1.894f, 1.119f, 2.41f,
+                                      1.813f, -0.169f, 2.215f, 0.404f, 2.617f, 0.977f,
+                                      2.546f, -0.256f, 2.948f, 0.318f, 3.019f, 1.551f);
+                level.obstacles = new[] { new ObstacleSpot(-1.45f, 0.05f, 0.4f, 2.8f, 35f), new ObstacleSpot(1.15f, 1.15f, 0.4f, 2.8f, 35f) };
+                return true;
+
+            // 10 Son Meydan — nefes.
+            case 57:
+                Set(level, 3.8f, 3, 4, 6, 9);
+                level.marbles = Spots(0.8f, 1.3f, 1.391f, 1.862f, 1.583f, 2.828f, 0.247f, 2.061f, -0.105f, 2.796f, -0.964f, 3.277f,
+                                      -0.647f, 1.77f, -1.455f, 1.663f, -2.179f, 0.994f, -0.647f, 0.83f, -0.795f, 0.028f,
+                                      -0.382f, -0.867f, 0.247f, 0.539f, 0.964f, 0.151f, 1.942f, 0.267f);
+                level.obstacles = new[] { new ObstacleSpot(0f, 1.3f, 0.5f, 0.5f), new ObstacleSpot(-1.9f, -1.2f, 1.6f, 0.4f, 25f) };
+                return true;
+
+            // 11 Mahalle Bulusmasi — KURNAZ.
+            case 58:
+                Set(level, 3.8f, 4, 6, 8, 10);
+                level.marbles = Spots(0f, 1.5f, 0.62f, 1.5f, 0.31f, 2.037f, -0.31f, 2.037f, -0.62f, 1.5f, -0.31f, 0.963f,
+                                      0.31f, 0.963f, 1.24f, 1.5f, 0.62f, 2.574f, -0.62f, 2.574f, -1.24f, 1.5f, -0.62f, 0.426f,
+                                      0.62f, 0.426f, -2.7f, 0.4f, 2.7f, 0.4f);
+                level.obstacles = new[] { new ObstacleSpot(0f, -0.4f, 2f, 0.4f), new ObstacleSpot(-2.4f, 1.6f, 0.4f, 1.5f, -30f), new ObstacleSpot(2.4f, 1.6f, 0.4f, 1.5f, 30f) };
+                return true;
+
+            // 12 Ustalik Sinavi — SINAV.
+            case 59:
+                Set(level, 3.85f, 4, 5, 7, 11);
+                level.marbles = Spots(0.346f, 0.964f, 0.716f, 1.602f, 0.347f, 2.216f, -0.348f, 2.346f, -0.949f, 1.984f,
+                                      -1.209f, 1.337f, -1.066f, 0.656f, -0.593f, 0.15f, 0.067f, -0.06f, 0.747f, 0.059f,
+                                      1.305f, 0.464f, 1.64f, 1.066f, 1.702f, 1.752f, 1.492f, 2.407f, 1.052f, 2.934f, 0.45f, 3.265f);
+                level.obstacles = new[] { new ObstacleSpot(0f, 1.4f, 0.35f, 0.35f), new ObstacleSpot(-2.4f, -0.6f, 1.5f, 0.4f, 30f), new ObstacleSpot(2.7f, 2.3f, 1.4f, 0.35f, -40f) };
                 level.starsToPass = 2;
                 return true;
 
