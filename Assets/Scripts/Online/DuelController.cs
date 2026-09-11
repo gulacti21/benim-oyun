@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 // Kural motorunu oyunun atis sistemine baglayan katman.
 // Kurallar DuelMatch'te, fizik mevcut MarbleArena/ShotController'da;
@@ -19,6 +20,12 @@ public class DuelController : MonoBehaviour
     private readonly Dictionary<TargetMarble, int> indexOf = new Dictionary<TargetMarble, int>();
 
     private bool waiting;         // atis yapildi, misketlerin durmasi bekleniyor
+    // Dizme asamasi: sirayla her oyuncu kendi misketlerini cembere koyar.
+    private readonly List<Vector2>[] spots = { new List<Vector2>(), new List<Vector2>() };
+    public bool Placing { get; private set; }
+    public int PlacingPlayer { get; private set; }
+    public bool HandOver { get; private set; }   // telefonu diger oyuncuya verme ekrani
+    public int PlacedCount => spots[Mathf.Clamp(PlacingPlayer, 0, 1)].Count;
     private float settleTimer, elapsed;
     private const float SettleDelay = .4f;
 
@@ -31,6 +38,139 @@ public class DuelController : MonoBehaviour
         if (Instance == this) Instance = null;
         Unhook();
         if (duelMaterial != null) { Destroy(duelMaterial); duelMaterial = null; }
+    }
+
+    // ---------------- Dizme ----------------
+
+    public void BeginPlacement()
+    {
+        level = FindFirstObjectByType<LevelController>();
+        if (level == null) { Debug.LogError("DUELLO: LevelController bulunamadi."); return; }
+        arena = level.Arena; shooter = level.Shooter;
+
+        spots[0].Clear(); spots[1].Clear();
+        PlacingPlayer = DuelSession.StartingPlayer;
+        Placing = true; HandOver = false;
+        Match = null;
+
+        BuildLevelData();
+        level.ConfigureForDuel(data);
+        if (shooter != null) shooter.ShootingEnabled = false;   // dizerken atis yok
+        RefreshPreview();
+        Changed?.Invoke();
+    }
+
+    // Parmagin dokundugu noktayi zemine dusurur.
+    private bool PointerToGround(out Vector3 world)
+    {
+        world = default;
+        var cam = Camera.main; var pointer = Pointer.current;
+        if (cam == null || pointer == null) return false;
+        var plane = new Plane(Vector3.up, new Vector3(0f, .25f, 0f));
+        var ray = cam.ScreenPointToRay(pointer.position.ReadValue());
+        if (!plane.Raycast(ray, out float d)) return false;
+        world = ray.GetPoint(d);
+        return true;
+    }
+
+    public bool AddSpot(Vector2 p)
+    {
+        int me = Mathf.Clamp(PlacingPlayer, 0, 1);
+        if (!Placing || spots[me].Count >= DuelMatch.MarblesPerPlayer) return false;
+        p = DuelPlacement.Clamp(p.x, p.y, DuelSession.ArenaSize);
+
+        // Var olan misketlerin uzerine konamaz; oyuncu bos yer secmeli.
+        foreach (var q in AllSpots())
+            if (Vector2.Distance(q, p) < DuelPlacement.MinGap) return false;
+
+        spots[me].Add(p);
+        RefreshPreview();
+        Changed?.Invoke();
+        return true;
+    }
+
+    public void UndoSpot()
+    {
+        int me = Mathf.Clamp(PlacingPlayer, 0, 1);
+        if (!Placing || spots[me].Count == 0) return;
+        spots[me].RemoveAt(spots[me].Count - 1);
+        RefreshPreview();
+        Changed?.Invoke();
+    }
+
+    public void FillRemaining()
+    {
+        int me = Mathf.Clamp(PlacingPlayer, 0, 1);
+        var hazir = DuelPlacement.DefaultLayout(me, DuelMatch.MarblesPerPlayer, DuelSession.ArenaSize);
+        foreach (var q in hazir)
+        {
+            if (spots[me].Count >= DuelMatch.MarblesPerPlayer) break;
+            bool cakisma = false;
+            foreach (var r in AllSpots()) if (Vector2.Distance(r, q) < DuelPlacement.MinGap) { cakisma = true; break; }
+            if (!cakisma) spots[me].Add(q);
+        }
+        RefreshPreview();
+        Changed?.Invoke();
+    }
+
+    // "Hazirim". Ilk oyuncudan sonra telefon devri ekrani gelir.
+    public void ConfirmPlacement()
+    {
+        int me = Mathf.Clamp(PlacingPlayer, 0, 1);
+        if (!Placing || spots[me].Count < DuelMatch.MarblesPerPlayer) return;
+
+        int other = 1 - me;
+        if (spots[other].Count < DuelMatch.MarblesPerPlayer) { HandOver = true; Changed?.Invoke(); return; }
+
+        Placing = false; HandOver = false;
+        StartMatch(spots[0], spots[1]);
+    }
+
+    // Telefon devredildi: sira diger oyuncunun dizmesinde.
+    public void HandOverDone()
+    {
+        HandOver = false;
+        PlacingPlayer = 1 - PlacingPlayer;
+        RefreshPreview();
+        Changed?.Invoke();
+    }
+
+    private List<Vector2> AllSpots()
+    {
+        var all = new List<Vector2>(spots[0]); all.AddRange(spots[1]);
+        return all;
+    }
+
+    // Dizilen misketleri cemberde gosterir. Rakibin misketleri GIZLI:
+    // sadece siradaki oyuncununkiler cizilir.
+    private void RefreshPreview()
+    {
+        int me = Mathf.Clamp(PlacingPlayer, 0, 1);
+        var show = spots[me];
+        var list = new MarbleSpot[show.Count];
+        for (int i = 0; i < show.Count; i++) list[i] = new MarbleSpot(show[i].x, show[i].y);
+        data.marbles = list;
+        arena.Configure(data.shape, data.arenaSize, data.rings, data.triangleRows, data.marbles);
+        arena.Rebuild();
+        foreach (var m in arena.SpawnedMarbles) if (m != null) Tint(m, DuelSession.PlayerColor(me));
+    }
+
+    private void Update()
+    {
+        if (Placing) { UpdatePlacing(); return; }
+        UpdateShooting();
+    }
+
+    private void UpdatePlacing()
+    {
+        if (HandOver) return;
+        var pointer = Pointer.current;
+        if (pointer == null || !pointer.press.wasPressedThisFrame) return;
+        // Ekranin alt seridi arayuz butonlarina ait; oraya dokunmak misket koymasin.
+        if (pointer.position.ReadValue().y < Screen.height * .22f) return;
+        if (!PointerToGround(out Vector3 w)) return;
+        if (!DuelPlacement.Inside(w.x, w.z, DuelSession.ArenaSize)) return;
+        AddSpot(new Vector2(w.x, w.z));
     }
 
     // ---------------- Kurulum ----------------
@@ -82,10 +222,14 @@ public class DuelController : MonoBehaviour
         data.shooterOffsetX = 0f;
         data.shooterStartPosition = new Vector3(0f, .25f, DuelSession.ShooterZ);
 
-        var spots = new MarbleSpot[Match.Marbles.Count];
-        for (int i = 0; i < spots.Length; i++)
-            spots[i] = new MarbleSpot(Match.Marbles[i].x, Match.Marbles[i].z);
-        data.marbles = spots;
+        if (Match != null)
+        {
+            var list = new MarbleSpot[Match.Marbles.Count];
+            for (int i = 0; i < list.Length; i++)
+                list[i] = new MarbleSpot(Match.Marbles[i].x, Match.Marbles[i].z);
+            data.marbles = list;
+        }
+        else data.marbles = new MarbleSpot[0];
     }
 
     // Arena misketleri dizilis sirasiyla uretiyor; sahiplik o siraya gore atanir.
@@ -174,7 +318,7 @@ public class DuelController : MonoBehaviour
         if (indexOf.TryGetValue(marble, out int i) && !knocked.Contains(i)) knocked.Add(i);
     }
 
-    private void Update()
+    private void UpdateShooting()
     {
         if (!waiting || Match == null) return;
 
@@ -209,11 +353,19 @@ public class DuelController : MonoBehaviour
         }
 
         // Zincir: cikardiysan atici kaldigi yerde kalir ve oradan atarsin.
-        // Sira gectiyse atici cizgiye doner.
-        if (sameTurn) shooter.HoldPosition();
+        // AMA cemberin disina savrulduysa pozisyon hakkini kaybeder ve cizgiye
+        // doner. Gercek misket oyununda da cemberi terk eden atici avantajini
+        // yitirir; ayrica bu olmadan atici ekran disinda kalip oyunu kilitliyordu.
+        if (sameTurn && ShooterInsideRing()) shooter.HoldPosition();
         else PlaceShooterOnLine();
 
         Changed?.Invoke();
+    }
+
+    private bool ShooterInsideRing()
+    {
+        if (shooter == null || arena == null) return false;
+        return !arena.IsOutside(shooter.transform.position);
     }
 
     private void PlaceShooterOnLine()
@@ -227,10 +379,10 @@ public class DuelController : MonoBehaviour
 
     // ---------------- Rovans ----------------
 
-    public void Rematch(IList<Vector2> playerOne, IList<Vector2> playerTwo)
+    public void Rematch()
     {
         DuelSession.StartingPlayer = 1 - DuelSession.StartingPlayer;
         DuelSession.MatchNumber++;
-        StartMatch(playerOne, playerTwo);
+        BeginPlacement();
     }
 }
