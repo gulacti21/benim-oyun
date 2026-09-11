@@ -13,6 +13,7 @@ public class DuelController : MonoBehaviour
     private MarbleArena arena;
     private ShotController shooter;
     private LevelData data;
+    private PhysicsMaterial duelMaterial;
 
     private readonly List<int> knocked = new List<int>();
     private readonly Dictionary<TargetMarble, int> indexOf = new Dictionary<TargetMarble, int>();
@@ -25,7 +26,12 @@ public class DuelController : MonoBehaviour
     public event Action Changed;
 
     private void Awake() { Instance = this; }
-    private void OnDestroy() { if (Instance == this) Instance = null; Unhook(); }
+    private void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
+        Unhook();
+        if (duelMaterial != null) { Destroy(duelMaterial); duelMaterial = null; }
+    }
 
     // ---------------- Kurulum ----------------
 
@@ -43,6 +49,7 @@ public class DuelController : MonoBehaviour
         BuildLevelData();
         level.ConfigureForDuel(data);
         AssignOwners();
+        ApplyDuelPhysics();
         Hook();
 
         waiting = false; settleTimer = 0f; elapsed = 0f;
@@ -82,6 +89,33 @@ public class DuelController : MonoBehaviour
     }
 
     // Arena misketleri dizilis sirasiyla uretiyor; sahiplik o siraya gore atanir.
+    // Kampanyanin MarbleMaterialPhysics.asset dosyasina DOKUNULMAZ: ona
+    // yazmak 60 bolumun dengesini bozar. Duello icin calisma aninda ayri
+    // bir materyal uretilir ve sadece duello misketlerine takilir.
+    private void ApplyDuelPhysics()
+    {
+        var source = arena != null && arena.SpawnedMarbles.Count > 0
+            ? arena.SpawnedMarbles[0].GetComponent<Collider>()?.sharedMaterial : null;
+        if (source == null) return;
+
+        if (duelMaterial == null) duelMaterial = new PhysicsMaterial("Duello misketi");
+        duelMaterial.dynamicFriction = source.dynamicFriction * DuelSession.FrictionMul;
+        duelMaterial.staticFriction = source.staticFriction * DuelSession.FrictionMul;
+        duelMaterial.bounciness = DuelSession.Bounciness;
+        duelMaterial.frictionCombine = source.frictionCombine;
+        duelMaterial.bounceCombine = source.bounceCombine;
+
+        foreach (var m in arena.SpawnedMarbles)
+        {
+            if (m == null) continue;
+            var c = m.GetComponent<Collider>();
+            if (c != null) c.sharedMaterial = duelMaterial;
+        }
+        var shooterCollider = shooter != null ? shooter.GetComponent<Collider>() : null;
+        if (shooterCollider != null) shooterCollider.sharedMaterial = duelMaterial;
+        if (shooter != null) shooter.DuelImpulseScale = DuelSession.Impulse / .65f;
+    }
+
     private void AssignOwners()
     {
         indexOf.Clear();

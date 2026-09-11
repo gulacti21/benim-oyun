@@ -26,7 +26,7 @@ public static class DuelPhysicsVerify
 
     // Duello arenasi: cember, engelsiz. Tek oyunculudan farkli olarak
     // icinde duvar yok -- sadece misketler ve acilar.
-    private const float ArenaSize = 3.2f;
+    private static float ArenaSize = 3.2f;
     private const float ShooterZ = -4.2f, ShooterHalfWidth = 2.4f;
 
     private static Scene scene;
@@ -67,6 +67,23 @@ public static class DuelPhysicsVerify
 
             Sweep("SURUKLENME (drag x kat)", new[] { .6f, 1f, 1.5f, 2.2f },
                   v => new Setting { dragMul = v });
+
+            Sweep("CEMBER BUYUKLUGU", new[] { 2.4f, 2.7f, 3.0f, 3.2f, 3.5f },
+                  v => new Setting { arena = v });
+
+            Sweep("ATIS GUCU ince ayar", new[] { .80f, .85f, .90f, .95f },
+                  v => new Setting { impulse = v });
+
+            // Tek degiskenle hedefe varilabiliyor ama his de onemli: sadece guc
+            // artirmak "sert vurdum, dagildi" hissi verir. Sekme ve sürtünme
+            // ekleyince misketler daha cok yayilir, taktik alani acilir.
+            report.Add("BIRLESIK ADAYLAR (his icin: guc + sekme/surtunme)");
+            Aday("A · guc .85 + sekme .45", new Setting { impulse = .85f, bounciness = .45f });
+            Aday("B · guc .85 + surtunme .7x", new Setting { impulse = .85f, frictionMul = .7f });
+            Aday("C · guc .80 + sekme .5 + surtunme .7x", new Setting { impulse = .80f, bounciness = .5f, frictionMul = .7f });
+            Aday("D · guc .90 + cember 3.0", new Setting { impulse = .90f, arena = 3.0f });
+            Aday("E · guc .85 + sekme .45 + cember 3.0", new Setting { impulse = .85f, bounciness = .45f, arena = 3.0f });
+            report.Add("");
         }
         finally
         {
@@ -81,9 +98,19 @@ public static class DuelPhysicsVerify
         Debug.Log("DUEL_PHYSICS_DONE: Logs/DuelPhysicsVerify.txt");
     }
 
+    private static void Aday(string ad, Setting s)
+    {
+        var (avg, best, zero) = Measure(s);
+        report.Add(string.Format("  {0,-38} ORT {1,5:0.00}  EN IYI {2}  bos atis %{3,3:0}{4}",
+                                 ad, avg, best, zero * 100f,
+                                 Math.Abs(avg - 1f) < .15f ? "   <-- hedefe yakin" : ""));
+        Debug.Log(ad + " -> ort " + avg.ToString("0.00"));
+    }
+
     private class Setting
     {
         public float massMul = 1f, dragMul = 1f, frictionMul = 1f, impulse = BaseImpulse, bounciness = -1f;
+        public float arena = 3.2f;
     }
 
     private static void Sweep(string title, float[] values, Func<float, Setting> build)
@@ -105,6 +132,7 @@ public static class DuelPhysicsVerify
     // sonuc TEK bir atisin ortalama verimi.
     private static (float avg, int best, float zeroRate) Measure(Setting s)
     {
+        ArenaSize = s.arena;
         Build(s);
         float total = 0f; int best = 0, shots = 0, zero = 0;
 

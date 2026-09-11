@@ -34,6 +34,8 @@ public class ShotController : MonoBehaviour
     // Misket çemberin içinde beklerken çizgiye dokunarak yer değiştirilemez.
     public bool PositionLocked => positionLocked;
     public float Power { get; private set; }
+    // Duello kendi atis gucunu kullanir. Kampanyada 1 kalir.
+    public float DuelImpulseScale { get; set; } = 1f;
     public MarblePower SelectedPower { get; private set; } = MarblePower.None;
     public bool ShootingEnabled
     {
@@ -141,7 +143,7 @@ public class ShotController : MonoBehaviour
         positionLocked = false;
         float multiplier = SelectedPower == MarblePower.Big ? 2.3f : SelectedPower == MarblePower.Iron ? 2.5f : 1f;
         pendingWearSkin=special.ActiveSkin;pendingWearPower=fired;
-        pendingImpulse = direction * (maxShotImpulse * power * multiplier * special.ImpulseMultiplier); hasPendingImpulse = true;
+        pendingImpulse = direction * (maxShotImpulse * DuelImpulseScale * power * multiplier * special.ImpulseMultiplier); hasPendingImpulse = true;
         if (SfxPlayer.Instance != null) SfxPlayer.Instance.PlayShot(power);
         MahalleFeedback.Tap();
         shootingEnabled = false;

@@ -16,6 +16,19 @@ public static class DuelSession
 
     // Duello arenasi. Kampanyadan bagimsiz: burayi degistirmek hicbir bolumu etkilemez.
     public const float ArenaSize = 3.2f;
+
+    // Duello fizigi. 2925 atis simule edilerek secildi; hedef "ortalama bir
+    // atis ~1 misket cikarsin"di, bu ayar 1.07 veriyor ve bos atis orani en
+    // dusuk olan o (%36).
+    //
+    // Kutle DENENDI VE ELENDI: 1.4 kat agirlastirmak bile atislarin %100'unu
+    // bosa cikardi, misket kipirdamiyor. Zorluk agirliktan degil aciyla
+    // gelmeli. Guc kampanyaya yakin kaldi (0.80 / 0.65), fark misketin
+    // kendisinde: daha sekici ve daha kaygan, temas sonrasi yola devam
+    // ediyorlar. Kampanyanin hicbir ayari degismiyor.
+    public const float Impulse = .80f;
+    public const float Bounciness = .5f;
+    public const float FrictionMul = .7f;
     public const float ShooterZ = -4.2f;
 
     public static void Begin(Mode kind)
