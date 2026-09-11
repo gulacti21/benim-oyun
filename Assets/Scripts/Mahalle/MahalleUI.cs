@@ -21,6 +21,8 @@ public class MahalleUI : MonoBehaviour
     // olmadan oyuncu her dönüşünde tebeşir animasyonunu baştan izlerdi.
     // static olduğu için sahne değişimlerini aşar, uygulama kapanınca sıfırlanır.
     private static bool titleShown;
+    // Duellodan "ANA MENU" ile cikinca harita degil baslik ekrani acilsin.
+    private static bool returnToTitle;
     private DuelController duel;
     private TextMeshProUGUI duelTurnLabel,duelCountA,duelCountB,duelTurnsLabel;
     private bool duelResultShown;
@@ -37,7 +39,11 @@ public class MahalleUI : MonoBehaviour
         controller=FindFirstObjectByType<LevelController>();
         if(controller!=null)controller.AnchorRefunded+=()=>Toast("Misketin işe yarar bir yerde kalmadı. Hakkın iade edildi.");
         district=MahalleProfile.NextLevel/Campaign.PerDistrict;
-        if(DuelSession.Active&&controller!=null)StartDuel();else if(controller!=null)ShowGame();else if(titleShown)ShowHome();else ShowTitle();
+        if(DuelSession.Active&&controller!=null)StartDuel();
+        else if(controller!=null)ShowGame();
+        else if(returnToTitle){returnToTitle=false;ShowTitle(true);}
+        else if(titleShown)ShowHome();
+        else ShowTitle();
         // Test yapisi damgasi. Bu yazi ekranda goruniyorsa bu build yayinlanamaz.
         if(MahalleProfile.TestUnlockAllLevels)
         {
@@ -393,6 +399,7 @@ public class MahalleUI : MonoBehaviour
     private void LeaveDuel()
     {
         DuelSession.End();
+        returnToTitle = true;
         Time.timeScale = 1f;
         SceneManager.LoadScene(GameSession.LevelSelectSceneName);
     }
