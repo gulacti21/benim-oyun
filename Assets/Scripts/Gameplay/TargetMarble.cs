@@ -12,6 +12,10 @@ public class TargetMarble : MonoBehaviour
     private MeshRenderer meshRenderer;
     private MaterialPropertyBlock propertyBlock;
 
+    // Online duelloda misketin sahibi: 0 veya 1. Kampanyada -1 kalir,
+    // yani tek oyunculu oyun bu alani hic kullanmaz.
+    public int Owner { get; set; } = -1;
+
     public bool IsScored { get; private set; }
     public Rigidbody Body => body;
 

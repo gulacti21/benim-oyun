@@ -52,6 +52,7 @@ public static class MahalleVerify
             var roundTrip=JsonUtility.FromJson<MahalleSave>(JsonUtility.ToJson(data));
             Check(roundTrip.beads==data.beads&&roundTrip.stars[11]==1&&roundTrip.selectedSkin==1&&roundTrip.claimed[0],"Save round trip retains economy, progression and collection");
             checks += SpecialMarblesVerify.RunChecks();
+            checks += DuelVerify.RunChecks();
             checks += DistrictRewardVerify.RunChecks();
             Check(Resources.Load<TMPro.TMP_FontAsset>("Mahalle/Nunito SDF")!=null,"Turkish font included");
             Check(Resources.Load<Shader>("Mahalle/Marble")!=null,"Marble shader included");

@@ -37,6 +37,10 @@ public class MarbleArena : MonoBehaviour
     private int totalMarbles;
 
     public event Action<int, int> ScoreChanged;
+    // Cemberi terk eden misketin kendisi. Duello hangi oyuncunun misketinin
+    // ciktigini bilmek zorunda; kampanya sadece sayiyla ilgilendigi icin
+    // bu olaya abone olmaz.
+    public event Action<TargetMarble> MarbleLeft;
 
     public int Score => score;
     public int TotalMarbles => totalMarbles;
@@ -71,6 +75,7 @@ public class MarbleArena : MonoBehaviour
             MahalleFeedback.Score(marble.transform.position);
             activeMarbles.RemoveAt(i);
             score++;
+            MarbleLeft?.Invoke(marble);
 
             if (SfxPlayer.Instance != null)
             {
@@ -107,6 +112,9 @@ public class MarbleArena : MonoBehaviour
         ClearMarbles();
         SpawnMarbles();
     }
+
+    // Duello, misketleri dizilis sirasina gore sahiplendirmek icin listeye bakar.
+    public IReadOnlyList<TargetMarble> SpawnedMarbles => spawnedMarbles;
 
     public bool AllMarblesAtRest()
     {

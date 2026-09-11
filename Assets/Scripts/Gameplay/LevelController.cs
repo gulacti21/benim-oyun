@@ -58,6 +58,9 @@ public class LevelController : MonoBehaviour
 
     private void Start()
     {
+        // Duelloda bolumu DuelController kuruyor; kampanya bolumu yuklenirse
+        // bir an ekranda yanlis dizilis gorunur ve arena iki kez kurulur.
+        if (DuelSession.Active) return;
         RestartLevel();
     }
 
@@ -123,6 +126,38 @@ public class LevelController : MonoBehaviour
         SceneManager.LoadScene(GameSession.LevelSelectSceneName);
     }
 
+    // Duello icin: kampanya veritabanina bakmadan, verilen bolum verisiyle
+    // arenayi ve aticiyi kurar. Gorsel dunya kurulumu kampanyayla ayni.
+    public void ConfigureForDuel(LevelData duelLevel)
+    {
+        if (duelLevel == null) return;
+        level = duelLevel;
+        LevelIndex = 0;
+
+        if (arena != null)
+        {
+            arena.Configure(level.shape, level.arenaSize, level.rings, level.triangleRows, level.marbles);
+            arena.Rebuild();
+        }
+
+        if (shooter != null)
+        {
+            shooter.ResetTo(level.shooterStartPosition);
+            shooter.ShootingEnabled = true;
+        }
+
+        MahalleWorld.Apply(this);
+        shotsUsed = 0;
+        waitingForSettle = false;
+        settleTimer = 0f;
+        State = LevelState.Playing;
+        IsPaused = false;
+        Time.timeScale = 1f;
+        StateChanged?.Invoke();
+    }
+
+    public MarbleArena Arena => arena;
+
     public void RestartLevel()
     {
         LevelIndex = Mathf.Clamp(GameSession.SelectedLevelIndex, 0, database.Count - 1);
@@ -169,6 +204,9 @@ public class LevelController : MonoBehaviour
 
     private void HandleShotFired()
     {
+        // Duelloda atisi DuelController takip ediyor; kampanyanin bitis
+        // kontrolu burada calisirsa bolum verisi olmadan sonuc hesaplamaya calisir.
+        if (DuelSession.Active) return;
         shotsUsed++;
         shotElapsed = 0f;
         waitingForSettle = true;
