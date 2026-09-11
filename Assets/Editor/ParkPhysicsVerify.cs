@@ -122,7 +122,7 @@ public static class ParkPhysicsVerify
 
     // Sadece son turda degisen bolumler. Degismeyenlerin tavani zaten olculdu,
     // tekrar taramak bosuna. Her yerlesim degisikliginden sonra bu liste guncellenir.
-    private static readonly int[] ChangedLevels = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59 };  // TAM DENETIM: 60 bolum, guc ve ozel misketlerle
+    private static readonly int[] ChangedLevels = { 59 };  // Meydan finali: 3 yildiz sarti icin tavan lazim
 
     // Mahalle Meydani (5. mahalle) tek basina.
     [MenuItem("MISKETR/Verify Mahalle Meydani")]
@@ -246,7 +246,7 @@ public static class ParkPhysicsVerify
 
         int total = 0; foreach (bool s in scored) if (s) total++;
         int one = level.oneStarTarget, two = level.twoStarTarget, three = level.threeStarTarget;
-        int gate = level.starsToPass == 2 ? two : one;
+        int gate = level.starsToPass >= 3 ? three : level.starsToPass == 2 ? two : one;
         int marbles = level.TotalMarbles(); int shots = level.shotCount;
         string route = string.Join(" ; ", moves);
         EndRun();

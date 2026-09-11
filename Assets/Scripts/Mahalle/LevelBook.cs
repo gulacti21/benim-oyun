@@ -250,9 +250,27 @@ public static class LevelBook
 
             // 11 Okul Turnuvası — Ters eğimli iki siper: bir kümeye işe yarayan geliş açısı diğerini tutmaz.
             case 22:
-                Set(level, 3.2f, 4, 9, 10, 12);
+                Set(level, 3.45f, 4, 6, 8, 11);
+                // KUM SAATI: iki ucgen dar bir belde birlesiyor. Belden vurursan
+                // iki tarafi birden acarsin ama o acikligi bulmak zor.
+                // Eskiden final bolumuydu; oyuncu finalden zor buldugu icin 11'e alindi.
+                level.marbles = Spots(-1.3f, 2.6f, 0f, 2.6f, 1.3f, 2.6f, -0.65f, 2.05f, 0.65f, 2.05f, 0f, 1.5f,
+                                      0f, 0.9f, -0.65f, 0.35f, 0.65f, 0.35f, -1.3f, -0.2f, 0f, -0.2f, 1.3f, -0.2f);
+                level.obstacles = new[]
+                {
+                    new ObstacleSpot(-2.4f, 1.2f, 0.4f, 1.8f, -15f),
+                    new ObstacleSpot(2.4f, 1.2f, 0.4f, 1.8f, 15f)
+                };
+                return true;
+
+            // 12 Ustalık Sınavı — çapraz girişler ve üç ayrı hedef grubu.
+            // 11'den daha geniş alan, bir eksik atış ve daha yüksek geçiş hedefi.
+            // Kümeler tek vuruşta topluca boşalmasın; üç bilinçli ilk temas seç.
+            case 23:
+                Set(level, 3.2f, 4, 8, 10, 12);
                 // Simetri yok: solda 3x3 sikisik blok, sagda uc dagimik misket.
                 // Bloga dalmak kolay ama uctekileri ayri ayri toplamak atis yiyor.
+                // Okul finali: kilit iki yildiz, blogu acmak yetmez, uclari da toplayacaksin.
                 level.marbles = Spots(-1.9f, 0.4f, -1.3f, 0.4f, -0.7f, 0.4f,
                                       -1.9f, 1f, -1.3f, 1f, -0.7f, 1f,
                                       -1.9f, 1.6f, -1.3f, 1.6f, -0.7f, 1.6f,
@@ -261,22 +279,6 @@ public static class LevelBook
                 {
                     new ObstacleSpot(-0.15f, -0.5f, 0.4f, 2f),
                     new ObstacleSpot(2.85f, 0.9f, 0.35f, 1.6f)
-                };
-                return true;
-
-            // 12 Ustalık Sınavı — çapraz girişler ve üç ayrı hedef grubu.
-            // 11'den daha geniş alan, bir eksik atış ve daha yüksek geçiş hedefi.
-            // Kümeler tek vuruşta topluca boşalmasın; üç bilinçli ilk temas seç.
-            case 23:
-                Set(level, 3.45f, 4, 5, 7, 11);
-                // KUM SAATI: iki ucgen dar bir belde birlesiyor. Belden vurursan
-                // iki tarafi birden acarsin ama o acikligi bulmak zor.
-                level.marbles = Spots(-1.3f, 2.6f, 0f, 2.6f, 1.3f, 2.6f, -0.65f, 2.05f, 0.65f, 2.05f, 0f, 1.5f,
-                                      0f, 0.9f, -0.65f, 0.35f, 0.65f, 0.35f, -1.3f, -0.2f, 0f, -0.2f, 1.3f, -0.2f);
-                level.obstacles = new[]
-                {
-                    new ObstacleSpot(-2.4f, 1.2f, 0.4f, 1.8f, -15f),
-                    new ObstacleSpot(2.4f, 1.2f, 0.4f, 1.8f, 15f)
                 };
                 level.starsToPass = 2;
                 return true;
@@ -636,11 +638,21 @@ public static class LevelBook
 
             // 12 Ustalik Sinavi — SINAV.
             case 59:
-                Set(level, 3.85f, 4, 5, 7, 11);
-                level.marbles = Spots(0.346f, 0.964f, 0.716f, 1.602f, 0.347f, 2.216f, -0.348f, 2.346f, -0.949f, 1.984f,
-                                      -1.209f, 1.337f, -1.066f, 0.656f, -0.593f, 0.15f, 0.067f, -0.06f, 0.747f, 0.059f,
-                                      1.305f, 0.464f, 1.64f, 1.066f, 1.702f, 1.752f, 1.492f, 2.407f, 1.052f, 2.934f, 0.45f, 3.265f);
-                level.obstacles = new[] { new ObstacleSpot(0f, 1.4f, 0.35f, 0.35f), new ObstacleSpot(-2.4f, -0.6f, 1.5f, 0.4f, 30f), new ObstacleSpot(2.7f, 2.3f, 1.4f, 0.35f, -40f) };
+                Set(level, 4f, 4, 3, 5, 9);
+                // SARMAL. Oyunun finali. Oyuncu onceki halini "asiri kolay" buldu:
+                // sarmalin dis kolu kenara yaslaniyordu ve itince kendiliginden
+                // cikiyordu. Sarmal merkeze cekildi, her misketin disari uzun yolu
+                // var. Faz ve merkez, oyundaki 59 bolume de en az benzeyecek sekilde
+                // tarayarak secildi. Hedefler olcumden sonra konacak.
+                level.marbles = Spots(0.034f, 2.086f, -0.629f, 1.788f, -0.585f, 1.079f, 0.012f, 0.709f, 0.685f, 0.892f,
+                                      1.064f, 1.475f, 1.001f, 2.165f, 0.553f, 2.691f, -0.109f, 2.888f, -0.776f, 2.714f,
+                                      -1.27f, 2.236f, -1.48f, 1.581f, -1.37f, 0.903f, -0.975f, 0.341f, -0.38f, -0.001f,
+                                      0.302f, -0.07f);
+                level.obstacles = new[] { new ObstacleSpot(0f, 1.4f, 0.5f, 0.5f), new ObstacleSpot(-2.4f, -0.6f, 1.5f, 0.4f, 30f), new ObstacleSpot(2.7f, 2.3f, 1.4f, 0.35f, -40f) };
+                // Olculdu: normal misketle tavan 16 misketin 6'si -- oyundaki en
+                // dusuk oran, yani en zor bolum. Kilit 2 yildiz = 5, yani normal
+                // misketle gecilir ama hata payi tek atis. 3 yildiz 9'da: oraya
+                // ancak guc veya ozel misketle ulasilir (KAYGAN 10, GUC-BUYUK 13).
                 level.starsToPass = 2;
                 return true;
 

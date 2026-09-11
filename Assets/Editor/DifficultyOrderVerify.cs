@@ -39,6 +39,11 @@ public static class DifficultyOrderVerify
                 if (l.starsToPass == 2)
                     Check(l.twoStarTarget < l.threeStarTarget,
                           "Kilit ve ustalik ayni sayi olmamali: " + name);
+                // Uc yildiz sarti olan bolumde uc esik de ayri olmali, yoksa
+                // "gec" ile "ustalik" ayni sey olur ve yildizlar anlamini yitirir.
+                if (l.starsToPass == 3)
+                    Check(l.oneStarTarget < l.twoStarTarget && l.twoStarTarget < l.threeStarTarget,
+                          "Uc yildiz sartinda uc esik de ayri olmali: " + name);
             }
 
         Debug.Log(failed == 0
