@@ -8,8 +8,8 @@ public static class DuelSession
 
     public static bool Active { get; private set; }
     public static Mode Kind { get; private set; } = Mode.HotSeat;
-    // Rovansta ilk baslayan degisir; bu deger maclar arasi tasinir.
-    public static int StartingPlayer { get; set; }
+    // Ilk dizen oyuncu. Atisa DIGERI baslar; rovansta el degisir.
+    public static int FirstPlacer { get; set; }
     public static int MatchNumber { get; set; }
     // Iki oyuncunun renkleri. Kozmetik secimden gelir, fizige etkisi YOKTUR.
     public static int[] Skin = { 0, 3 };
@@ -26,6 +26,12 @@ public static class DuelSession
     // gelmeli. Guc kampanyaya yakin kaldi (0.80 / 0.65), fark misketin
     // kendisinde: daha sekici ve daha kaygan, temas sonrasi yola devam
     // ediyorlar. Kampanyanin hicbir ayari degismiyor.
+    // Ortadaki buyuk misket: kimsenin degil, cikaran 2 puan alir.
+    // Buyuk ve agir oldugu icin kolay cikmiyor -- odul olmasinin sebebi bu.
+    public static readonly Vector2 BigMarbleSpot = new Vector2(0f, 0f);
+    public const float BigScale = 1.45f;
+    public const float BigMass = 2.2f;
+
     public const float Impulse = .80f;
     public const float Bounciness = .5f;
     public const float FrictionMul = .7f;
@@ -34,7 +40,7 @@ public static class DuelSession
     public static void Begin(Mode kind)
     {
         Active = true; Kind = kind;
-        StartingPlayer = 0; MatchNumber = 0;
+        FirstPlacer = 0; MatchNumber = 0;
     }
 
     public static void End() { Active = false; }

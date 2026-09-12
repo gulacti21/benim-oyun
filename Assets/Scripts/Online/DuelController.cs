@@ -49,7 +49,7 @@ public class DuelController : MonoBehaviour
         arena = level.Arena; shooter = level.Shooter;
 
         spots[0].Clear(); spots[1].Clear();
-        PlacingPlayer = DuelSession.StartingPlayer;
+        PlacingPlayer = DuelSession.FirstPlacer;
         Placing = true; HandOver = false;
         Match = null;
 
@@ -82,6 +82,8 @@ public class DuelController : MonoBehaviour
         // Var olan misketlerin uzerine konamaz; oyuncu bos yer secmeli.
         foreach (var q in AllSpots())
             if (Vector2.Distance(q, p) < DuelPlacement.MinGap) return false;
+        // Ortadaki buyuk misketin yeri ayrilmistir.
+        if (Vector2.Distance(DuelSession.BigMarbleSpot, p) < DuelPlacement.MinGap * DuelSession.BigScale) return false;
 
         spots[me].Add(p);
         RefreshPreview();
@@ -147,12 +149,21 @@ public class DuelController : MonoBehaviour
     {
         int me = Mathf.Clamp(PlacingPlayer, 0, 1);
         var show = spots[me];
-        var list = new MarbleSpot[show.Count];
+        // Buyuk misket en sona: oyuncu odulun nerede durdugunu dizerken gorsun.
+        var list = new MarbleSpot[show.Count + 1];
         for (int i = 0; i < show.Count; i++) list[i] = new MarbleSpot(show[i].x, show[i].y);
+        list[show.Count] = new MarbleSpot(DuelSession.BigMarbleSpot.x, DuelSession.BigMarbleSpot.y);
         data.marbles = list;
         arena.Configure(data.shape, data.arenaSize, data.rings, data.triangleRows, data.marbles);
         arena.Rebuild();
-        foreach (var m in arena.SpawnedMarbles) if (m != null) Tint(m, DuelSession.PlayerColor(me));
+        var spawned = arena.SpawnedMarbles;
+        for (int i = 0; i < spawned.Count; i++)
+        {
+            if (spawned[i] == null) continue;
+            bool big = i == show.Count;
+            Tint(spawned[i], big ? BigColor : DuelSession.PlayerColor(me));
+            if (big) MakeBig(spawned[i]);
+        }
     }
 
     private void Update()
@@ -182,9 +193,10 @@ public class DuelController : MonoBehaviour
         arena = level.Arena;
         shooter = level.Shooter;
 
-        Match = new DuelMatch(DuelSession.StartingPlayer);
+        Match = new DuelMatch(DuelSession.FirstPlacer);
         Match.Place(0, ToTuples(playerOne));
         Match.Place(1, ToTuples(playerTwo));
+        Match.PlaceBigMarble(DuelSession.BigMarbleSpot.x, DuelSession.BigMarbleSpot.y);
 
         BuildLevelData();
         level.ConfigureForDuel(data);
@@ -270,8 +282,25 @@ public class DuelController : MonoBehaviour
             if (m == null) continue;
             m.Owner = Match.Marbles[i].owner;
             indexOf[m] = i;
-            Tint(m, DuelSession.PlayerColor(m.Owner));
+            if (Match.Marbles[i].big) { Tint(m, BigColor); MakeBig(m); }
+            else Tint(m, DuelSession.PlayerColor(m.Owner));
         }
+    }
+
+    // Buyuk misket ne senin ne rakibin: ayri bir renk.
+    private static readonly Color BigColor = new Color(.94f, .90f, .78f);
+
+    // Buyuk ve agir. Olcum agirlastirmanin misketi neredeyse sabitledigini
+    // gosterdi; odul olmasinin sebebi tam olarak bu -- kolay cikmamali.
+    private static void MakeBig(TargetMarble marble)
+    {
+        marble.transform.localScale *= DuelSession.BigScale;
+        var body = marble.GetComponent<Rigidbody>();
+        if (body != null) body.mass *= DuelSession.BigMass;
+        var p = marble.transform.position;
+        p.y = marble.transform.localScale.y * .5f;
+        marble.transform.position = p;
+        if (body != null) body.position = p;
     }
 
     private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
@@ -381,7 +410,7 @@ public class DuelController : MonoBehaviour
 
     public void Rematch()
     {
-        DuelSession.StartingPlayer = 1 - DuelSession.StartingPlayer;
+        DuelSession.FirstPlacer = 1 - DuelSession.FirstPlacer;
         DuelSession.MatchNumber++;
         BeginPlacement();
     }

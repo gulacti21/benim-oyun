@@ -384,15 +384,18 @@ public class MahalleUI : MonoBehaviour
         Text(top.transform, "DÜELLO", 28, 14, 600, 56, 36, Cream);
         LabelButton(top.transform, "ÇIK", 872, 16, 134, 88, new Color(.28f, .38f, .31f), Cream, LeaveDuel, 30);
 
-        // Iki oyuncunun cemberdeki misket sayisi. Kazanani bu belirliyor.
+        // Kazanani PUAN belirliyor: cikardigin misket senin.
         for (int p = 0; p < 2; p++)
         {
             var box = Panel(top.transform, "Oyuncu " + p, 24 + p * 502, 96, 482, 134, new Color(.24f, .34f, .29f));
             Art(box.transform, "Renk", MahalleGraphic.Shape.Marble, 20, 20, 54, 54, DuelSession.PlayerColor(p));
-            Text(box.transform, DuelSession.PlayerName(p), 88, 16, 380, 40, 26, new Color(.8f, .84f, .75f));
-            var value = Text(box.transform, "7", 88, 56, 380, 60, 44, Cream);
+            Text(box.transform, DuelSession.PlayerName(p), 88, 16, 300, 40, 26, new Color(.8f, .84f, .75f));
+            Text(box.transform, "PUAN", 392, 16, 80, 40, 22, new Color(.66f, .7f, .62f));
+            var value = Text(box.transform, "0", 88, 56, 380, 60, 44, Cream);
             if (p == 0) duelCountA = value; else duelCountB = value;
         }
+        Text(top.transform, "Ortadaki büyük misket 2 puan · çember boşalınca biter",
+             28, 236, 976, 34, 23, new Color(.72f, .76f, .68f));
 
         duelTurnLabel = Text(page, "", 48, 0, 984, 62, 34, Cream, TextAlignmentOptions.Center);
         Bottom(duelTurnLabel.rectTransform, 48, 240, 984, 62);
@@ -405,8 +408,8 @@ public class MahalleUI : MonoBehaviour
     {
         if (duel == null || duel.Match == null) return;
         var m = duel.Match;
-        if (duelCountA != null) duelCountA.SetText(m.InRing(0).ToString());
-        if (duelCountB != null) duelCountB.SetText(m.InRing(1).ToString());
+        if (duelCountA != null) duelCountA.SetText(m.Score(0).ToString());
+        if (duelCountB != null) duelCountB.SetText(m.Score(1).ToString());
         if (duelTurnLabel != null)
         {
             duelTurnLabel.SetText(DuelSession.PlayerName(m.Turn) + " ATIYOR");
@@ -415,9 +418,9 @@ public class MahalleUI : MonoBehaviour
         if (duelTurnsLabel != null)
         {
             int kalan = DuelMatch.MaxShotsPerTurn - m.ShotsThisTurn;
-            duelTurnsLabel.SetText(m.ShotsThisTurn > 0
-                ? "Bu turda " + kalan + " atış hakkın daha var"
-                : m.TurnsLeft(m.Turn) + " tur kaldı");
+            duelTurnsLabel.SetText(m.Overtime ? "UZATMA · son tur"
+                : m.ShotsThisTurn > 0 ? "Bu turda " + kalan + " atış hakkın daha var"
+                : m.TurnsLeft(m.Turn) + " tur kaldı · çemberde " + m.RemainingInRing + " misket");
         }
     }
 
@@ -429,8 +432,8 @@ public class MahalleUI : MonoBehaviour
         string baslik = m.Result == DuelMatch.Outcome.Draw ? "BERABERE"
                       : DuelSession.PlayerName(m.Result == DuelMatch.Outcome.PlayerOne ? 0 : 1) + " KAZANDI";
         Text(box, baslik, 30, 40, 924, 80, 50, Ink, TextAlignmentOptions.Center);
-        Text(box, m.InRing(0) + "  ·  " + m.InRing(1), 30, 140, 924, 90, 64, Muted, TextAlignmentOptions.Center);
-        Text(box, "çemberde kalan misket", 30, 236, 924, 44, 26, Muted, TextAlignmentOptions.Center);
+        Text(box, m.Score(0) + "  ·  " + m.Score(1), 30, 140, 924, 90, 64, Muted, TextAlignmentOptions.Center);
+        Text(box, "toplanan puan", 30, 236, 924, 44, 26, Muted, TextAlignmentOptions.Center);
 
         LabelButton(box, "RÖVANŞ", 36, 320, 912, 116, Ink, Cream, () =>
         {
