@@ -334,9 +334,12 @@ public class DuelController : MonoBehaviour
 
     private void Resolve()
     {
-        // Atici cemberin ICINDE durduysa kaybedilir ve orada hedef olur.
+        // Atici cemberin ORTASINDA durduysa kaybedilir ve orada hedef olur.
+        // Kenarda durmak guvenli: olcum, "cemberin herhangi bir yeri" kuralinin
+        // atislarin %60'inda tetiklendigini gosterdi, o da secim degil vergi olurdu.
         Vector3 sp = shooter != null ? shooter.transform.position : Vector3.zero;
-        bool stranded = shooter != null && arena != null && !arena.IsOutside(sp);
+        float sr = new Vector2(sp.x, sp.z).magnitude;
+        bool stranded = shooter != null && sr <= DuelSession.ArenaSize * DuelSession.StrandRadiusFactor;
 
         bool sameTurn = Match.ResolveShot(knocked, stranded, sp.x, sp.z);
         knocked.Clear();

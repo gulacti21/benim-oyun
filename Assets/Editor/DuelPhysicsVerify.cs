@@ -43,7 +43,10 @@ public static class DuelPhysicsVerify
         if (marbleMat == null || groundMat == null) { Debug.LogError("DUEL_PHYSICS_ABORT: fizik materyalleri yok."); return; }
 
         report.Clear(); simCount = 0;
-        report.Add("DUELLO FIZIK TARAMASI · cember " + ArenaSize + " · 14 misket · hedef: atis basina ~1.0");
+        report.Add("DUELLO FIZIK TARAMASI · cember " + ArenaSize + " · hedef: atis basina ~1.0");
+        report.Add("KALAN = aticinin cemberin ICINDE durdugu atislarin orani.");
+        report.Add("Yeni kuralda atici cemberde kalirsa kaybediliyor, yani bu oran");
+        report.Add("dusuk olmali; yuksekse oyuncu her atista misket kaybeder.");
         report.Add("");
         report.Add("Her satir: o ayarla yapilan butun ornek atislarin ortalamasi ve en iyisi.");
         report.Add("ORT = vasat oyuncunun bekleyecegi sonuc. EN IYI = ustanin tek atista cikarabildigi.");
@@ -84,12 +87,29 @@ public static class DuelPhysicsVerify
             Aday("D · guc .90 + cember 3.0", new Setting { impulse = .90f, arena = 3.0f });
             Aday("E · guc .85 + sekme .45 + cember 3.0", new Setting { impulse = .85f, bounciness = .45f, arena = 3.0f });
             report.Add("");
+
+            // Atici nerede duruyor? Kural esigini buna gore secilecek.
+            report.Add("ATICI NEREDE DURUYOR (cember yaricapinin yuzdesi icinde kalma orani)");
+            foreach (var (ad, st) in new (string, Setting)[]
+            {
+                ("guc .80", new Setting { impulse = .80f }),
+                ("guc .90", new Setting { impulse = .90f }),
+                ("guc 1.00", new Setting { impulse = 1.00f }),
+                ("guc .90 + surtunme .7x", new Setting { impulse = .90f, frictionMul = .7f }),
+            })
+            {
+                Measure(st);
+                report.Add("  " + ad.PadRight(24) + BandReport());
+            }
+            report.Add("");
         }
         finally
         {
             Cleanup();
             if (testMat != null) { UnityEngine.Object.DestroyImmediate(testMat); testMat = null; }
         }
+
+        Denge();
 
         report.Add("");
         report.Add("# " + simCount + " atis simule edildi.");
@@ -100,11 +120,99 @@ public static class DuelPhysicsVerify
 
     private static void Aday(string ad, Setting s)
     {
-        var (avg, best, zero) = Measure(s);
-        report.Add(string.Format("  {0,-38} ORT {1,5:0.00}  EN IYI {2}  bos atis %{3,3:0}{4}",
-                                 ad, avg, best, zero * 100f,
+        var (avg, best, zero, strand) = Measure(s);
+        report.Add(string.Format("  {0,-38} ORT {1,5:0.00}  EN IYI {2}  bos %{3,3:0}  KALAN %{4,3:0}{5}",
+                                 ad, avg, best, zero * 100f, strand * 100f,
                                  Math.Abs(avg - 1f) < .15f ? "   <-- hedefe yakin" : ""));
         Debug.Log(ad + " -> ort " + avg.ToString("0.00"));
+    }
+
+    // Atici cemberin hangi bolumunde durdu? Kural esigini veriyle secmek icin.
+    private static readonly float[] Thresholds = { .40f, .55f, .70f, .85f, 1f };
+    private static readonly int[] bands = new int[5];
+    private static int lastShots;
+
+    private static string BandReport()
+    {
+        if (lastShots == 0) return "";
+        var parts = new List<string>();
+        for (int i = 0; i < Thresholds.Length; i++)
+            parts.Add("%" + Mathf.RoundToInt(Thresholds[i] * 100) + ": %" + Mathf.RoundToInt(bands[i] * 100f / lastShots));
+        return string.Join("  ", parts);
+    }
+
+    // ---------------- MAC DENGESI ----------------
+    // Fizik olcumunden cikan atis modeliyle binlerce mac oynatir.
+    // Cevaplanan soru: bes el yeterli mi, kese bosaliyor mu, berabere ne siklikta.
+    private static void Denge()
+    {
+        // Olculen degerler: ortalama 0.93 misket/atis, atislarin %47'si bos,
+        // en iyi atis 3 misket, atici %30 ihtimalle cemberin ortasinda kaliyor.
+        float[] dagilim = { .45f, .24f, .19f, .12f };   // 0,1,2,3 misket (guc 1.0)
+        const float strandSans = .20f;   // tehlike bolgesi %35 yaricap
+        var rnd = new System.Random(12345);             // sabit tohum: sonuc tekrarlanabilir
+
+        int mac = 4000, beraberlik = 0, erkenBitis = 0;
+        long toplamEl = 0, toplamAtis = 0, toplamTikanma = 0;
+        var farklar = new List<int>();
+
+        for (int i = 0; i < mac; i++)
+        {
+            int[] kese = { DuelMatch.StartingPouch, DuelMatch.StartingPouch };
+            int ilkDizen = 0, el = 1, kalanOrtada = 0;
+            bool erken = false;
+
+            while (el <= DuelMatch.RoundsPerMatch)
+            {
+                int ante0 = Mathf.Min(DuelMatch.AntePerRound, kese[0]);
+                int ante1 = Mathf.Min(DuelMatch.AntePerRound, kese[1]);
+                if (ante0 <= 0 || ante1 <= 0) { erken = true; break; }
+                kese[0] -= ante0; kese[1] -= ante1;
+                int ortada = ante0 + ante1 + kalanOrtada;
+
+                int sira = 1 - ilkDizen, bosTur = 0, atisSayaci = 0;
+                while (ortada > 0 && bosTur < DuelMatch.StaleTurnLimit)
+                {
+                    int turdaAtis = 0; bool turKazanc = false;
+                    while (turdaAtis < DuelMatch.MaxShotsPerTurn && ortada > 0)
+                    {
+                        double r = rnd.NextDouble(); int cikan = 0, birikim = 0;
+                        for (int k = 0; k < dagilim.Length; k++) { birikim = k; if ((r -= dagilim[k]) <= 0) break; }
+                        cikan = Mathf.Min(birikim, ortada);
+                        bool kaldi = rnd.NextDouble() < strandSans;
+
+                        kese[sira] += cikan; ortada -= cikan;
+                        if (kaldi) ortada += 1;          // cemberde kalan atici yeni hedef
+                        turdaAtis++; atisSayaci++;
+                        if (cikan > 0) turKazanc = true;
+                        if (cikan == 0 || kaldi) break;  // zincir kesilir
+                    }
+                    bosTur = turKazanc ? 0 : bosTur + 1;
+                    sira = 1 - sira;
+                }
+                if (ortada > 0) toplamTikanma++;
+                kalanOrtada = ortada;
+                toplamAtis += atisSayaci;
+                toplamEl++;
+                ilkDizen = 1 - ilkDizen;
+                el++;
+            }
+
+            if (erken) erkenBitis++;
+            if (kese[0] == kese[1]) beraberlik++;
+            farklar.Add(Mathf.Abs(kese[0] - kese[1]));
+        }
+
+        farklar.Sort();
+        report.Add("");
+        report.Add("MAC DENGESI · " + mac + " mac simule edildi");
+        report.Add("  ortalama el basina atis    : " + (toplamAtis / (float)toplamEl).ToString("0.0"));
+        report.Add("  tikanan el orani           : %" + Mathf.RoundToInt(toplamTikanma * 100f / toplamEl));
+        report.Add("  kesesi bosalip erken biten : %" + Mathf.RoundToInt(erkenBitis * 100f / mac));
+        report.Add("  beraberlik                 : %" + Mathf.RoundToInt(beraberlik * 100f / mac));
+        report.Add("  kese farki (ortanca)       : " + farklar[farklar.Count / 2] + " misket");
+        report.Add("  kese farki (en yakin %25)  : " + farklar[farklar.Count / 4] + " misket");
+        report.Add("  kese farki (en uzak %25)   : " + farklar[farklar.Count * 3 / 4] + " misket");
     }
 
     private class Setting
@@ -119,22 +227,24 @@ public static class DuelPhysicsVerify
         foreach (float v in values)
         {
             var s = build(v);
-            var (avg, best, zero) = Measure(s);
-            report.Add(string.Format("  {0,6:0.00} ->  ORT {1,5:0.00}  EN IYI {2}  bos atis %{3,3:0}{4}",
-                                     v, avg, best, zero * 100f,
+            var (avg, best, zero, strand) = Measure(s);
+            report.Add(string.Format("  {0,6:0.00} ->  ORT {1,5:0.00}  EN IYI {2}  bos %{3,3:0}  KALAN %{4,3:0}{5}",
+                                     v, avg, best, zero * 100f, strand * 100f,
                                      Math.Abs(avg - 1f) < .12f ? "   <-- hedefe yakin" : ""));
-            Debug.Log(title + " " + v.ToString("0.00") + " -> ort " + avg.ToString("0.00") + " en iyi " + best);
+            Debug.Log(title + " " + v.ToString("0.00") + " -> ort " + avg.ToString("0.00") + " kalan %" + (strand*100f).ToString("0"));
         }
         report.Add("");
     }
 
     // Bir ayarla ornek atislar yapar. Nisan noktalari ve gucler taranir;
     // sonuc TEK bir atisin ortalama verimi.
-    private static (float avg, int best, float zeroRate) Measure(Setting s)
+    private static (float avg, int best, float zeroRate, float strandRate) Measure(Setting s)
     {
         ArenaSize = s.arena;
         Build(s);
-        float total = 0f; int best = 0, shots = 0, zero = 0;
+        float total = 0f; int best = 0, shots = 0, zero = 0, strand = 0;
+        for (int i = 0; i < bands.Length; i++) bands[i] = 0;
+        lastShots = 0;
 
         float[] powers = { 1f, .75f, .5f };
         for (int p = 0; p < 5; p++)
@@ -145,25 +255,32 @@ public static class DuelPhysicsVerify
                 float ax = Mathf.Lerp(-1.4f, 1.4f, a / 4f);
                 foreach (float pw in powers)
                 {
-                    int outCount = Shoot(s, new Vector3(sx, TargetY, ShooterZ), new Vector3(ax, TargetY, .8f), pw);
+                    var (outCount, endR) = Shoot(s, new Vector3(sx, TargetY, ShooterZ), new Vector3(ax, TargetY, .8f), pw);
                     total += outCount; shots++; simCount++;
                     if (outCount > best) best = outCount;
                     if (outCount == 0) zero++;
+                    // Esik taramasi: aticinin cemberin hangi bolgesinde durdugu.
+                    for (int t = 0; t < Thresholds.Length; t++)
+                        if (endR <= ArenaSize * Thresholds[t]) bands[t]++;
+                    if (endR <= ArenaSize + ExitMargin) strand++;
                 }
             }
         }
         Cleanup();
-        return (shots == 0 ? 0f : total / shots, best, shots == 0 ? 0f : zero / (float)shots);
+        lastShots = shots;
+        return (shots == 0 ? 0f : total / shots, best, shots == 0 ? 0f : zero / (float)shots, shots == 0 ? 0f : strand / (float)shots);
     }
 
     // Duello dizilisi: iki oyuncunun 7'ser misketi cembere yayilmis.
     // Gercek macta oyuncular kendi dizecek; burada temsili, makul sik bir dizilis.
+    // Duello dizilisi: iki oyuncunun 5'er misketi. Gercek macta oyuncular
+    // kendi dizecek; burada temsili, makul sik bir dizilis.
     private static readonly float[,] Layout =
     {
-        {  0f, 1.0f }, { -0.62f, 1.0f }, { 0.62f, 1.0f },
-        { -0.31f, 1.54f }, { 0.31f, 1.54f }, { -0.93f, 1.54f }, { 0.93f, 1.54f },
-        {  0f, 2.08f }, { -0.62f, 2.08f }, { 0.62f, 2.08f },
-        { -1.24f, 1.0f }, { 1.24f, 1.0f }, { -0.31f, 0.46f }, { 0.31f, 0.46f }
+        { -0.62f, 1.0f }, { 0f, 1.0f }, { 0.62f, 1.0f },
+        { -0.31f, 1.54f }, { 0.31f, 1.54f },
+        { -0.93f, 0.46f }, { -0.31f, 0.46f }, { 0.31f, 0.46f }, { 0.93f, 0.46f },
+        {  0f, 2.08f }
     };
 
     private static readonly List<Rigidbody> bodies = new List<Rigidbody>();
@@ -197,7 +314,7 @@ public static class DuelPhysicsVerify
     // Tek atis simule eder, cemberi terk eden misket sayisini dondurur.
     // Her atistan once dizilis basa alinir: atislar birbirini etkilemesin,
     // olculen sey tek bir atisin verimi olsun.
-    private static int Shoot(Setting s, Vector3 from, Vector3 aim, float power)
+    private static (int outCount, float endRadius) Shoot(Setting s, Vector3 from, Vector3 aim, float power)
     {
         for (int i = 0; i < bodies.Count; i++)
         {
@@ -228,8 +345,12 @@ public static class DuelPhysicsVerify
             if (new Vector2(p.x, p.z).magnitude > exit) outCount++;
         }
 
+        // Atici nerede durdu? Yeni kuralda cemberin ortasinda kalmak misket kaybi.
+        var sp = shot.position;
+        float endR = new Vector2(sp.x, sp.z).magnitude;
+
         UnityEngine.Object.DestroyImmediate(shot.gameObject);
-        return outCount;
+        return (outCount, endR);
     }
 
     private static GameObject Make(PrimitiveType kind, Vector3 position, Vector3 scale)

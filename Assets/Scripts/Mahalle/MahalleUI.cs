@@ -284,17 +284,17 @@ public class MahalleUI : MonoBehaviour
         ClearPage();
         Background(new Color(.14f, .12f, .10f));
         Text(page, "ONLİNE", 0, 150, 1080, 110, 84, new Color(1, .98f, .92f), TextAlignmentOptions.Center);
-        Text(page, "ikiniz de misketlerinizi dizin, sırayla atın,\nçemberde misketi çok kalan kazanır",
+        Text(page, "ikiniz de misketlerinizi ortaya koyun, sırayla atın,\nçıkardığınız misket sizin olur",
              60, 280, 960, 110, 28, new Color(1, .97f, .89f, .62f), TextAlignmentOptions.Center);
 
         var kart = Panel(page, "Kurallar", 90, 430, 900, 330, new Color(.19f, .24f, .22f));
         kart.radius = 28;
         string[] satir =
         {
-            "7'şer misket, 6'şar tur",
+            "Kese 20 misket · her el 5'er ortaya",
+            "Çıkardığın misket kesene girer",
             "Çıkardıysan tekrar atarsın, turda en fazla 3",
-            "Atıcı kaldığı yerde kalır",
-            "Kendi misketini çıkarırsan sana yazılır",
+            "Atıcın çemberin ortasında kalırsa onu kaybedersin",
             "Herkes aynı misketi kullanır, güç yok"
         };
         for (int i = 0; i < satir.Length; i++)
@@ -414,7 +414,7 @@ public class MahalleUI : MonoBehaviour
             var value = Text(box.transform, "0", 88, 56, 380, 60, 44, Cream);
             if (p == 0) duelCountA = value; else duelCountB = value;
         }
-        Text(top.transform, "Çıkardığın misket senin · atıcın çemberde kalırsa onu kaybedersin",
+        Text(top.transform, "Çıkardığın misket senin · atıcın çemberin ORTASINDA kalırsa kaybedersin",
              28, 236, 976, 34, 22, new Color(.72f, .76f, .68f));
 
         duelTurnLabel = Text(page, "", 48, 0, 984, 62, 34, Cream, TextAlignmentOptions.Center);

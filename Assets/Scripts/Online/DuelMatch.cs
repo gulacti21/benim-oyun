@@ -27,8 +27,13 @@ using System.Collections.Generic;
 //              kesesi el basinda bosalirsa mac orada biter.
 public class DuelMatch
 {
-    public const int StartingPouch = 20;
-    public const int AntePerRound = 5;
+    // 4000 mac simule edilerek secildi.
+    //   Kese 20 / ortaya 5 iken: el basina 16 atis (macta ~80), kese HIC
+    //   bosalmiyordu -- mac hem cok uzun hem gerilimsizdi.
+    //   Kese 12 / ortaya 4: bes elde 20 misket ortaya koymak gerekiyor ama
+    //   elinde 12 var, yani kazanmadan maci bitiremiyorsun.
+    public const int StartingPouch = 12;
+    public const int AntePerRound = 4;
     public const int RoundsPerMatch = 5;
     public const int MaxShotsPerTurn = 3;
     public const int StaleTurnLimit = 4;

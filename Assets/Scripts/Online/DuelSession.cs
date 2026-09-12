@@ -27,9 +27,17 @@ public static class DuelSession
     // kendisinde: daha sekici ve daha kaygan, temas sonrasi yola devam
     // ediyorlar. Kampanyanin hicbir ayari degismiyor.
 
-    public const float Impulse = .80f;
-    public const float Bounciness = .5f;
+    public const float Impulse = 1f;
+    public const float Bounciness = .45f;
     public const float FrictionMul = .7f;
+
+    // ATICI TEHLIKE BOLGESI. Atici cemberin ORTASINDA kalirsa kaybedilir;
+    // kenarda durursa kurtulur. Yaricapin bu kadarlik ic bolgesi tehlikeli.
+    //
+    // Olcum: atici cemberin herhangi bir yerinde kalma orani %60 cikti --
+    // yani kural bu haliyle bir secim degil, her atista odenen vergi olurdu.
+    // Ic bolge %50'ye daraltilinca oran ~%30'a dustu: uc atistan birinde risk.
+    public const float StrandRadiusFactor = .35f;
     public const float ShooterZ = -4.2f;
 
     public static void Begin(Mode kind)
