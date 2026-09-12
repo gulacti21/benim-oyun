@@ -37,7 +37,55 @@ public class DuelController : MonoBehaviour
     private float settleTimer, elapsed;
     private const float SettleDelay = .4f;
 
-    public DuelMatch Match { get; private set; }
+    // AG MODU. Net null ise tek cihazda oynanan mac: asagidaki her sey
+    // eskisi gibi calisir. Net doluysa MACIN SAHIBI oturumdur; controller
+    // kendi kopyasini tutmaz -- iki kopya tutmak kacinilmaz olarak
+    // uyusmazlik uretir.
+    public DuelNetSession Net { get; private set; }
+    private DuelMatch localMatch;
+    public DuelMatch Match => Net != null ? Net.Match : localMatch;
+
+    // Ag modunda sadece SIRASI GELEN oyuncu hamle uretir; digeri izler.
+    public bool Online => Net != null;
+    public int MePlayer => Net != null ? Net.LocalPlayer : ActivePlayer;
+    public bool Watching => Net != null && Match != null
+                            && ((CurrentStep == Step.Shoot && Match.Turn != Net.LocalPlayer)
+                             || (CurrentStep == Step.Place && Match.HasPlaced(Net.LocalPlayer))
+                             || (CurrentStep == Step.Toss && !Net.IsMyTurnToToss));
+
+    public void AttachNet(DuelNetSession session)
+    {
+        Net = session;
+        if (Net != null) Net.Applied += OnNetApplied;
+    }
+
+    // Uzaktan gelen hamle oturumda zaten islendi; burada sadece sahneyi
+    // ve ekrani ona gore guncelliyoruz.
+    private void OnNetApplied(DuelNet.Packet p)
+    {
+        if (p.player == Net.LocalPlayer) return;        // kendi hamlemiz zaten islendi
+        switch (p.kind)
+        {
+            case DuelNet.Kind.Toss:
+                tossShotTaken = false;
+                if (Net.Toss.Finished) { if (shooter != null) shooter.ShootingEnabled = false; }
+                else PlaceTossShooter();
+                break;
+            case DuelNet.Kind.Place:
+                orderIndex++;
+                if (Match.State == DuelMatch.Phase.Shooting) StartShooting();
+                else { RefreshPreview(); }
+                break;
+            case DuelNet.Kind.Shot:
+                SyncAfterShot();
+                break;
+            case DuelNet.Kind.NextRound:
+                DuelSession.FirstPlacer = Match.FirstPlacer;
+                BeginRound();
+                break;
+        }
+        Refresh();
+    }
     public Step CurrentStep { get; private set; } = Step.Done;
     public int ActivePlayer => order[Mathf.Clamp(orderIndex, 0, 1)];
     public int PlacedCount => spots[Mathf.Clamp(ActivePlayer, 0, 1)].Count;
@@ -51,6 +99,7 @@ public class DuelController : MonoBehaviour
     private void OnDestroy()
     {
         if (Instance == this) Instance = null;
+        if (Net != null) Net.Applied -= OnNetApplied;
         Unhook();
         if (duelMaterial != null) { Destroy(duelMaterial); duelMaterial = null; }
     }
@@ -75,7 +124,7 @@ public class DuelController : MonoBehaviour
     private void BeginToss()
     {
         CurrentStep = Step.Toss;
-        DuelToss.Reset(0);
+        if (Net == null) DuelToss.Reset(0);
         tossShotTaken = false;
         BuildTossData();
         level.ConfigureForDuel(data);
@@ -104,11 +153,12 @@ public class DuelController : MonoBehaviour
     {
         if (shooter == null) return;
         shooter.ResetTo(new Vector3(0f, .25f, DuelSession.ShooterZ));
-        shooter.ShootingEnabled = true;
+        shooter.ShootingEnabled = !Watching;
         // Sira atisi mac atisindan DAHA HAFIF: bkz. DuelSession.TossImpulseFactor.
         shooter.DuelImpulseScale = DuelSession.TossImpulse / .65f;
         var visual = shooter.GetComponent<MarbleVisual>();
-        if (visual != null) visual.SetSkin(DuelSession.Skin[Mathf.Clamp(DuelToss.Shooter, 0, 1)]);
+        int tossAtan = Net != null ? Net.Toss.TurnOf : DuelToss.Shooter;
+        if (visual != null) visual.SetSkin(DuelSession.Skin[Mathf.Clamp(tossAtan, 0, 1)]);
     }
 
     private void UpdateToss()
@@ -137,6 +187,15 @@ public class DuelController : MonoBehaviour
         Vector3 sp = shooter != null ? shooter.transform.position : Vector3.zero;
         // Cizgiyi gecmek yaniktir; kisa kalmak degil. Karar DuelToss'ta.
         bool dustu = shooter == null || sp.y < -1f;
+        if (Net != null)
+        {
+            Net.LocalToss(sp.x, sp.z, dustu);
+            if (Net.Toss.Finished) { if (shooter != null) shooter.ShootingEnabled = false; }
+            else PlaceTossShooter();
+            Refresh();
+            return;
+        }
+
         int atan = DuelToss.Shooter;
         DuelToss.Record(atan, DuelToss.Measure(sp.x, sp.z, dustu));
 
@@ -153,7 +212,15 @@ public class DuelController : MonoBehaviour
     // Sira atisi bitti; oyuncu onayladi.
     public void TossDone()
     {
-        if (CurrentStep != Step.Toss || !DuelToss.Done) return;
+        if (CurrentStep != Step.Toss) return;
+        if (Net != null)
+        {
+            if (!Net.Toss.Finished) return;
+            DuelSession.FirstPlacer = Net.Match != null ? Net.Match.FirstPlacer : Net.Toss.FirstPlacerOf;
+            StartMatchProper();
+            return;
+        }
+        if (!DuelToss.Done) return;
         DuelSession.FirstPlacer = DuelToss.FirstPlacer;
         StartMatchProper();
     }
@@ -161,7 +228,8 @@ public class DuelController : MonoBehaviour
     private void StartMatchProper()
     {
         Unhook();
-        Match = new DuelMatch(DuelSession.FirstPlacer);
+        // Ag modunda maci oturum kurar (sira atisi bitince); burada degil.
+        if (Net == null) localMatch = new DuelMatch(DuelSession.FirstPlacer);
         BeginRound();
     }
 
@@ -197,7 +265,8 @@ public class DuelController : MonoBehaviour
     public void ChooseManual()
     {
         if (CurrentStep != Step.Offer) return;
-        if (!Match.UsePlacementRight(ActivePlayer)) { ChooseAuto(); return; }
+        if (Net != null) Net.LocalRight(true);
+        else if (!Match.UsePlacementRight(ActivePlayer)) { ChooseAuto(); return; }
         CurrentStep = Step.Place; Refresh();
     }
 
@@ -213,7 +282,8 @@ public class DuelController : MonoBehaviour
     {
         var hazir = DuelPlacement.DefaultLayout(player, Match.AnteFor(player), DuelSession.ArenaSize);
         var son = Avoid(hazir, player);
-        Match.Place(player, ToTuples(son));
+        if (Net != null) Net.LocalPlace(ToTuples(son));
+        else Match.Place(player, ToTuples(son));
     }
 
     // Otomatik dizilis, ortada duran misketlerin ustune gelmesin.
@@ -288,7 +358,8 @@ public class DuelController : MonoBehaviour
     {
         if (CurrentStep != Step.Place || PlacedCount < NeedCount) return;
         int me = ActivePlayer;
-        Match.Place(me, ToTuples(spots[me]));
+        if (Net != null) Net.LocalPlace(ToTuples(spots[me]));
+        else Match.Place(me, ToTuples(spots[me]));
         orderIndex++;
 
         // Sonraki oyuncu da elle dizecekse telefon devri ekrani gelir.
@@ -453,9 +524,25 @@ public class DuelController : MonoBehaviour
         float tehlike = DuelSession.ArenaSize * DuelSession.StrandRadiusFactor * (DuelSession.Triangle ? .5f : 1f);
         bool stranded = shooter != null && sr <= tehlike;
 
+        if (Net != null)
+        {
+            // Ag modunda atisin sonucunu OTURUM isler ve rakibe yollar;
+            // sahneyi guncelleme isi ortak SyncAfterShot'ta.
+            Net.LocalShot(knocked, stranded, sp.x, sp.z);
+            knocked.Clear();
+            SyncAfterShot();
+            return;
+        }
+
         bool sameTurn = Match.ResolveShot(knocked, stranded, sp.x, sp.z);
         knocked.Clear();
+        AfterShot(sameTurn, stranded);
+    }
 
+    // Atistan sonra sahne ve adim. Tek cihazda zincir bilgisi elimizde;
+    // ag modunda sira degisip degismedigine bakilir.
+    private void AfterShot(bool sameTurn, bool stranded)
+    {
         if (Match.State != DuelMatch.Phase.Shooting)
         {
             if (shooter != null) shooter.ShootingEnabled = false;
@@ -473,6 +560,24 @@ public class DuelController : MonoBehaviour
         Refresh();
     }
 
+    // Ag modunda atistan sonra: zinciri, sirayi ve cemberi mac durumundan
+    // tureterek sahneyi yeniden esler. Kimin attigi onemli degil, iki
+    // tarafta ayni kod calisir.
+    private void SyncAfterShot()
+    {
+        if (Match == null) return;
+        if (Match.State != DuelMatch.Phase.Shooting)
+        {
+            if (shooter != null) shooter.ShootingEnabled = false;
+            CurrentStep = Match.State == DuelMatch.Phase.Finished ? Step.Done : Step.RoundOver;
+            Refresh();
+            return;
+        }
+        RebuildRing();
+        PlaceShooterOnLine();
+        Refresh();
+    }
+
     // Cemberde kalan atici yeni bir hedef olarak eklendigi icin arena yeniden kurulur.
     private void RebuildRing()
     {
@@ -486,6 +591,7 @@ public class DuelController : MonoBehaviour
     public void NextRound()
     {
         if (CurrentStep != Step.RoundOver) return;
+        if (Net != null) { Net.LocalNextRound(); if (Match.State == DuelMatch.Phase.Placing) { DuelSession.FirstPlacer = Match.FirstPlacer; BeginRound(); } return; }
         Match.NextRound();
         if (Match.State == DuelMatch.Phase.Finished) { CurrentStep = Step.Done; Refresh(); return; }
         DuelSession.FirstPlacer = Match.FirstPlacer;
@@ -494,6 +600,14 @@ public class DuelController : MonoBehaviour
 
     public void Rematch()
     {
+        if (Net != null)
+        {
+            Net.LocalRematch();
+            Unhook();
+            DuelSession.FirstPlacer = Match != null ? Match.FirstPlacer : 0;
+            BeginRound();
+            return;
+        }
         DuelSession.FirstPlacer = 1 - DuelSession.FirstPlacer;
         DuelSession.MatchNumber++;
         Unhook();
@@ -559,7 +673,9 @@ public class DuelController : MonoBehaviour
     {
         if (shooter == null) return;
         shooter.ResetTo(new Vector3(0f, .25f, DuelSession.ShooterZ));
-        shooter.ShootingEnabled = true;
+        // Ag modunda sadece sirasi gelen oyuncu atar; digerinde atis kapali,
+        // yoksa iki taraf ayni anda atip mac catallanir.
+        shooter.ShootingEnabled = !Watching;
         var visual = shooter.GetComponent<MarbleVisual>();
         if (visual != null) visual.SetSkin(DuelSession.Skin[Mathf.Clamp(Match.Turn, 0, 1)]);
     }

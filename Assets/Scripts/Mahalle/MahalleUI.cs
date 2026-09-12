@@ -373,26 +373,28 @@ public class MahalleUI : MonoBehaviour
     private void RefreshToss()
     {
         if (duel == null || tossWho == null) return;
-        if (tossScoreA != null) tossScoreA.SetText(DuelToss.ScoreText(0));
-        if (tossScoreB != null) tossScoreB.SetText(DuelToss.ScoreText(1));
+        var toss = duel.Online ? duel.Net.Toss : DuelToss.Current;
+        if (tossScoreA != null) tossScoreA.SetText(toss.TextFor(0));
+        if (tossScoreB != null) tossScoreB.SetText(toss.TextFor(1));
 
-        bool bitti = DuelToss.Done;
+        bool bitti = toss.Finished;
         if (tossGo != null) tossGo.SetActive(bitti);
 
         if (bitti)
         {
-            int k = DuelToss.Winner;
+            int k = toss.WinnerOf;
             tossWho.SetText(DuelSession.PlayerName(k) + " ÖNCE ATIYOR");
             tossWho.color = DuelSession.PlayerColor(k);
-            tossHint.SetText(DuelSession.PlayerName(DuelToss.FirstPlacer) + " misketlerini önce dizer");
+            tossHint.SetText(DuelSession.PlayerName(toss.FirstPlacerOf) + " misketlerini önce dizer");
             return;
         }
 
-        int atan = DuelToss.Shooter;
-        tossWho.SetText(DuelSession.PlayerName(atan) + " ATIYOR");
+        int atan = duel.Online ? duel.Net.Toss.TurnOf : DuelToss.Shooter;
+        tossWho.SetText(duel.Watching ? "RAKİP ATIYOR"
+                                      : DuelSession.PlayerName(atan) + " ATIYOR");
         tossWho.color = DuelSession.PlayerColor(atan);
-        tossHint.SetText(DuelToss.HasShot(1 - atan) ? "Rakibinden daha yakın durdurmaya çalış"
-                                                    : "Uzak kenara olabildiğince yakın durdur");
+        tossHint.SetText(toss.Threw(1 - atan) ? "Rakibinden daha yakın durdurmaya çalış"
+                                              : "Uzak kenara olabildiğince yakın durdur");
     }
 
     // Elin basinda: "ekstra dizme hakkini kullanacak misin?"
@@ -503,14 +505,16 @@ public class MahalleUI : MonoBehaviour
         if (duelCountB != null) duelCountB.SetText(m.Pouch(1).ToString());
         if (duelTurnLabel != null)
         {
-            duelTurnLabel.SetText(DuelSession.PlayerName(m.Turn) + " ATIYOR");
+            bool izliyor = duel.Watching;
+            duelTurnLabel.SetText(izliyor ? "RAKİP ATIYOR"
+                                          : DuelSession.PlayerName(m.Turn) + " ATIYOR");
             duelTurnLabel.color = DuelSession.PlayerColor(m.Turn);
         }
         if (duelTurnsLabel != null)
         {
             int kalan = DuelMatch.MaxShotsPerTurn - m.ShotsThisTurn;
-            duelTurnsLabel.SetText(m.ShotsThisTurn > 0
-                ? "Bu turda " + kalan + " atış hakkın daha var"
+            duelTurnsLabel.SetText(duel.Watching ? "Sıranı bekle · çemberde " + m.RemainingInRing + " misket"
+                : m.ShotsThisTurn > 0 ? "Bu turda " + kalan + " atış hakkın daha var"
                 : "Çemberde " + m.RemainingInRing + " misket");
         }
     }
