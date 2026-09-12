@@ -6,9 +6,15 @@ using UnityEngine.InputSystem;
 // Kural motorunu oyunun atis sistemine baglayan katman.
 // Kurallar DuelMatch'te, fizik mevcut MarbleArena/ShotController'da;
 // burasi ikisinin arasinda tercumanlik yapar.
+//
+// Bir elin akisi:
+//   [hak teklifi] -> dizme (elle ya da otomatik) -> telefon devri -> atis
+//   -> el sonu -> sonraki el
 public class DuelController : MonoBehaviour
 {
     public static DuelController Instance { get; private set; }
+
+    public enum Step { Offer, Place, HandOver, Shoot, RoundOver, Done }
 
     private LevelController level;
     private MarbleArena arena;
@@ -18,18 +24,21 @@ public class DuelController : MonoBehaviour
 
     private readonly List<int> knocked = new List<int>();
     private readonly Dictionary<TargetMarble, int> indexOf = new Dictionary<TargetMarble, int>();
-
-    private bool waiting;         // atis yapildi, misketlerin durmasi bekleniyor
-    // Dizme asamasi: sirayla her oyuncu kendi misketlerini cembere koyar.
     private readonly List<Vector2>[] spots = { new List<Vector2>(), new List<Vector2>() };
-    public bool Placing { get; private set; }
-    public int PlacingPlayer { get; private set; }
-    public bool HandOver { get; private set; }   // telefonu diger oyuncuya verme ekrani
-    public int PlacedCount => spots[Mathf.Clamp(PlacingPlayer, 0, 1)].Count;
+    // Elin dizme sirasi: once ilk dizen, sonra digeri.
+    private readonly int[] order = new int[2];
+    private int orderIndex;
+
+    private bool waiting;
     private float settleTimer, elapsed;
     private const float SettleDelay = .4f;
 
     public DuelMatch Match { get; private set; }
+    public Step CurrentStep { get; private set; } = Step.Done;
+    public int ActivePlayer => order[Mathf.Clamp(orderIndex, 0, 1)];
+    public int PlacedCount => spots[Mathf.Clamp(ActivePlayer, 0, 1)].Count;
+    public int NeedCount => Match != null ? Match.AnteFor(ActivePlayer) : 0;
+    public string Diag = "hazir";
     public event Action Changed;
 
     private void Awake() { Instance = this; }
@@ -40,214 +49,363 @@ public class DuelController : MonoBehaviour
         if (duelMaterial != null) { Destroy(duelMaterial); duelMaterial = null; }
     }
 
-    // ---------------- Dizme ----------------
+    // ---------------- Mac ----------------
 
-    public void BeginPlacement()
+    public void BeginMatch()
     {
         level = FindFirstObjectByType<LevelController>();
         if (level == null) { Debug.LogError("DUELLO: LevelController bulunamadi."); return; }
         arena = level.Arena; shooter = level.Shooter;
 
-        spots[0].Clear(); spots[1].Clear();
-        PlacingPlayer = DuelSession.FirstPlacer;
-        Placing = true; HandOver = false;
-        Match = null;
-
-        BuildLevelData();
-        level.ConfigureForDuel(data);
-        if (shooter != null) shooter.ShootingEnabled = false;   // dizerken atis yok
-        RefreshPreview();
-        Changed?.Invoke();
+        Match = new DuelMatch(DuelSession.FirstPlacer);
+        if (data == null) data = ScriptableObject.CreateInstance<LevelData>();
+        BeginRound();
     }
 
-    // Parmagin dokundugu noktayi zemine dusurur.
-    private bool PointerToGround(out Vector3 world)
+    private void BeginRound()
     {
-        world = default;
-        var cam = Camera.main; var pointer = Pointer.current;
-        if (cam == null || pointer == null) return false;
-        var plane = new Plane(Vector3.up, new Vector3(0f, .25f, 0f));
-        var ray = cam.ScreenPointToRay(pointer.position.ReadValue());
-        if (!plane.Raycast(ray, out float d)) return false;
-        world = ray.GetPoint(d);
-        return true;
+        spots[0].Clear(); spots[1].Clear();
+        order[0] = Match.FirstPlacer; order[1] = 1 - Match.FirstPlacer;
+        orderIndex = 0;
+        if (shooter != null) shooter.ShootingEnabled = false;
+        Refresh();
+        NextPlacer();
     }
+
+    // Siradaki oyuncuya gecer: hakki varsa teklif eder, yoksa dizdirir.
+    private void NextPlacer()
+    {
+        while (orderIndex < 2)
+        {
+            int p = order[orderIndex];
+            if (Match.HasPlaced(p)) { orderIndex++; continue; }
+
+            // Ilk el herkes elle dizer, teklif yok.
+            if (Match.Round == 1) { CurrentStep = Step.Place; Refresh(); return; }
+
+            // Sonraki ellerde hakki varsa sorulur, yoksa otomatik dizilir.
+            if (Match.PlacementRights(p) > 0) { CurrentStep = Step.Offer; Refresh(); return; }
+            AutoPlace(p);
+            orderIndex++;
+        }
+        StartShooting();
+    }
+
+    public void ChooseManual()
+    {
+        if (CurrentStep != Step.Offer) return;
+        if (!Match.UsePlacementRight(ActivePlayer)) { ChooseAuto(); return; }
+        CurrentStep = Step.Place; Refresh();
+    }
+
+    public void ChooseAuto()
+    {
+        if (CurrentStep != Step.Offer) return;
+        AutoPlace(ActivePlayer);
+        orderIndex++;
+        NextPlacer();
+    }
+
+    private void AutoPlace(int player)
+    {
+        var hazir = DuelPlacement.DefaultLayout(player, Match.AnteFor(player), DuelSession.ArenaSize);
+        var son = Avoid(hazir, player);
+        Match.Place(player, ToTuples(son));
+    }
+
+    // Otomatik dizilis, ortada duran misketlerin ustune gelmesin.
+    private List<Vector2> Avoid(List<Vector2> istenen, int player)
+    {
+        var dolu = new List<Vector2>();
+        foreach (var m in Match.Marbles) if (!m.out_) dolu.Add(new Vector2(m.x, m.z));
+        foreach (var q in spots[0]) dolu.Add(q);
+        foreach (var q in spots[1]) dolu.Add(q);
+
+        var sonuc = new List<Vector2>();
+        foreach (var q in istenen)
+        {
+            Vector2 p = q;
+            // Dolu noktadan kacana kadar kucuk adimlarla kaydir.
+            for (int deneme = 0; deneme < 40; deneme++)
+            {
+                bool cakisma = false;
+                foreach (var d in dolu) if (Vector2.Distance(d, p) < DuelPlacement.MinGap) { cakisma = true; break; }
+                foreach (var d in sonuc) if (Vector2.Distance(d, p) < DuelPlacement.MinGap) { cakisma = true; break; }
+                if (!cakisma) break;
+                float a = deneme * 2.4f;
+                p = DuelPlacement.Clamp(q.x + Mathf.Cos(a) * (.2f + deneme * .05f),
+                                        q.y + Mathf.Sin(a) * (.2f + deneme * .05f), DuelSession.ArenaSize);
+            }
+            sonuc.Add(p);
+        }
+        return sonuc;
+    }
+
+    // ---------------- Elle dizme ----------------
 
     public bool AddSpot(Vector2 p)
     {
-        int me = Mathf.Clamp(PlacingPlayer, 0, 1);
-        if (!Placing || spots[me].Count >= DuelMatch.MarblesPerPlayer) return false;
+        if (CurrentStep != Step.Place || PlacedCount >= NeedCount) return false;
         p = DuelPlacement.Clamp(p.x, p.y, DuelSession.ArenaSize);
-
-        // Var olan misketlerin uzerine konamaz; oyuncu bos yer secmeli.
-        foreach (var q in AllSpots())
-            if (Vector2.Distance(q, p) < DuelPlacement.MinGap) return false;
-        // Ortadaki buyuk misketin yeri ayrilmistir.
-        if (Vector2.Distance(DuelSession.BigMarbleSpot, p) < DuelPlacement.MinGap * DuelSession.BigScale) return false;
-
-        spots[me].Add(p);
+        if (Occupied(p)) return false;
+        spots[ActivePlayer].Add(p);
         RefreshPreview();
-        Changed?.Invoke();
+        Refresh();
         return true;
+    }
+
+    private bool Occupied(Vector2 p)
+    {
+        foreach (var m in Match.Marbles) if (!m.out_ && Vector2.Distance(new Vector2(m.x, m.z), p) < DuelPlacement.MinGap) return true;
+        foreach (var q in spots[0]) if (Vector2.Distance(q, p) < DuelPlacement.MinGap) return true;
+        foreach (var q in spots[1]) if (Vector2.Distance(q, p) < DuelPlacement.MinGap) return true;
+        return false;
     }
 
     public void UndoSpot()
     {
-        int me = Mathf.Clamp(PlacingPlayer, 0, 1);
-        if (!Placing || spots[me].Count == 0) return;
-        spots[me].RemoveAt(spots[me].Count - 1);
-        RefreshPreview();
-        Changed?.Invoke();
+        if (CurrentStep != Step.Place || PlacedCount == 0) return;
+        spots[ActivePlayer].RemoveAt(spots[ActivePlayer].Count - 1);
+        RefreshPreview(); Refresh();
     }
 
     public void FillRemaining()
     {
-        int me = Mathf.Clamp(PlacingPlayer, 0, 1);
-        var hazir = DuelPlacement.DefaultLayout(me, DuelMatch.MarblesPerPlayer, DuelSession.ArenaSize);
-        foreach (var q in hazir)
+        if (CurrentStep != Step.Place) return;
+        int me = ActivePlayer;
+        foreach (var q in Avoid(DuelPlacement.DefaultLayout(me, NeedCount, DuelSession.ArenaSize), me))
         {
-            if (spots[me].Count >= DuelMatch.MarblesPerPlayer) break;
-            bool cakisma = false;
-            foreach (var r in AllSpots()) if (Vector2.Distance(r, q) < DuelPlacement.MinGap) { cakisma = true; break; }
-            if (!cakisma) spots[me].Add(q);
+            if (spots[me].Count >= NeedCount) break;
+            if (!Occupied(q)) spots[me].Add(q);
         }
-        RefreshPreview();
-        Changed?.Invoke();
+        RefreshPreview(); Refresh();
     }
 
-    // "Hazirim". Ilk oyuncudan sonra telefon devri ekrani gelir.
     public void ConfirmPlacement()
     {
-        int me = Mathf.Clamp(PlacingPlayer, 0, 1);
-        if (!Placing || spots[me].Count < DuelMatch.MarblesPerPlayer) return;
+        if (CurrentStep != Step.Place || PlacedCount < NeedCount) return;
+        int me = ActivePlayer;
+        Match.Place(me, ToTuples(spots[me]));
+        orderIndex++;
 
-        int other = 1 - me;
-        if (spots[other].Count < DuelMatch.MarblesPerPlayer) { HandOver = true; Changed?.Invoke(); return; }
-
-        Placing = false; HandOver = false;
-        StartMatch(spots[0], spots[1]);
+        // Sonraki oyuncu da elle dizecekse telefon devri ekrani gelir.
+        if (orderIndex < 2 && !Match.HasPlaced(order[1]))
+        {
+            int sonraki = order[1];
+            bool elle = Match.Round == 1 || Match.PlacementRights(sonraki) > 0;
+            if (elle) { CurrentStep = Step.HandOver; Refresh(); return; }
+        }
+        NextPlacer();
     }
 
-    // Telefon devredildi: sira diger oyuncunun dizmesinde.
     public void HandOverDone()
     {
-        HandOver = false;
-        PlacingPlayer = 1 - PlacingPlayer;
+        if (CurrentStep != Step.HandOver) return;
         RefreshPreview();
-        Changed?.Invoke();
+        NextPlacer();
     }
 
-    private List<Vector2> AllSpots()
+    // ---------------- Atis ----------------
+
+    private void StartShooting()
     {
-        var all = new List<Vector2>(spots[0]); all.AddRange(spots[1]);
-        return all;
-    }
-
-    // Dizilen misketleri cemberde gosterir. Rakibin misketleri GIZLI:
-    // sadece siradaki oyuncununkiler cizilir.
-    private void RefreshPreview()
-    {
-        int me = Mathf.Clamp(PlacingPlayer, 0, 1);
-        var show = spots[me];
-        // Buyuk misket en sona: oyuncu odulun nerede durdugunu dizerken gorsun.
-        var list = new MarbleSpot[show.Count + 1];
-        for (int i = 0; i < show.Count; i++) list[i] = new MarbleSpot(show[i].x, show[i].y);
-        list[show.Count] = new MarbleSpot(DuelSession.BigMarbleSpot.x, DuelSession.BigMarbleSpot.y);
-        data.marbles = list;
-        arena.Configure(data.shape, data.arenaSize, data.rings, data.triangleRows, data.marbles);
-        arena.Rebuild();
-        var spawned = arena.SpawnedMarbles;
-        for (int i = 0; i < spawned.Count; i++)
-        {
-            if (spawned[i] == null) continue;
-            bool big = i == show.Count;
-            Tint(spawned[i], big ? BigColor : DuelSession.PlayerColor(me));
-            if (big) MakeBig(spawned[i]);
-        }
-    }
-
-    private void Update()
-    {
-        if (Placing) { UpdatePlacing(); return; }
-        UpdateShooting();
-    }
-
-    private void UpdatePlacing()
-    {
-        if (HandOver) return;
-        var pointer = Pointer.current;
-        if (pointer == null || !pointer.press.wasPressedThisFrame) return;
-        // Ekranin alt seridi arayuz butonlarina ait; oraya dokunmak misket koymasin.
-        if (pointer.position.ReadValue().y < Screen.height * .22f) return;
-        if (!PointerToGround(out Vector3 w)) return;
-        if (!DuelPlacement.Inside(w.x, w.z, DuelSession.ArenaSize)) return;
-        AddSpot(new Vector2(w.x, w.z));
-    }
-
-    // ---------------- Kurulum ----------------
-
-    public void StartMatch(IList<Vector2> playerOne, IList<Vector2> playerTwo)
-    {
-        level = FindFirstObjectByType<LevelController>();
-        if (level == null) { Debug.LogError("DUELLO: LevelController bulunamadi."); return; }
-        arena = level.Arena;
-        shooter = level.Shooter;
-
-        Match = new DuelMatch(DuelSession.FirstPlacer);
-        Match.Place(0, ToTuples(playerOne));
-        Match.Place(1, ToTuples(playerTwo));
-        Match.PlaceBigMarble(DuelSession.BigMarbleSpot.x, DuelSession.BigMarbleSpot.y);
-
+        CurrentStep = Step.Shoot;
         BuildLevelData();
         level.ConfigureForDuel(data);
         AssignOwners();
         ApplyDuelPhysics();
         Hook();
-
         waiting = false; settleTimer = 0f; elapsed = 0f;
         PlaceShooterOnLine();
-        Changed?.Invoke();
+        Refresh();
     }
 
-    private static List<(float x, float z)> ToTuples(IList<Vector2> spots)
-    {
-        var list = new List<(float, float)>();
-        foreach (var s in spots) list.Add((s.x, s.y));
-        return list;
-    }
-
-    // Duello bolumu: cember, engelsiz, elle dizilmis 14 misket.
-    // Atis hakki kural motorunda tutuluyor, burada yuksek verilir ki
-    // LevelController "atis bitti" diye maci kesmesin.
     private void BuildLevelData()
     {
-        if (data == null) data = ScriptableObject.CreateInstance<LevelData>();
         data.levelName = "DÜELLO";
         data.shape = ArenaShape.Circle;
         data.arenaSize = DuelSession.ArenaSize;
         data.shotCount = 999;
         data.oneStarTarget = data.twoStarTarget = data.threeStarTarget = 99;
         data.starsToPass = 1;
-        data.obstacles = null;
-        data.obstacleCount = 0;
-        data.shooterHalfWidth = 0f;
-        data.shooterOffsetX = 0f;
+        data.obstacles = null; data.obstacleCount = 0;
+        data.shooterHalfWidth = 0f; data.shooterOffsetX = 0f;
         data.shooterStartPosition = new Vector3(0f, .25f, DuelSession.ShooterZ);
 
-        if (Match != null)
-        {
-            var list = new MarbleSpot[Match.Marbles.Count];
-            for (int i = 0; i < list.Length; i++)
-                list[i] = new MarbleSpot(Match.Marbles[i].x, Match.Marbles[i].z);
-            data.marbles = list;
-        }
-        else data.marbles = new MarbleSpot[0];
+        var list = new List<MarbleSpot>();
+        foreach (var m in Match.Marbles) if (!m.out_) list.Add(new MarbleSpot(m.x, m.z));
+        data.marbles = list.ToArray();
     }
 
-    // Arena misketleri dizilis sirasiyla uretiyor; sahiplik o siraya gore atanir.
-    // Kampanyanin MarbleMaterialPhysics.asset dosyasina DOKUNULMAZ: ona
-    // yazmak 60 bolumun dengesini bozar. Duello icin calisma aninda ayri
-    // bir materyal uretilir ve sadece duello misketlerine takilir.
+    // Arena misketleri dizilis sirasiyla uretir; indeksler o siraya gore eslenir.
+    private void AssignOwners()
+    {
+        indexOf.Clear();
+        var spawned = arena.SpawnedMarbles;
+        int k = 0;
+        for (int i = 0; i < Match.Marbles.Count && k < spawned.Count; i++)
+        {
+            if (Match.Marbles[i].out_) continue;
+            var m = spawned[k++];
+            if (m == null) continue;
+            indexOf[m] = i;
+            Tint(m, Renk(Match.Marbles[i]));
+        }
+    }
+
+    private static Color Renk(DuelMatch.Marble m)
+    {
+        // Cemberde kalmis atici ayri renkte: rakip icin acik hedef.
+        if (m.stranded) return new Color(.94f, .90f, .78f);
+        return DuelSession.PlayerColor(m.placedBy);
+    }
+
+    private void OnShotFired()
+    {
+        if (Match == null || Match.State != DuelMatch.Phase.Shooting) return;
+        knocked.Clear();
+        waiting = true; settleTimer = 0f; elapsed = 0f;
+        Refresh();
+    }
+
+    private void OnMarbleLeft(TargetMarble marble)
+    {
+        if (marble == null) return;
+        if (indexOf.TryGetValue(marble, out int i) && !knocked.Contains(i)) knocked.Add(i);
+        // Cemberi terk eden misket artik oyunda degil: dondurulur. Dondurulmazsa
+        // zeminin kenarindan ucup bosluga dusuyor ve DUSEN CISIM ASLA DURMUYOR --
+        // oyun "hepsi durdu mu" beklemesinde sonsuza kadar takiliyordu.
+        Freeze(marble);
+    }
+
+    private static void Freeze(TargetMarble marble)
+    {
+        var body = marble.GetComponent<Rigidbody>();
+        if (body != null)
+        {
+            body.linearVelocity = Vector3.zero; body.angularVelocity = Vector3.zero;
+            body.isKinematic = true;
+        }
+        var col = marble.GetComponent<Collider>();
+        if (col != null) col.enabled = false;
+    }
+
+    private void Update()
+    {
+        if (CurrentStep == Step.Place) { UpdatePlacing(); return; }
+        if (CurrentStep == Step.Shoot) UpdateShooting();
+    }
+
+    private void UpdateShooting()
+    {
+        if (!waiting || Match == null) return;
+
+        elapsed += Time.deltaTime;
+        if (elapsed > 8f)
+        {
+            // Emniyet: sekiz saniyede cozumle. Sadece hizlari sifirlamak
+            // yetmiyordu, cunku dusen cismi yercekimi tekrar hizlandiriyor.
+            foreach (var m in arena.SpawnedMarbles)
+                if (m != null)
+                {
+                    var b = m.GetComponent<Rigidbody>();
+                    if (b != null && !b.isKinematic) { b.linearVelocity = Vector3.zero; b.angularVelocity = Vector3.zero; }
+                }
+            waiting = false; Diag = "atis zaman asimina ugradi";
+            Resolve(); return;
+        }
+
+        // Atici dunyadan dustuyse kurtar.
+        if (shooter != null)
+        {
+            var sp = shooter.transform.position;
+            if (sp.y < -1f || new Vector2(sp.x, sp.z).magnitude > DuelSession.ArenaSize * 3f)
+                shooter.ResetTo(new Vector3(0f, .25f, DuelSession.ShooterZ));
+        }
+
+        bool resting = (shooter == null || shooter.AtRest) && (arena == null || arena.AllMarblesAtRest());
+        if (!resting) { settleTimer = 0f; return; }
+        settleTimer += Time.deltaTime;
+        if (settleTimer < SettleDelay) return;
+
+        waiting = false;
+        Resolve();
+    }
+
+    private void Resolve()
+    {
+        // Atici cemberin ICINDE durduysa kaybedilir ve orada hedef olur.
+        Vector3 sp = shooter != null ? shooter.transform.position : Vector3.zero;
+        bool stranded = shooter != null && arena != null && !arena.IsOutside(sp);
+
+        bool sameTurn = Match.ResolveShot(knocked, stranded, sp.x, sp.z);
+        knocked.Clear();
+
+        if (Match.State != DuelMatch.Phase.Shooting)
+        {
+            if (shooter != null) shooter.ShootingEnabled = false;
+            CurrentStep = Match.State == DuelMatch.Phase.Finished ? Step.Done : Step.RoundOver;
+            Refresh();
+            return;
+        }
+
+        // Atici cemberde kaldiysa yenisi cizgiden gelir; kalmadiysa ve zincir
+        // devam ediyorsa durdugu yerden atar.
+        if (stranded) { RebuildRing(); PlaceShooterOnLine(); }
+        else if (sameTurn) shooter.HoldPosition();
+        else PlaceShooterOnLine();
+
+        Refresh();
+    }
+
+    // Cemberde kalan atici yeni bir hedef olarak eklendigi icin arena yeniden kurulur.
+    private void RebuildRing()
+    {
+        BuildLevelData();
+        arena.Configure(data.shape, data.arenaSize, data.rings, data.triangleRows, data.marbles);
+        arena.Rebuild();
+        AssignOwners();
+        ApplyDuelPhysics();
+    }
+
+    public void NextRound()
+    {
+        if (CurrentStep != Step.RoundOver) return;
+        Match.NextRound();
+        if (Match.State == DuelMatch.Phase.Finished) { CurrentStep = Step.Done; Refresh(); return; }
+        DuelSession.FirstPlacer = Match.FirstPlacer;
+        BeginRound();
+    }
+
+    public void Rematch()
+    {
+        DuelSession.FirstPlacer = 1 - DuelSession.FirstPlacer;
+        DuelSession.MatchNumber++;
+        Unhook();
+        BeginMatch();
+    }
+
+    // ---------------- Yardimcilar ----------------
+
+    private void RefreshPreview()
+    {
+        // Dizerken sadece ortadaki misketler ve SIRADAKI oyuncunun koydugu
+        // gorunur; rakibin o el dizdigi gizli kalir.
+        var list = new List<MarbleSpot>();
+        var renk = new List<Color>();
+        foreach (var m in Match.Marbles)
+            if (!m.out_) { list.Add(new MarbleSpot(m.x, m.z)); renk.Add(Renk(m)); }
+        foreach (var q in spots[ActivePlayer])
+        { list.Add(new MarbleSpot(q.x, q.y)); renk.Add(DuelSession.PlayerColor(ActivePlayer)); }
+
+        data.marbles = list.ToArray();
+        arena.Configure(data.shape, data.arenaSize, data.rings, data.triangleRows, data.marbles);
+        arena.Rebuild();
+        var spawned = arena.SpawnedMarbles;
+        for (int i = 0; i < spawned.Count && i < renk.Count; i++)
+            if (spawned[i] != null) Tint(spawned[i], renk[i]);
+    }
+
     private void ApplyDuelPhysics()
     {
         var source = arena != null && arena.SpawnedMarbles.Count > 0
@@ -267,46 +425,23 @@ public class DuelController : MonoBehaviour
             var c = m.GetComponent<Collider>();
             if (c != null) c.sharedMaterial = duelMaterial;
         }
-        var shooterCollider = shooter != null ? shooter.GetComponent<Collider>() : null;
-        if (shooterCollider != null) shooterCollider.sharedMaterial = duelMaterial;
+        var sc = shooter != null ? shooter.GetComponent<Collider>() : null;
+        if (sc != null) sc.sharedMaterial = duelMaterial;
         if (shooter != null) shooter.DuelImpulseScale = DuelSession.Impulse / .65f;
     }
 
-    private void AssignOwners()
+    private void PlaceShooterOnLine()
     {
-        indexOf.Clear();
-        var spawned = arena.SpawnedMarbles;
-        for (int i = 0; i < spawned.Count && i < Match.Marbles.Count; i++)
-        {
-            var m = spawned[i];
-            if (m == null) continue;
-            m.Owner = Match.Marbles[i].owner;
-            indexOf[m] = i;
-            if (Match.Marbles[i].big) { Tint(m, BigColor); MakeBig(m); }
-            else Tint(m, DuelSession.PlayerColor(m.Owner));
-        }
-    }
-
-    // Buyuk misket ne senin ne rakibin: ayri bir renk.
-    private static readonly Color BigColor = new Color(.94f, .90f, .78f);
-
-    // Buyuk ve agir. Olcum agirlastirmanin misketi neredeyse sabitledigini
-    // gosterdi; odul olmasinin sebebi tam olarak bu -- kolay cikmamali.
-    private static void MakeBig(TargetMarble marble)
-    {
-        marble.transform.localScale *= DuelSession.BigScale;
-        var body = marble.GetComponent<Rigidbody>();
-        if (body != null) body.mass *= DuelSession.BigMass;
-        var p = marble.transform.position;
-        p.y = marble.transform.localScale.y * .5f;
-        marble.transform.position = p;
-        if (body != null) body.position = p;
+        if (shooter == null) return;
+        shooter.ResetTo(new Vector3(0f, .25f, DuelSession.ShooterZ));
+        shooter.ShootingEnabled = true;
+        var visual = shooter.GetComponent<MarbleVisual>();
+        if (visual != null) visual.SetSkin(DuelSession.Skin[Mathf.Clamp(Match.Turn, 0, 1)]);
     }
 
     private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
     private static readonly int LegacyColorId = Shader.PropertyToID("_Color");
 
-    // Iki oyuncunun misketi renkle ayrilir. Bu SADECE gorsel: fizik ikisinde de ayni.
     private static void Tint(TargetMarble marble, Color color)
     {
         var renderer = marble.GetComponent<MeshRenderer>();
@@ -316,6 +451,13 @@ public class DuelController : MonoBehaviour
         block.SetColor(BaseColorId, color);
         block.SetColor(LegacyColorId, color);
         renderer.SetPropertyBlock(block);
+    }
+
+    private static List<(float x, float z)> ToTuples(IList<Vector2> v)
+    {
+        var list = new List<(float, float)>();
+        foreach (var s in v) list.Add((s.x, s.y));
+        return list;
     }
 
     private void Hook()
@@ -331,87 +473,37 @@ public class DuelController : MonoBehaviour
         if (shooter != null) shooter.ShotFired -= OnShotFired;
     }
 
-    // ---------------- Atis dongusu ----------------
+    private void Refresh() { Changed?.Invoke(); }
 
-    private void OnShotFired()
+    private bool PointerToGround(out Vector3 world)
     {
-        if (Match == null || Match.State != DuelMatch.Phase.Shooting) return;
-        knocked.Clear();
-        waiting = true; settleTimer = 0f; elapsed = 0f;
-        Changed?.Invoke();
+        world = default;
+        var cam = Camera.main; var pointer = Pointer.current;
+        if (cam == null || pointer == null) return false;
+        var plane = new Plane(Vector3.up, new Vector3(0f, .25f, 0f));
+        var ray = cam.ScreenPointToRay(pointer.position.ReadValue());
+        if (!plane.Raycast(ray, out float d)) return false;
+        world = ray.GetPoint(d);
+        return true;
     }
 
-    private void OnMarbleLeft(TargetMarble marble)
+    private void UpdatePlacing()
     {
-        if (marble == null) return;
-        if (indexOf.TryGetValue(marble, out int i) && !knocked.Contains(i)) knocked.Add(i);
-    }
+        var pointer = Pointer.current;
+        if (pointer == null) { Diag = "pointer yok"; return; }
+        if (!pointer.press.wasPressedThisFrame) return;
 
-    private void UpdateShooting()
-    {
-        if (!waiting || Match == null) return;
+        Vector2 sp = pointer.position.ReadValue();
+        if (sp.y < Screen.height * .22f) { Diag = "alt serit (buton alani)"; return; }
+        if (Camera.main == null) { Diag = "Camera.main yok"; return; }
+        if (!PointerToGround(out Vector3 w)) { Diag = "dokunus zemine dusmedi"; return; }
 
-        elapsed += Time.deltaTime;
-        // Cok uzun suren atislar oyunu kilitlemesin: her seyi durdurup cozeriz.
-        if (elapsed > 12f)
-        {
-            foreach (var b in FindObjectsByType<Rigidbody>(FindObjectsSortMode.None))
-            { b.linearVelocity = Vector3.zero; b.angularVelocity = Vector3.zero; }
-        }
+        float r = new Vector2(w.x, w.z).magnitude;
+        if (!DuelPlacement.Inside(w.x, w.z, DuelSession.ArenaSize))
+        { Diag = "cember disi: " + r.ToString("0.0") + " / " +
+                 (DuelSession.ArenaSize - DuelPlacement.MarbleRadius - DuelPlacement.EdgeMargin).ToString("0.0"); return; }
 
-        bool resting = (shooter == null || shooter.AtRest) && (arena == null || arena.AllMarblesAtRest());
-        if (!resting) { settleTimer = 0f; return; }
-
-        settleTimer += Time.deltaTime;
-        if (settleTimer < SettleDelay) return;
-
-        waiting = false;
-        Resolve();
-    }
-
-    private void Resolve()
-    {
-        bool sameTurn = Match.ResolveShot(knocked);
-        knocked.Clear();
-
-        if (Match.State == DuelMatch.Phase.Finished)
-        {
-            if (shooter != null) shooter.ShootingEnabled = false;
-            Changed?.Invoke();
-            return;
-        }
-
-        // Zincir: cikardiysan atici kaldigi yerde kalir ve oradan atarsin.
-        // AMA cemberin disina savrulduysa pozisyon hakkini kaybeder ve cizgiye
-        // doner. Gercek misket oyununda da cemberi terk eden atici avantajini
-        // yitirir; ayrica bu olmadan atici ekran disinda kalip oyunu kilitliyordu.
-        if (sameTurn && ShooterInsideRing()) shooter.HoldPosition();
-        else PlaceShooterOnLine();
-
-        Changed?.Invoke();
-    }
-
-    private bool ShooterInsideRing()
-    {
-        if (shooter == null || arena == null) return false;
-        return !arena.IsOutside(shooter.transform.position);
-    }
-
-    private void PlaceShooterOnLine()
-    {
-        if (shooter == null) return;
-        shooter.ResetTo(new Vector3(0f, .25f, DuelSession.ShooterZ));
-        shooter.ShootingEnabled = true;
-        var visual = shooter.GetComponent<MarbleVisual>();
-        if (visual != null) visual.SetSkin(DuelSession.Skin[Mathf.Clamp(Match.Turn, 0, 1)]);
-    }
-
-    // ---------------- Rovans ----------------
-
-    public void Rematch()
-    {
-        DuelSession.FirstPlacer = 1 - DuelSession.FirstPlacer;
-        DuelSession.MatchNumber++;
-        BeginPlacement();
+        if (AddSpot(new Vector2(w.x, w.z))) Diag = "kondu (" + w.x.ToString("0.0") + ", " + w.z.ToString("0.0") + ")";
+        else Diag = "dolu yer, bos nokta sec";
     }
 }

@@ -319,36 +319,56 @@ public class MahalleUI : MonoBehaviour
                     () => ShowTitle(true), 29);
     }
 
-    // ---- Duello maci ----
+    // ---- Duello ----
     private void StartDuel()
     {
         duel = controller.gameObject.GetComponent<DuelController>();
         if (duel == null) duel = controller.gameObject.AddComponent<DuelController>();
-
         duelScreenShown = -1;
-        duel.BeginPlacement();
+        duel.BeginMatch();
     }
 
-    // ---- Dizme ekrani ----
+    // Elin basinda: "ekstra dizme hakkini kullanacak misin?"
+    private void ShowOffer()
+    {
+        ClearPage();
+        Background(new Color(.14f, .12f, .10f));
+        int me = duel.ActivePlayer;
+        Text(page, "EL " + duel.Match.Round, 0, 200, 1080, 80, 48, new Color(1, .97f, .89f, .6f), TextAlignmentOptions.Center);
+        Art(page, "Renk", MahalleGraphic.Shape.Marble, 480, 320, 120, 120, DuelSession.PlayerColor(me));
+        Text(page, DuelSession.PlayerName(me), 0, 470, 1080, 70, 44, new Color(1, .98f, .92f), TextAlignmentOptions.Center);
+        Text(page, "Misketlerini kendi elinle dizmek ister misin?", 80, 570, 920, 70, 31,
+             new Color(1, .97f, .89f, .72f), TextAlignmentOptions.Center);
+        Text(page, "Bu hakkı maç boyunca bir kez kullanabilirsin", 80, 650, 920, 60, 25,
+             new Color(1, .97f, .89f, .45f), TextAlignmentOptions.Center);
+
+        LabelButton(page, "ELLE DİZECEĞİM", 90, 800, 900, 128, Gold, new Color(.16f, .20f, .16f),
+                    () => { duelScreenShown = -1; duel.ChooseManual(); }, 38);
+        LabelButton(page, "OTOMATİK DİZİLSİN", 90, 960, 900, 110, new Color(.24f, .30f, .27f), Cream,
+                    () => { duelScreenShown = -1; duel.ChooseAuto(); }, 32);
+        LabelButton(page, "ÇIK", 90, 1110, 900, 92, new Color(.34f, .28f, .26f), Cream, LeaveDuel, 29);
+    }
+
     private void ShowPlacement()
     {
         ClearPage();
-        int me = duel.PlacingPlayer;
-        var top = Panel(page, "Dizme başlığı", 24, 12, 1032, 190, Ink); top.radius = 30;
+        int me = duel.ActivePlayer;
+        var top = Panel(page, "Dizme başlığı", 24, 12, 1032, 200, Ink); top.radius = 30;
         Art(top.transform, "Renk", MahalleGraphic.Shape.Marble, 28, 26, 58, 58, DuelSession.PlayerColor(me));
-        Text(top.transform, DuelSession.PlayerName(me) + " · MİSKETLERİNİ DİZ", 100, 24, 900, 62, 36, Cream);
-        Text(top.transform, "Çemberin içine dokun. Rakibin nereye dizdiğini görmüyorsun.",
-             28, 96, 976, 70, 26, new Color(.81f, .84f, .75f));
-        placeCount = Text(top.transform, "", 28, 140, 976, 44, 30, Gold);
+        Text(top.transform, DuelSession.PlayerName(me) + " · EL " + duel.Match.Round, 100, 20, 900, 60, 34, Cream);
+        Text(top.transform, "Çemberin içine dokunarak misketlerini diz. Rakibin dizilişini görmüyorsun.",
+             28, 88, 976, 70, 25, new Color(.81f, .84f, .75f));
+        placeCount = Text(top.transform, "", 28, 148, 976, 44, 29, Gold);
 
         var dock = Panel(page, "Dizme çubuğu", 24, 0, 1032, 260, Ink);
         Bottom(dock.rectTransform, 24, 18, 1032, 260);
         LabelButton(dock.transform, "GERİ AL", 20, 20, 320, 100, new Color(.3f, .35f, .32f), Cream, () => duel.UndoSpot(), 30);
         LabelButton(dock.transform, "HAZIR DİZİLİŞ", 356, 20, 320, 100, new Color(.3f, .35f, .32f), Cream, () => duel.FillRemaining(), 28);
         LabelButton(dock.transform, "ÇIK", 692, 20, 320, 100, new Color(.34f, .28f, .26f), Cream, LeaveDuel, 30);
-        LabelButton(dock.transform, "HAZIRIM", 20, 140, 992, 104, Gold, new Color(.16f, .20f, .16f), () => duel.ConfirmPlacement(), 38);
+        LabelButton(dock.transform, "HAZIRIM", 20, 140, 992, 104, Gold, new Color(.16f, .20f, .16f),
+                    () => { duelScreenShown = -1; duel.ConfirmPlacement(); }, 38);
 
-        placeHint = Text(page, "", 48, 0, 984, 50, 26, new Color(1, .97f, .89f, .7f), TextAlignmentOptions.Center);
+        placeHint = Text(page, "", 48, 0, 984, 50, 25, new Color(1, .97f, .89f, .7f), TextAlignmentOptions.Center);
         Bottom(placeHint.rectTransform, 48, 292, 984, 50);
         RefreshPlacement();
     }
@@ -356,50 +376,50 @@ public class MahalleUI : MonoBehaviour
     private void RefreshPlacement()
     {
         if (duel == null || placeCount == null) return;
-        int n = duel.PlacedCount, toplam = DuelMatch.MarblesPerPlayer;
+        int n = duel.PlacedCount, toplam = duel.NeedCount;
         placeCount.SetText(n + " / " + toplam + " misket dizildi");
         if (placeHint != null)
-            placeHint.SetText(n >= toplam ? "Hazırsan HAZIRIM'a bas" : (toplam - n) + " misket daha koy");
+            placeHint.SetText((n >= toplam ? "Hazırsan HAZIRIM'a bas" : (toplam - n) + " misket daha koy")
+                              + "   ·   " + duel.Diag);
     }
 
-    // ---- Telefon devri ----
     private void ShowHandOver()
     {
         ClearPage();
         Background(new Color(.14f, .12f, .10f));
-        int next = 1 - duel.PlacingPlayer;
+        int next = duel.ActivePlayer;
         Text(page, "TELEFONU VER", 0, 520, 1080, 100, 66, new Color(1, .98f, .92f), TextAlignmentOptions.Center);
         Text(page, DuelSession.PlayerName(next) + " şimdi kendi misketlerini dizecek",
              80, 650, 920, 90, 32, new Color(1, .97f, .89f, .7f), TextAlignmentOptions.Center);
         Text(page, "Diziliş gizli: kimse diğerinin nereye koyduğunu görmeyecek",
              80, 760, 920, 80, 25, new Color(1, .97f, .89f, .45f), TextAlignmentOptions.Center);
         LabelButton(page, "HAZIRIM", 90, 1000, 900, 132, Gold, new Color(.16f, .20f, .16f),
-                    () => duel.HandOverDone(), 40);
+                    () => { duelScreenShown = -1; duel.HandOverDone(); }, 40);
     }
 
     private void ShowDuel()
     {
-        ClearPage(); duelResultShown = false;
+        ClearPage();
         var top = Panel(page, "Düello başlığı", 24, 12, 1032, 250, Ink); top.radius = 30;
-        Text(top.transform, "DÜELLO", 28, 14, 600, 56, 36, Cream);
+        Text(top.transform, "EL " + duel.Match.Round + " / " + DuelMatch.RoundsPerMatch, 28, 14, 600, 56, 34, Cream);
         LabelButton(top.transform, "ÇIK", 872, 16, 134, 88, new Color(.28f, .38f, .31f), Cream, LeaveDuel, 30);
 
-        // Kazanani PUAN belirliyor: cikardigin misket senin.
+        // Kazanani KESE belirliyor: cikardigin misket senin olur.
         for (int p = 0; p < 2; p++)
         {
             var box = Panel(top.transform, "Oyuncu " + p, 24 + p * 502, 96, 482, 134, new Color(.24f, .34f, .29f));
             Art(box.transform, "Renk", MahalleGraphic.Shape.Marble, 20, 20, 54, 54, DuelSession.PlayerColor(p));
             Text(box.transform, DuelSession.PlayerName(p), 88, 16, 300, 40, 26, new Color(.8f, .84f, .75f));
-            Text(box.transform, "PUAN", 392, 16, 80, 40, 22, new Color(.66f, .7f, .62f));
+            Text(box.transform, "KESE", 396, 16, 76, 40, 22, new Color(.66f, .7f, .62f));
             var value = Text(box.transform, "0", 88, 56, 380, 60, 44, Cream);
             if (p == 0) duelCountA = value; else duelCountB = value;
         }
-        Text(top.transform, "Ortadaki büyük misket 2 puan · çember boşalınca biter",
-             28, 236, 976, 34, 23, new Color(.72f, .76f, .68f));
+        Text(top.transform, "Çıkardığın misket senin · atıcın çemberde kalırsa onu kaybedersin",
+             28, 236, 976, 34, 22, new Color(.72f, .76f, .68f));
 
         duelTurnLabel = Text(page, "", 48, 0, 984, 62, 34, Cream, TextAlignmentOptions.Center);
         Bottom(duelTurnLabel.rectTransform, 48, 240, 984, 62);
-        duelTurnsLabel = Text(page, "", 48, 0, 984, 46, 25, new Color(.81f, .84f, .75f), TextAlignmentOptions.Center);
+        duelTurnsLabel = Text(page, "", 48, 0, 984, 46, 24, new Color(.81f, .84f, .75f), TextAlignmentOptions.Center);
         Bottom(duelTurnsLabel.rectTransform, 48, 194, 984, 46);
         RefreshDuel();
     }
@@ -408,8 +428,8 @@ public class MahalleUI : MonoBehaviour
     {
         if (duel == null || duel.Match == null) return;
         var m = duel.Match;
-        if (duelCountA != null) duelCountA.SetText(m.Score(0).ToString());
-        if (duelCountB != null) duelCountB.SetText(m.Score(1).ToString());
+        if (duelCountA != null) duelCountA.SetText(m.Pouch(0).ToString());
+        if (duelCountB != null) duelCountB.SetText(m.Pouch(1).ToString());
         if (duelTurnLabel != null)
         {
             duelTurnLabel.SetText(DuelSession.PlayerName(m.Turn) + " ATIYOR");
@@ -418,30 +438,41 @@ public class MahalleUI : MonoBehaviour
         if (duelTurnsLabel != null)
         {
             int kalan = DuelMatch.MaxShotsPerTurn - m.ShotsThisTurn;
-            duelTurnsLabel.SetText(m.Overtime ? "UZATMA · son tur"
-                : m.ShotsThisTurn > 0 ? "Bu turda " + kalan + " atış hakkın daha var"
-                : m.TurnsLeft(m.Turn) + " tur kaldı · çemberde " + m.RemainingInRing + " misket");
+            duelTurnsLabel.SetText(m.ShotsThisTurn > 0
+                ? "Bu turda " + kalan + " atış hakkın daha var"
+                : "Çemberde " + m.RemainingInRing + " misket");
         }
+    }
+
+    // El bitti: ara ekran.
+    private void ShowRoundOver()
+    {
+        var m = duel.Match;
+        var box = Modal("El sonucu", 620);
+        Text(box, "EL " + m.Round + " BİTTİ", 30, 40, 924, 80, 48, Ink, TextAlignmentOptions.Center);
+        Text(box, m.Pouch(0) + "  ·  " + m.Pouch(1), 30, 140, 924, 90, 62, Muted, TextAlignmentOptions.Center);
+        Text(box, "kesedeki misket", 30, 236, 924, 44, 26, Muted, TextAlignmentOptions.Center);
+        if (m.RemainingInRing > 0)
+            Text(box, "Çemberde kalan " + m.RemainingInRing + " misket sonraki ele devrediyor",
+                 30, 290, 924, 44, 24, new Color(.72f, .32f, .24f), TextAlignmentOptions.Center);
+        LabelButton(box, "SONRAKİ EL", 36, 360, 912, 116, Ink, Cream,
+                    () => { CloseModal(false); duelScreenShown = -1; duel.NextRound(); }, 38);
+        LabelButton(box, "ANA MENÜ", 36, 490, 912, 96, new Color(.88f, .83f, .69f), Ink, LeaveDuel, 30);
     }
 
     private void DuelResult()
     {
-        duelResultShown = true;
         var m = duel.Match;
-        var box = Modal("Düello sonucu", 760);
+        var box = Modal("Düello sonucu", 720);
         string baslik = m.Result == DuelMatch.Outcome.Draw ? "BERABERE"
                       : DuelSession.PlayerName(m.Result == DuelMatch.Outcome.PlayerOne ? 0 : 1) + " KAZANDI";
         Text(box, baslik, 30, 40, 924, 80, 50, Ink, TextAlignmentOptions.Center);
-        Text(box, m.Score(0) + "  ·  " + m.Score(1), 30, 140, 924, 90, 64, Muted, TextAlignmentOptions.Center);
-        Text(box, "toplanan puan", 30, 236, 924, 44, 26, Muted, TextAlignmentOptions.Center);
+        Text(box, m.Pouch(0) + "  ·  " + m.Pouch(1), 30, 140, 924, 90, 64, Muted, TextAlignmentOptions.Center);
+        Text(box, "kesedeki misket", 30, 236, 924, 44, 26, Muted, TextAlignmentOptions.Center);
 
-        LabelButton(box, "RÖVANŞ", 36, 320, 912, 116, Ink, Cream, () =>
-        {
-            CloseModal(false);
-            duelScreenShown = -1;
-            duel.Rematch();
-        }, 38);
-        Text(box, "ilk başlayan değişir", 36, 444, 912, 40, 23, Muted, TextAlignmentOptions.Center);
+        LabelButton(box, "RÖVANŞ", 36, 320, 912, 116, Ink, Cream,
+                    () => { CloseModal(false); duelScreenShown = -1; duel.Rematch(); }, 38);
+        Text(box, "ilk dizen değişir", 36, 444, 912, 40, 23, Muted, TextAlignmentOptions.Center);
         LabelButton(box, "ANA MENÜ", 36, 500, 912, 100, new Color(.88f, .83f, .69f), Ink, LeaveDuel, 30);
     }
 
@@ -681,16 +712,22 @@ public class MahalleUI : MonoBehaviour
         if(DuelSession.Active)
         {
             if(duel==null)return;
-            int want=duel.Placing?(duel.HandOver?1:0)
-                    :(duel.Match!=null&&duel.Match.State==DuelMatch.Phase.Finished?3:2);
+            int want=(int)duel.CurrentStep;
             if(want!=duelScreenShown)
             {
                 duelScreenShown=want;
-                if(want==0)ShowPlacement();else if(want==1)ShowHandOver();
-                else if(want==2)ShowDuel();else DuelResult();
+                switch(duel.CurrentStep)
+                {
+                    case DuelController.Step.Offer:     ShowOffer(); break;
+                    case DuelController.Step.Place:     ShowPlacement(); break;
+                    case DuelController.Step.HandOver:  ShowHandOver(); break;
+                    case DuelController.Step.Shoot:     ShowDuel(); break;
+                    case DuelController.Step.RoundOver: ShowRoundOver(); break;
+                    case DuelController.Step.Done:      DuelResult(); break;
+                }
             }
-            else if(want==0)RefreshPlacement();
-            else if(want==2)RefreshDuel();
+            else if(duel.CurrentStep==DuelController.Step.Place)RefreshPlacement();
+            else if(duel.CurrentStep==DuelController.Step.Shoot)RefreshDuel();
             return;
         }
         if(controller==null || scoreLabel==null)return;

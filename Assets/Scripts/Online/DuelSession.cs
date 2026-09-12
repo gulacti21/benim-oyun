@@ -26,11 +26,6 @@ public static class DuelSession
     // gelmeli. Guc kampanyaya yakin kaldi (0.80 / 0.65), fark misketin
     // kendisinde: daha sekici ve daha kaygan, temas sonrasi yola devam
     // ediyorlar. Kampanyanin hicbir ayari degismiyor.
-    // Ortadaki buyuk misket: kimsenin degil, cikaran 2 puan alir.
-    // Buyuk ve agir oldugu icin kolay cikmiyor -- odul olmasinin sebebi bu.
-    public static readonly Vector2 BigMarbleSpot = new Vector2(0f, 0f);
-    public const float BigScale = 1.45f;
-    public const float BigMass = 2.2f;
 
     public const float Impulse = .80f;
     public const float Bounciness = .5f;

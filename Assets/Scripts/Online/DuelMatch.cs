@@ -1,77 +1,89 @@
 using System;
 using System.Collections.Generic;
 
-// MISKETR ONLINE — maç kural motoru.
+// MISKETR ONLINE — mac kural motoru.
 //
-// Saf C#: Unity'ye, sahneye, fiziğe hiç bakmaz. Kuralların doğruluğu
-// sahne kurmadan, telefon bağlamadan, ağ yazmadan test edilebilsin diye.
+// Saf C#: Unity'ye, sahneye, fizige hic bakmaz. Kurallarin dogrulugu
+// sahne kurmadan, telefon baglamadan, ag yazmadan test edilebilsin diye.
 //
 // KURALLAR
-//   Hazırlık : iki oyuncu da 7'şer misket dizer, aynı anda ve birbirini
-//              görmeden. Ortaya ayrıca kimsenin olmayan bir BÜYÜK misket konur.
-//   Atış     : sırayla. İLK DİZEN İKİNCİ ATAR.
-//              Puan aldığın atıştan sonra aynı turda tekrar atarsın,
-//              turda en fazla 3 atış. Atıcı kaldığı yerden devam eder.
-//   Puan     : çıkardığın misket sana yazılır.
-//              Kendi misketini çıkarırsan puan RAKİBE yazılır.
-//              Ortadaki büyük misket 2 puandır, kim çıkarırsa onun.
-//   Bitiş    : çemberde misket kalmayınca. Toplam 16 puan paylaşılır.
-//              Çok toplayan kazanır.
-//   Rövanş   : ilk dizen değişir, dolayısıyla ilk atan da değişir.
+//   Kese     : herkes 20 misketle baslar. Kaybeden, kesesi eriyen olur.
+//   El       : her el ikisi de keseden 5'er misket cikarip cembere dizer.
+//              Ortadaki misketler artik kimsenin degil; kim cikarirsa onun.
+//   Dizme    : sadece ILK EL elle dizilir. Sonraki eller otomatik dizilir.
+//              Herkesin ayrica 1 EKSTRA DIZME HAKKI vardir; istedigi elin
+//              basinda kullanip o eli kendi eliyle dizebilir.
+//   Atis     : sirayla. ILK DIZEN IKINCI ATAR.
+//              Misket cikardiysan ayni turda tekrar atarsin, en fazla 3.
+//   ATICI    : atisin sonunda atici misketin cemberin ICINDE durduysa onu
+//              KAYBEDERSIN. Keseden duser ve ortada bir hedef olur; rakip
+//              onu cikarip kendi kesesine katabilir.
+//              Yani her atista "ne kadar sert vurayim" hesabi vardir:
+//              sert vurursan atici cemberi gecip disari cikar, canin yanmaz.
+//   El biter : cemberde misket kalmayinca. Dort tur ust uste kimse misket
+//              cikaramazsa el tikanmis sayilir, kalan misketler sonraki
+//              ele devreder.
+//   Mac      : 5 el. Sonunda kesesi kalabalik olan kazanir. Bir oyuncunun
+//              kesesi el basinda bosalirsa mac orada biter.
 public class DuelMatch
 {
-    public const int MarblesPerPlayer = 7;
+    public const int StartingPouch = 20;
+    public const int AntePerRound = 5;
+    public const int RoundsPerMatch = 5;
     public const int MaxShotsPerTurn = 3;
-    public const int BigMarbleValue = 2;
-    public const int Neutral = 2;              // büyük misketin "sahibi"
-    // Herkes DORT tur oynar. Puan alip almamasi fark etmez; dordu de
-    // dolunca mac biter. Onde olan kazanir, esitse bir tur UZATMA oynanir,
-    // orada da esitlik bozulmazsa berabere.
-    // Cember bundan once bosalirsa mac orada biter.
-    public const int TurnsPerPlayer = 4;
+    public const int StaleTurnLimit = 4;
+    // Ilk el disinda elle dizme hakki: herkese bir tane.
+    public const int ExtraPlacements = 1;
 
-    public enum Phase { Placing, Shooting, Finished }
+    public enum Phase { Placing, Shooting, RoundOver, Finished }
     public enum Outcome { None, PlayerOne, PlayerTwo, Draw }
 
     public struct Marble
     {
-        public int owner;      // 0, 1 veya Neutral
+        public int placedBy;   // sadece renk icin: bu misketi kim ortaya koydu
         public bool out_;
         public float x, z;
-        public bool big;
+        public bool stranded;  // cemberde kalmis bir atici mi
     }
 
     private readonly List<Marble> marbles = new List<Marble>();
     private readonly bool[] placed = new bool[2];
-    private readonly int[] score = new int[2];
+    private readonly int[] pouch = { StartingPouch, StartingPouch };
+    private readonly int[] anted = new int[2];
+    private readonly int[] rights = { ExtraPlacements, ExtraPlacements };
+    private readonly bool[] usingRight = new bool[2];
 
     public Phase State { get; private set; } = Phase.Placing;
-    // Ilk dizen oyuncu. Atisa DIGERI baslar.
     public int FirstPlacer { get; private set; }
     public int Turn { get; private set; }
     public int ShotsThisTurn { get; private set; }
+    public int Round { get; private set; } = 1;
+    public int ScorelessTurns { get; private set; }
     public int MatchNumber { get; private set; }
-    public bool Overtime { get; private set; }
-    private readonly int[] turnsUsed = new int[2];
-    private int overtimeTurnsLeft;
-
-    public int TurnsLeft(int player) => Math.Max(0, TurnsPerPlayer - turnsUsed[player & 1]);
 
     public IReadOnlyList<Marble> Marbles => marbles;
-    public int Score(int player) => score[player & 1];
+    public int Pouch(int player) => pouch[player & 1];
+    public int Anted(int player) => anted[player & 1];
     public bool HasPlaced(int player) => placed[player & 1];
-
-    public int InRing(int player)
-    {
-        int n = 0;
-        for (int i = 0; i < marbles.Count; i++)
-            if (marbles[i].owner == player && !marbles[i].out_) n++;
-        return n;
-    }
-
     public int RemainingInRing
     {
         get { int n = 0; for (int i = 0; i < marbles.Count; i++) if (!marbles[i].out_) n++; return n; }
+    }
+    // Bu el ortaya konacak misket sayisi: kese yetmiyorsa kalan kadar.
+    public int AnteFor(int player) => Math.Min(AntePerRound, pouch[player & 1]);
+    public int PlacementRights(int player) => rights[player & 1];
+    // Bu el elle mi diziliyor? Ilk el herkes icin elle; sonrakiler ancak
+    // oyuncu ekstra hakkini kullanirsa.
+    public bool PlacesByHand(int player) => Round == 1 || usingRight[player & 1];
+
+    // Elin basinda "hakkimi kullanacagim" demek.
+    public bool UsePlacementRight(int player)
+    {
+        player &= 1;
+        if (State != Phase.Placing || Round == 1 || placed[player]) return false;
+        if (rights[player] <= 0 || usingRight[player]) return false;
+        rights[player]--; usingRight[player] = true;
+        return true;
     }
 
     public DuelMatch(int firstPlacer = 0)
@@ -80,36 +92,37 @@ public class DuelMatch
         Turn = 1 - FirstPlacer;      // ilk dizen ikinci atar
     }
 
-    // ---------------- Hazırlık ----------------
+    // ---------------- El hazirligi ----------------
 
+    // Oyuncu kesesinden misketleri cikarip cembere dizer.
     public bool Place(int player, IList<(float x, float z)> spots)
     {
-        if (State != Phase.Placing || player < 0 || player > 1 || placed[player]) return false;
-        if (spots == null || spots.Count != MarblesPerPlayer) return false;
+        player &= 1;
+        if (State != Phase.Placing || placed[player]) return false;
+        int gereken = AnteFor(player);
+        if (spots == null || spots.Count != gereken) return false;
 
         foreach (var s in spots)
-            marbles.Add(new Marble { owner = player, out_ = false, x = s.x, z = s.z, big = false });
+            marbles.Add(new Marble { placedBy = player, out_ = false, x = s.x, z = s.z });
 
+        pouch[player] -= gereken;
+        anted[player] = gereken;
         placed[player] = true;
         if (placed[0] && placed[1]) State = Phase.Shooting;
         return true;
     }
 
-    // Ortadaki büyük misket. Kimsenin değil; çıkaran 2 puan alır.
-    public void PlaceBigMarble(float x, float z)
-    {
-        marbles.Add(new Marble { owner = Neutral, out_ = false, x = x, z = z, big = true });
-    }
+    // ---------------- Atis ----------------
 
-    // ---------------- Atış ----------------
-
-    // knocked = çemberi terk eden misketlerin indeksleri.
-    // Dönen değer: sıra aynı oyuncuda mı kaldı.
-    public bool ResolveShot(IList<int> knocked)
+    // knocked          : cemberi terk eden misketlerin indeksleri
+    // shooterStranded  : atici misket cemberin ICINDE durdu mu
+    // sx, sz           : aticinin durdugu yer (cemberde kaldiysa oraya hedef olarak eklenir)
+    // Donen deger      : sira ayni oyuncuda mi kaldi
+    public bool ResolveShot(IList<int> knocked, bool shooterStranded, float sx = 0f, float sz = 0f)
     {
         if (State != Phase.Shooting) return false;
 
-        int shooter = Turn, other = 1 - shooter, gained = 0;
+        int shooter = Turn, kazanc = 0;
 
         if (knocked != null)
         {
@@ -119,67 +132,87 @@ public class DuelMatch
                 var m = marbles[i];
                 if (m.out_) continue;
                 m.out_ = true; marbles[i] = m;
-
-                if (m.big) { score[shooter] += BigMarbleValue; gained += BigMarbleValue; }
-                else if (m.owner == shooter) score[other] += 1;   // kendi misketin rakibe yazılır
-                else { score[shooter] += 1; gained++; }
+                kazanc++;
             }
+        }
+        pouch[shooter] += kazanc;
+
+        // Atici cemberde kaldi: keseden duser, ortada hedef olur.
+        if (shooterStranded)
+        {
+            pouch[shooter] -= 1;
+            marbles.Add(new Marble { placedBy = shooter, out_ = false, x = sx, z = sz, stranded = true });
         }
 
         ShotsThisTurn++;
+        ScorelessTurns = kazanc > 0 ? 0 : ScorelessTurns;
 
-        // Çember boşaldıysa maç biter.
-        if (RemainingInRing == 0) { State = Phase.Finished; return false; }
+        if (RemainingInRing == 0) { EndRound(); return false; }
 
-        // Puan aldıysan ve tur hakkın dolmadıysa tekrar atarsın.
-        if (gained > 0 && ShotsThisTurn < MaxShotsPerTurn) return true;
+        // Cikardiysan, aticin da cemberde kalmadiysa ve hakkin varsa devam.
+        if (kazanc > 0 && !shooterStranded && ShotsThisTurn < MaxShotsPerTurn) return true;
 
-        EndTurn();
+        EndTurn(kazanc > 0);
         return false;
     }
 
     public void ForfeitTurn()
     {
         if (State != Phase.Shooting) return;
-        EndTurn();
+        EndTurn(false);
     }
 
-    private void EndTurn()
+    private void EndTurn(bool kazandi)
     {
-        turnsUsed[Turn]++;
         ShotsThisTurn = 0;
+        ScorelessTurns = kazandi ? 0 : ScorelessTurns + 1;
         Turn = 1 - Turn;
 
-        if (Overtime)
-        {
-            overtimeTurnsLeft--;
-            if (overtimeTurnsLeft <= 0) State = Phase.Finished;
-            return;
-        }
-
-        // Ikisi de dort turunu oynamadiysa mac surer.
-        if (turnsUsed[0] < TurnsPerPlayer || turnsUsed[1] < TurnsPerPlayer) return;
-
-        // Dort tur doldu. Onde olan varsa biter; esitse bir tur uzatma.
-        if (score[0] != score[1]) { State = Phase.Finished; return; }
-        Overtime = true;
-        overtimeTurnsLeft = 2;      // ikisine de birer tur
+        // El tikandi: kimse misket cikaramiyor. Kalan misketler ortada kalir
+        // ve sonraki ele devreder.
+        if (ScorelessTurns >= StaleTurnLimit) EndRound();
     }
 
-    // ---------------- Sonuç ----------------
+    private void EndRound()
+    {
+        ShotsThisTurn = 0; ScorelessTurns = 0;
+        if (Round >= RoundsPerMatch) { State = Phase.Finished; return; }
+        State = Phase.RoundOver;
+    }
+
+    // Sonraki ele gecis. Cemberde kalan misketler ortada kalir.
+    public void NextRound()
+    {
+        if (State != Phase.RoundOver) return;
+
+        // Cikmis misketleri listeden at; kalanlar ortada durmaya devam eder.
+        for (int i = marbles.Count - 1; i >= 0; i--) if (marbles[i].out_) marbles.RemoveAt(i);
+
+        Round++;
+        placed[0] = placed[1] = false;
+        usingRight[0] = usingRight[1] = false;
+        anted[0] = anted[1] = 0;
+        FirstPlacer = 1 - FirstPlacer;     // her el ilk dizen degisir
+        Turn = 1 - FirstPlacer;
+
+        // Kesesi bos olan ortaya koyamaz: mac biter.
+        if (pouch[0] <= 0 || pouch[1] <= 0) { State = Phase.Finished; return; }
+        State = Phase.Placing;
+    }
+
+    // ---------------- Sonuc ----------------
 
     public Outcome Result
     {
         get
         {
             if (State != Phase.Finished) return Outcome.None;
-            if (score[0] > score[1]) return Outcome.PlayerOne;
-            if (score[1] > score[0]) return Outcome.PlayerTwo;
+            if (pouch[0] > pouch[1]) return Outcome.PlayerOne;
+            if (pouch[1] > pouch[0]) return Outcome.PlayerTwo;
             return Outcome.Draw;
         }
     }
 
-    // Rövanş: ilk dizen değişir, dolayısıyla ilk atan da değişir.
     public DuelMatch Rematch()
     {
         var next = new DuelMatch(1 - FirstPlacer);

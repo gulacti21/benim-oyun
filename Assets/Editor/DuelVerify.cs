@@ -25,146 +25,160 @@ public static class DuelVerify
         throw new Exception("CHECK FAILED: " + message);
     }
 
-    private static List<(float, float)> Spots(float x)
+    private static List<(float, float)> Spots(float x, int count)
     {
         var list = new List<(float, float)>();
-        for (int i = 0; i < DuelMatch.MarblesPerPlayer; i++) list.Add((x, i * .6f));
+        for (int i = 0; i < count; i++) list.Add((x, i * .6f));
         return list;
     }
 
-    private static DuelMatch Ready(int firstPlacer = 0, bool big = true)
+    private static DuelMatch Ready(int firstPlacer = 0)
     {
         var m = new DuelMatch(firstPlacer);
-        m.Place(0, Spots(-1f));
-        m.Place(1, Spots(1f));
-        if (big) m.PlaceBigMarble(0f, 0f);
+        m.Place(0, Spots(-1f, m.AnteFor(0)));
+        m.Place(1, Spots(1f, m.AnteFor(1)));
         return m;
     }
 
-    // Belirli bir sahibin cemberde duran misketlerinden n tanesinin indeksi.
-    private static List<int> Of(DuelMatch m, int owner, int count)
+    // Cemberde duran misketlerden n tanesinin indeksi.
+    private static List<int> Ring(DuelMatch m, int count)
     {
         var hit = new List<int>();
         for (int i = 0; i < m.Marbles.Count && hit.Count < count; i++)
-            if (m.Marbles[i].owner == owner && !m.Marbles[i].out_) hit.Add(i);
+            if (!m.Marbles[i].out_) hit.Add(i);
         return hit;
-    }
-
-    private static List<int> Big(DuelMatch m)
-    {
-        for (int i = 0; i < m.Marbles.Count; i++) if (m.Marbles[i].big) return new List<int> { i };
-        return new List<int>();
     }
 
     public static int RunChecks()
     {
-        // --- Hazirlik ---
+        // --- El hazirligi ve kese ---
         var m = new DuelMatch();
         Check(m.State == DuelMatch.Phase.Placing, "Mac dizme asamasinda baslar");
-        Check(!m.Place(0, new List<(float, float)> { (0f, 0f) }), "Eksik dizilis reddedilir");
-        Check(m.Place(0, Spots(-1f)), "Gecerli dizilis kabul edilir");
-        Check(!m.Place(0, Spots(-1f)), "Ayni oyuncu iki kez dizemez");
+        Check(m.Pouch(0) == DuelMatch.StartingPouch && m.Pouch(1) == DuelMatch.StartingPouch, "Herkes yirmi misketle baslar");
+        Check(m.AnteFor(0) == DuelMatch.AntePerRound, "Ilk el bes misket ortaya konur");
+        Check(!m.Place(0, Spots(-1f, 2)), "Eksik dizilis reddedilir");
+        Check(m.Place(0, Spots(-1f, DuelMatch.AntePerRound)), "Gecerli dizilis kabul edilir");
+        Check(m.Pouch(0) == DuelMatch.StartingPouch - DuelMatch.AntePerRound, "Ortaya konan misket keseden duser");
+        Check(!m.Place(0, Spots(-1f, DuelMatch.AntePerRound)), "Ayni oyuncu iki kez dizemez");
         Check(m.State == DuelMatch.Phase.Placing, "Tek oyuncu dizince cember acilmaz");
-        Check(m.Place(1, Spots(1f)), "Ikinci oyuncu dizer");
+        Check(m.Place(1, Spots(1f, DuelMatch.AntePerRound)), "Ikinci oyuncu dizer");
         Check(m.State == DuelMatch.Phase.Shooting, "Ikisi de dizince atisa gecilir");
-        Check(m.InRing(0) == 7 && m.InRing(1) == 7, "Herkes 7 misketle baslar");
+        Check(m.RemainingInRing == DuelMatch.AntePerRound * 2, "Cemberde on misket var");
 
         // --- Ilk dizen ikinci atar ---
-        m = Ready(0);
-        Check(m.FirstPlacer == 0 && m.Turn == 1, "Ilk dizen ikinci atar");
-        m = Ready(1);
-        Check(m.FirstPlacer == 1 && m.Turn == 0, "Ilk dizen 2. oyuncuysa 1. atar");
+        m = Ready(0); Check(m.Turn == 1, "Ilk dizen ikinci atar");
+        m = Ready(1); Check(m.Turn == 0, "Ilk dizen 2. oyuncuysa 1. atar");
 
-        // --- Puan: rakibin misketi sana, kendi misketin rakibe ---
-        m = Ready(1);                       // sira 0'da
-        Check(m.ResolveShot(Of(m, 1, 1)), "Rakibin misketini cikaran tekrar atar");
-        Check(m.Score(0) == 1 && m.Score(1) == 0, "Rakibin misketi cikarana yazilir");
-        Check(!m.ResolveShot(Of(m, 0, 1)), "Kendi misketini cikarmak turu uzatmaz");
-        Check(m.Score(1) == 1, "Kendi misketin rakibe yazilir");
-        Check(m.Turn == 1, "Kotu atistan sonra sira gecer");
-
-        // --- Buyuk misket iki puan ---
+        // --- Cikardigin misket kesene girer ---
         m = Ready(1);
-        Check(m.ResolveShot(Big(m)), "Buyuk misketi cikaran tekrar atar");
-        Check(m.Score(0) == DuelMatch.BigMarbleValue, "Buyuk misket iki puan");
-        Check(m.Score(1) == 0, "Buyuk misket rakibe puan yazmaz");
+        int once = m.Pouch(0);
+        Check(m.ResolveShot(Ring(m, 1), false), "Misket cikaran tekrar atar");
+        Check(m.Pouch(0) == once + 1, "Cikardigin misket kesene girer");
+        Check(m.Pouch(1) == DuelMatch.StartingPouch - DuelMatch.AntePerRound, "Rakibin kesesi degismez");
 
         // --- Zincir en fazla uc atis ---
         m = Ready(1);
-        Check(m.ResolveShot(Of(m, 1, 1)), "Birinci zincir atisi");
-        Check(m.ResolveShot(Of(m, 1, 1)), "Ikinci zincir atisi");
-        Check(!m.ResolveShot(Of(m, 1, 1)), "Turda en fazla uc atis");
+        Check(m.ResolveShot(Ring(m, 1), false), "Birinci zincir atisi");
+        Check(m.ResolveShot(Ring(m, 1), false), "Ikinci zincir atisi");
+        Check(!m.ResolveShot(Ring(m, 1), false), "Turda en fazla uc atis");
         Check(m.Turn == 1, "Uc atistan sonra sira gecer");
-        Check(m.Score(0) == 3, "Zincirdeki her misket puan yazar");
 
-        // --- Iska ---
+        // --- Atici cemberde kalirsa kaybedilir ---
         m = Ready(1);
-        Check(!m.ResolveShot(new List<int>()), "Iskalayinca sira gecer");
-        Check(m.Score(0) == 0 && m.Score(1) == 0, "Iska puan yazmaz");
+        once = m.Pouch(0);
+        int cemberde = m.RemainingInRing;
+        Check(!m.ResolveShot(null, true, .5f, .5f), "Atici cemberde kalinca tur biter");
+        Check(m.Pouch(0) == once - 1, "Cemberde kalan atici keseden duser");
+        Check(m.RemainingInRing == cemberde + 1, "Kalan atici ortada hedef olur");
 
-        // --- Cember bosalinca mac biter ---
-        m = Ready(1);
-        var hepsi = new List<int>();
-        for (int i = 0; i < m.Marbles.Count; i++) hepsi.Add(i);
-        m.ResolveShot(hepsi);
-        Check(m.State == DuelMatch.Phase.Finished, "Cember bosalinca mac biter");
-        Check(m.RemainingInRing == 0, "Cemberde misket kalmadi");
-        Check(m.Score(0) + m.Score(1) == DuelMatch.MarblesPerPlayer * 2 + DuelMatch.BigMarbleValue,
-              "Toplam puan 16 olmali");
+        // --- Cemberde kalan atici rakip tarafindan alinabilir ---
+        int hedef = -1;
+        for (int i = 0; i < m.Marbles.Count; i++) if (m.Marbles[i].stranded) hedef = i;
+        Check(hedef >= 0, "Kalan atici listede isaretli");
+        int rakipOnce = m.Pouch(1);
+        m.ResolveShot(new List<int> { hedef }, false);
+        Check(m.Pouch(1) == rakipOnce + 1, "Rakip kalan aticiyi kesesine katar");
 
-        // --- Kazanan skora gore ---
+        // --- Misket cikarsan bile atici cemberde kaldiysa zincir yok ---
         m = Ready(1);
-        m.ResolveShot(Of(m, 1, 3));
+        Check(!m.ResolveShot(Ring(m, 1), true, .3f, .3f), "Atici cemberde kaldiysa zincir kesilir");
+
+        // --- Cember bosalinca el biter ---
+        m = Ready(1);
+        m.ResolveShot(Ring(m, m.RemainingInRing), false);
+        Check(m.State == DuelMatch.Phase.RoundOver, "Cember bosalinca el biter");
+        Check(m.Round == 1, "El bitti ama sonraki ele henuz gecilmedi");
+        m.NextRound();
+        Check(m.Round == 2 && m.State == DuelMatch.Phase.Placing, "Sonraki el dizmeyle baslar");
+
+        // --- Ikinci el otomatik dizilir, ekstra hak elle dizdirir ---
+        Check(!m.PlacesByHand(0), "Ikinci el varsayilan olarak otomatik dizilir");
+        Check(m.PlacementRights(0) == DuelMatch.ExtraPlacements, "Ekstra dizme hakki duruyor");
+        Check(m.UsePlacementRight(0), "Ekstra hak kullanilabilir");
+        Check(m.PlacesByHand(0), "Hak kullanilinca elle dizilir");
+        Check(m.PlacementRights(0) == 0, "Hak bir kez kullanilir");
+        Check(!m.UsePlacementRight(0), "Biten hak tekrar kullanilamaz");
+
+        // --- Tikanan elde kalan misketler devreder ---
+        m = Ready(1);
+        m.ResolveShot(Ring(m, 2), false);
         while (m.State == DuelMatch.Phase.Shooting) m.ForfeitTurn();
-        Check(m.Result == DuelMatch.Outcome.PlayerOne, "Cok puan toplayan kazanir");
+        Check(m.State == DuelMatch.Phase.RoundOver, "Dort bos tur eli bitirir");
+        int devreden = m.RemainingInRing;
+        Check(devreden > 0, "Cemberde misket kalmis");
+        m.NextRound();
+        Check(m.RemainingInRing == devreden, "Kalan misketler sonraki ele devreder");
 
-        // --- Herkes dort tur oynar ---
-        m = Ready(1);
-        Check(m.TurnsLeft(0) == DuelMatch.TurnsPerPlayer, "Herkes dort turla baslar");
-        for (int i = 0; i < DuelMatch.TurnsPerPlayer * 2; i++) m.ForfeitTurn();
-        Check(m.Overtime, "Dort tur dolunca skorlar esitse uzatma");
-        Check(m.State == DuelMatch.Phase.Shooting, "Uzatmada mac devam eder");
-        m.ForfeitTurn(); m.ForfeitTurn();
-        Check(m.State == DuelMatch.Phase.Finished, "Uzatma bir tur surer");
-        Check(m.Result == DuelMatch.Outcome.Draw, "Uzatmada da esitlik bozulmazsa berabere");
+        // --- Her el ilk dizen degisir ---
+        m = Ready(0);
+        Check(m.FirstPlacer == 0, "Ilk elde birinci dizer");
+        m.ResolveShot(Ring(m, m.RemainingInRing), false);
+        m.NextRound();
+        Check(m.FirstPlacer == 1, "Ikinci elde ikinci dizer");
+        Check(m.Turn == 0, "Dizen degisince atan da degisir");
 
-        // --- Onde olan varsa uzatma yok ---
-        m = Ready(1);
-        m.ResolveShot(Of(m, 1, 1));                 // 0 one gecti
-        while (m.State == DuelMatch.Phase.Shooting) m.ForfeitTurn();
-        Check(!m.Overtime, "Onde olan varken uzatma oynanmaz");
-        Check(m.Result == DuelMatch.Outcome.PlayerOne, "Dort tur sonunda onde olan kazanir");
-
-        // --- Tur sayaci: zincir tek tur sayilir ---
-        m = Ready(1);
-        m.ResolveShot(Of(m, 1, 1));                 // zincir, sira ayni oyuncuda
-        Check(m.TurnsLeft(0) == DuelMatch.TurnsPerPlayer, "Zincir devam ederken tur harcanmaz");
-        m.ResolveShot(new List<int>());             // iska, tur biter
-        Check(m.TurnsLeft(0) == DuelMatch.TurnsPerPlayer - 1, "Tur bitince sayac duser");
+        // --- Bes el sonunda mac biter ---
+        m = Ready(0);
+        for (int el = 1; el <= DuelMatch.RoundsPerMatch; el++)
+        {
+            if (m.State == DuelMatch.Phase.Placing)
+            {
+                m.Place(0, Spots(-1f, m.AnteFor(0)));
+                m.Place(1, Spots(1f, m.AnteFor(1)));
+            }
+            if (m.State == DuelMatch.Phase.Shooting) m.ResolveShot(Ring(m, m.RemainingInRing), false);
+            if (m.State == DuelMatch.Phase.RoundOver) m.NextRound();
+        }
+        Check(m.State == DuelMatch.Phase.Finished, "Bes el sonunda mac biter");
+        // Kazanani sabit varsayamayiz: her el ilk dizen degistigi icin ilk atan
+        // da donusumlu oluyor. Kural su: kesesi kalabalik olan kazanir.
+        var beklenen = m.Pouch(0) > m.Pouch(1) ? DuelMatch.Outcome.PlayerOne
+                     : m.Pouch(1) > m.Pouch(0) ? DuelMatch.Outcome.PlayerTwo
+                     : DuelMatch.Outcome.Draw;
+        Check(m.Result == beklenen, "Kesesi kalabalik olan kazanir");
+        Check(m.Pouch(0) + m.Pouch(1) == DuelMatch.StartingPouch * 2, "Misketler kaybolmaz, el degistirir");
 
         // --- Bitmis macta atis islenmez ---
-        m = Ready(1);
-        m.ResolveShot(hepsi);
-        int oncekiSkor = m.Score(0);
-        Check(!m.ResolveShot(Of(m, 1, 1)), "Bitmis macta atis islenmez");
-        Check(m.Score(0) == oncekiSkor, "Bitmis macta puan degismez");
+        int kese = m.Pouch(0);
+        Check(!m.ResolveShot(new List<int> { 0 }, false), "Bitmis macta atis islenmez");
+        Check(m.Pouch(0) == kese, "Bitmis macta kese degismez");
 
         // --- Ayni misket iki kez sayilmaz ---
         m = Ready(1);
-        var tek = Of(m, 1, 1);
-        m.ResolveShot(tek);
-        int skor = m.Score(0);
-        m.ResolveShot(tek);
-        Check(m.Score(0) == skor, "Cikmis misket tekrar puan yazmaz");
+        var tek = Ring(m, 1);
+        m.ResolveShot(tek, false);
+        kese = m.Pouch(0);
+        m.ResolveShot(tek, false);
+        Check(m.Pouch(0) == kese, "Cikmis misket tekrar kesene girmez");
 
         // --- Rovans ---
         m = Ready(0);
         var r = m.Rematch();
         Check(r.FirstPlacer == 1, "Rovansta ilk dizen degisir");
         Check(r.Turn == 0, "Ilk dizen degisince ilk atan da degisir");
-        Check(r.State == DuelMatch.Phase.Placing, "Rovans dizmeden baslar");
-        Check(r.MatchNumber == 1, "Rovans sayaci artar");
-        Check(r.Rematch().FirstPlacer == 0, "Ikinci rovansta el geri doner");
+        Check(r.Pouch(0) == DuelMatch.StartingPouch, "Rovansta kese sifirlanir");
+        Check(r.Round == 1 && r.State == DuelMatch.Phase.Placing, "Rovans ilk elden baslar");
+        Check(r.PlacementRights(0) == DuelMatch.ExtraPlacements, "Rovansta ekstra hak geri gelir");
 
         // --- Dizme kurallari ---
         const float arena = 3.2f;
@@ -186,16 +200,12 @@ public static class DuelVerify
 
         for (int pl = 0; pl < 2; pl++)
         {
-            var d = DuelPlacement.DefaultLayout(pl, DuelMatch.MarblesPerPlayer, arena);
-            Check(d.Count == DuelMatch.MarblesPerPlayer, "Hazir dizilis tam sayida");
+            var d = DuelPlacement.DefaultLayout(pl, DuelMatch.AntePerRound, arena);
+            Check(d.Count == DuelMatch.AntePerRound, "Hazir dizilis tam sayida");
             foreach (var q in d) Check(DuelPlacement.Inside(q.x, q.y, arena), "Hazir dizilis cemberin icinde");
             for (int i = 0; i < d.Count; i++)
                 for (int j = i + 1; j < d.Count; j++)
                     Check(Vector2.Distance(d[i], d[j]) > DuelPlacement.MinGap - .02f, "Hazir diziliste cakisma yok");
-            // Hazir dizilis ortadaki buyuk misketin yerini isgal etmemeli.
-            foreach (var q in d)
-                Check(Vector2.Distance(q, DuelSession.BigMarbleSpot) > DuelPlacement.MinGap * DuelSession.BigScale - .02f,
-                      "Hazir dizilis buyuk misketin yerine girmez");
         }
 
         return passed;
