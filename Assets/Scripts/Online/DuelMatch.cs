@@ -119,11 +119,19 @@ public class DuelMatch
 
     // ---------------- Atis ----------------
 
-    // knocked          : cemberi terk eden misketlerin indeksleri
-    // shooterStranded  : atici misket cemberin ICINDE durdu mu
-    // sx, sz           : aticinin durdugu yer (cemberde kaldiysa oraya hedef olarak eklenir)
+    // knocked          : atisi yapanin kazandigi misketlerin indeksleri
+    //                    (cemberde disari cikanlar, dizide kipirdayanlar,
+    //                     kuyuda cukura dusenler -- kural moduna gore degisir,
+    //                     motor sadece "bunlar kazanildi" bilgisini alir)
+    // shooterStranded  : atici misketini KAYBETTI mi
+    // sx, sz           : aticinin durdugu yer
+    // strandedBecomesTarget : kaybedilen atici ortada yeni bir hedef olur mu.
+    //                    Cember/ucgende olur (cemberin ortasinda oylece durur).
+    //                    KUYUDA OLMAZ: atici cukurun dibindedir, kimse ona
+    //                    vuramaz. Ikisinde de keseden duser.
     // Donen deger      : sira ayni oyuncuda mi kaldi
-    public bool ResolveShot(IList<int> knocked, bool shooterStranded, float sx = 0f, float sz = 0f)
+    public bool ResolveShot(IList<int> knocked, bool shooterStranded, float sx = 0f, float sz = 0f,
+                            bool strandedBecomesTarget = true)
     {
         if (State != Phase.Shooting) return false;
 
@@ -146,7 +154,8 @@ public class DuelMatch
         if (shooterStranded)
         {
             pouch[shooter] -= 1;
-            marbles.Add(new Marble { placedBy = shooter, out_ = false, x = sx, z = sz, stranded = true });
+            if (strandedBecomesTarget)
+                marbles.Add(new Marble { placedBy = shooter, out_ = false, x = sx, z = sz, stranded = true });
         }
 
         ShotsThisTurn++;

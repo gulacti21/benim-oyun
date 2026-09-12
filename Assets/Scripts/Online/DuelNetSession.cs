@@ -163,7 +163,8 @@ public class DuelNetSession
                 if (Match == null || Match.State != DuelMatch.Phase.Shooting) { Rejected++; return; }
                 // Sirasi gelmeyen oyuncunun atisi kabul edilmez.
                 if (Match.Turn != p.player) { Rejected++; return; }
-                Match.ResolveShot(p.knocked, p.flag, p.x, p.z);
+                // Kuyuda kaybedilen atici ortada hedef OLMAZ: cukurun dibinde.
+                Match.ResolveShot(p.knocked, p.flag, p.x, p.z, !DuelSession.Well);
                 break;
 
             // "Sonraki el" ve "rovans" IKI oyuncu da basar. Ikincisi geldiginde

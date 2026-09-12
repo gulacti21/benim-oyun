@@ -13,9 +13,21 @@ public static class DuelPlacement
     // yoksa oyuncu misketini kenara dizip ilk dokunusta kaybeder.
     public static bool Inside(float x, float z, float arenaSize)
     {
+        if (DuelSession.Well) return InsideWell(x, z, arenaSize);
         if (DuelSession.Row) return InsideRow(x, z, arenaSize);
         return DuelSession.Triangle ? InsideTriangle(x, z, arenaSize)
                                     : InsideCircle(x, z, arenaSize);
+    }
+
+    // KUYU: saha cember, ama CUKURUN AGZI gecerli dizme yeri degil --
+    // misket cukurun kenarina konsaydi ilk dokunusta duserdi ve dizilis
+    // "rakibe hediye" olurdu. Cukurun etrafinda bir emniyet halkasi var.
+    private static bool InsideWell(float x, float z, float arenaSize)
+    {
+        float r = new Vector2(x, z).magnitude;
+        float dis = arenaSize - MarbleRadius - EdgeMargin;
+        float ic = DuelSession.HoleRadius + MarbleRadius + .18f;
+        return r <= dis && r >= ic;
     }
 
     // DIZI: gecerli yer siranin UZERI. Elle dizme yok ama otomatik dizilisin
@@ -89,6 +101,15 @@ public static class DuelPlacement
             return new Vector2(Mathf.Clamp(p.x, -lim, lim), DuelSession.RowZ);
         }
 
+        if (DuelSession.Well)
+        {
+            float dis = arenaSize - MarbleRadius - EdgeMargin - .002f;
+            float ic = DuelSession.HoleRadius + MarbleRadius + .18f;
+            float r = p.magnitude;
+            if (r < .0001f) return new Vector2(0f, ic);      // tam merkez: disari it
+            return p.normalized * Mathf.Clamp(r, ic, dis);
+        }
+
         if (!DuelSession.Triangle)
         {
             float limit = arenaSize - MarbleRadius - EdgeMargin;
@@ -148,6 +169,22 @@ public static class DuelPlacement
     {
         var list = new List<Vector2>();
         float side = player == 0 ? -1f : 1f;
+
+        // KUYU: misketler cukurun etrafina halka halinde dizilir; iki oyuncu
+        // halkanin iki yarisina. Cukura esit uzaklikta olmalari onemli,
+        // yoksa birinin misketleri digerinden kolay dusurulurdu.
+        if (DuelSession.Well)
+        {
+            float halka = DuelSession.HoleRadius + MarbleRadius + .55f;
+            float taban = player == 0 ? 90f : 270f;
+            for (int i = 0; i < count; i++)
+            {
+                float t = count == 1 ? .5f : i / (float)(count - 1);
+                float aci = (taban + Mathf.Lerp(-70f, 70f, t)) * Mathf.Deg2Rad;
+                list.Add(new Vector2(Mathf.Cos(aci) * halka, Mathf.Sin(aci) * halka));
+            }
+            return Resolve(list, arenaSize);
+        }
 
         // DIZI: tek duz sira. Iki oyuncunun misketleri BIRBIRINE GECMELI
         // diziliyor -- yan yana dizilse oyuncu kendi tarafina nisan alip

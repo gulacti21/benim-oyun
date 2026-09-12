@@ -12,15 +12,19 @@ public static class DuelSession
     //   Ucgen  -- ayni kural, saha ucgen; koseler oyunu sertlestirir
     //   Dizi   -- "kondik/bas oyunu": misketler tek siraya dizilir,
     //             KIPIRDATTIGIN misket senin olur (cikarmak degil)
-    public enum GameType { Cember, Ucgen, Dizi }
+    //   Kuyu   -- ortada bir cukur; CUKURA DUSURDUGUN misket senin olur,
+    //             kendi aticin duserse onu kaybedersin
+    public enum GameType { Cember, Ucgen, Dizi, Kuyu }
 
     public static bool Active { get; private set; }
     public static Mode Kind { get; private set; } = Mode.HotSeat;
     public static GameType Type { get; set; } = GameType.Cember;
     public static bool Triangle => Type == GameType.Ucgen;
     public static bool Row => Type == GameType.Dizi;
+    public static bool Well => Type == GameType.Kuyu;
     public static string TypeName => Type == GameType.Ucgen ? "ÜÇGEN"
-                                  : Type == GameType.Dizi ? "DİZİ" : "ÇEMBER";
+                                  : Type == GameType.Dizi ? "DİZİ"
+                                  : Type == GameType.Kuyu ? "KUYU" : "ÇEMBER";
     // Ilk dizen oyuncu. Atisa DIGERI baslar; rovansta el degisir.
     public static int FirstPlacer { get; set; }
     public static int MatchNumber { get; set; }
@@ -47,7 +51,23 @@ public static class DuelSession
     public const float RowSize = 3.4f;
     // Siranin zemindeki yeri. Atici z=-4.2'den atar, yani sira 4.2 birim otede.
     public const float RowZ = 0f;
-    public static float ArenaSize => Triangle ? TriangleSize : Row ? RowSize : CircleSize;
+    // KUYU: saha yine yuvarlak, ama ortasinda bir cukur var. Cukurun boyu
+    // ve atis gucu DuelPhysicsVerify'in KUYU bolumunden geliyor.
+    public const float WellSize = 3.0f;
+    // Cukurun agzi. OLCULDU (cizgiden 4.2 birim, nisan sapmasi dahil):
+    //   0.35 -> atislarin %26'si giriyor, 12 sayi ~47 atis (cok uzun)
+    //   0.45 -> %34, ~35 atis   <-- secildi
+    //   0.50 -> %51, ~23 atis
+    //   0.55 -> %51, ~23 atis
+    //   0.70 -> %74, ~16 atis (cok kolay, cukur kendiliginden cekiyor)
+    // 0.45 secildi. 0.50 ve ustunde atislarin YARISINDAN fazlasi giriyor;
+    // ustelik olcumdeki nisan sapmasi gercek oyuncudan dar, yani sahada
+    // daha da kolay olurdu. 0.45'te cukur hala vurulabiliyor ama isabet
+    // etmek bir sey ifade ediyor.
+    public const float HoleRadius = .45f;
+    public static float ArenaSize => Triangle ? TriangleSize : Row ? RowSize
+                                   : Well ? WellSize : CircleSize;
+    // Kuyunun sahasi da cember; farki ortadaki cukur (DuelHole cizer).
     public static ArenaShape Shape => Triangle ? ArenaShape.Triangle
                                     : Row ? ArenaShape.Line : ArenaShape.Circle;
 
@@ -79,6 +99,22 @@ public static class DuelSession
     // Bu esigin ALTINDA kalan siyirma bilerek sayilmiyor: kuralin adi
     // "kipirdatmak", degip gecmek degil.
     public const float RowNudge = .08f;
+
+    // KUYU atis gucu.
+    //
+    // Burada beceri "vurup cikarmak" degil "tam cukurda durdurmak". Ilk
+    // denemede mac gucuyle (0.55-1.0) olculdu ve atislarin %100'u sahayi
+    // terk etti: cukur 4.2 birim otede, oysa o guclerle misket 15-27 birim
+    // gidiyor. Yani mac gucu bu mod icin anlamsiz.
+    //
+    // Guc, sira belirleme atisiyla AYNI mantikla cukur mesafesinden
+    // turetiliyor. Fark su: sira atisinda cizgiye ULASMAK yetiyor, burada
+    // tam cukurda DURMAK gerekiyor -- yani nisan gucu daha yukari alinmali,
+    // aksi halde tam gucte misket cukurun uzerinden gecip gidiyor.
+    // Olculdu: 0.23 ile cukura giren atis %0, 0.18 ile %34.
+    public const float WellAimPower = .87f;
+    public static float WellImpulse =>
+        (0f - ShooterZ) / (TossTravelPerImpulse * WellAimPower);
     public const float Bounciness = .45f;
     public const float FrictionMul = .7f;
 

@@ -101,6 +101,9 @@ public static class DuelPhysicsVerify
             // (2) "kipirdadi" esigi gurultuden ayirt edilebiliyor mu.
             DiziReport();
 
+            // KUYU MODU: cukura girmek ne kadar zor?
+            KuyuReport();
+
             // SIRA BELIRLEME ATISI olculebilir mi?
             // Soru: oyuncu cizgiye (sahanin uzak kenari) ULASABILIYOR mu ve
             // tam gucte GECIYOR mu. Ikisi de olmazsa atis beceri testi degil,
@@ -274,6 +277,87 @@ public static class DuelPhysicsVerify
         }
         UnityEngine.Object.DestroyImmediate(shot.gameObject);
         return (oynayan, enKucuk);
+    }
+
+    // KUYU: atici cizgiden cukura atar. Olculen sey cukura girme orani.
+    // Cok yuksekse mac sikici bir tekrar, cok dusukse 12 sayi hic gelmez.
+    private static void KuyuReport()
+    {
+        var eski = DuelSession.Type;
+        DuelSession.Type = DuelSession.GameType.Kuyu;
+        float saha = DuelSession.WellSize;
+
+        report.Add("KUYU MODU · saha " + saha.ToString("0.0")
+                   + " · cukur yaricapi " + DuelSession.HoleRadius.ToString("0.00")
+                   + " · cizgiden cukura " + (0f - ShooterZ).ToString("0.0") + " birim");
+        report.Add("  Hedef: cukura girme orani makul olsun; 12 sayi icin gereken");
+        report.Add("  atis sayisi da ondan cikiyor.");
+        report.Add("  cukur   guc    CUKUR%   SAHA DISI%   12 sayi icin ~atis");
+
+        float secili = DuelSession.WellImpulse;
+        foreach (float cukur in new[] { .35f, .45f, DuelSession.HoleRadius, .55f, .70f })
+        {
+            foreach (float guc in new[] { secili * .8f, secili, secili * 1.2f })
+            {
+                var st = new Setting
+                {
+                    arena = saha, triangle = false, impulse = guc,
+                    bounciness = DuelSession.Bounciness, frictionMul = DuelSession.FrictionMul,
+                };
+                ArenaSize = saha; triangleMode = false;
+                BuildEmpty(st);
+
+                int atis = 0, giren = 0, disari = 0;
+                // Oyuncu nisan alir ama tam tutturamaz: cukurun etrafina
+                // yayilmis hedef noktalari ve guc sapmasi ile taranir.
+                for (int a = -3; a <= 3; a++)
+                {
+                    float ax = a * .18f;
+                    for (int g = -2; g <= 2; g++)
+                    {
+                        float pw = Mathf.Clamp01(1f + g * .07f);
+                        var (mx, mz, dis) = KuyuShot(st, ax, pw, saha);
+                        atis++; simCount++;
+                        if (dis) { disari++; continue; }
+                        float r = new Vector2(mx, mz).magnitude;
+                        if (r <= cukur - .125f) giren++;
+                    }
+                }
+                Cleanup();
+
+                float oran = atis == 0 ? 0f : giren / (float)atis;
+                string tahmin = oran <= .001f ? "ulasilmaz"
+                              : Mathf.RoundToInt(WellMatch.TargetScore / oran).ToString();
+                report.Add(string.Format("  {0,5:0.00}  {1,4:0.00}   %{2,5:0}   %{3,9:0}   {4,17}{5}",
+                                         cukur, guc, oran * 100f, disari * 100f / Mathf.Max(1, atis), tahmin,
+                                         Mathf.Approximately(guc, secili) && Mathf.Approximately(cukur, DuelSession.HoleRadius)
+                                             ? "   <-- SECILI" : ""));
+            }
+        }
+        report.Add("  secili: cukur " + DuelSession.HoleRadius.ToString("0.00")
+                   + " · guc " + DuelSession.WellImpulse.ToString("0.00"));
+        report.Add("");
+        DuelSession.Type = eski;
+    }
+
+    // Cizgiden cukura tek atis; misketin durdugu yer ve sahayi terk edip
+    // etmedigi. Cukur fiziksel bir delik degil, duran misketin merkeze
+    // uzakligina bakiliyor (oyundaki kuralin aynisi).
+    private static (float x, float z, bool disarida) KuyuShot(Setting s, float aimX, float power, float saha)
+    {
+        var from = new Vector3(0f, TargetY, ShooterZ);
+        var shot = MakeMarble(from, BaseScale, BaseMass * s.massMul, BaseDrag * s.dragMul, testMat);
+        Vector3 dir = (new Vector3(aimX, TargetY, 0f) - from); dir.y = 0f; dir.Normalize();
+        shot.AddForce(dir * (s.impulse * power), ForceMode.Impulse);
+        for (int f = 0; f < MaxFrames; f++)
+        {
+            physics.Simulate(.02f);
+            if (shot.linearVelocity.magnitude <= RestSpeed) break;
+        }
+        var p = shot.position;
+        bool disarida = new Vector2(p.x, p.z).magnitude > saha + ExitMargin;
+        UnityEngine.Object.DestroyImmediate(shot.gameObject);
+        return (p.x, p.z, disarida);
     }
 
     private static void TossReport()

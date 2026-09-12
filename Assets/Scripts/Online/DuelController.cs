@@ -37,6 +37,13 @@ public class DuelController : MonoBehaviour
     // DIZI modu: atis oncesi misketlerin durdugu yerler. Kazanma kosulu
     // "kipirdattigin misket senin" oldugu icin karsilastirma buna gore.
     private readonly Dictionary<TargetMarble, Vector3> rowHome = new Dictionary<TargetMarble, Vector3>();
+    // KUYU modunun cukuru. Sadece bu modda yaratilir; kampanya bilmez.
+    private DuelHole hole;
+    // KUYU modunun kural motoru. Diger modlarda null; DuelMatch ile hicbir
+    // ortak yeri yok, iki oyun ayri ayri yasiyor.
+    public WellMatch Well { get; private set; }
+    // Rakibin sahadaki misketi (kuyu modunda tek hedef odur).
+    private TargetMarble wellRival;
     private float settleTimer, elapsed;
     private const float SettleDelay = .4f;
 
@@ -50,11 +57,24 @@ public class DuelController : MonoBehaviour
 
     // Ag modunda sadece SIRASI GELEN oyuncu hamle uretir; digeri izler.
     public bool Online => Net != null;
+
+    // Her modun kendi atis gucu var; hepsi ayri ayri olculdu.
+    private static float ModImpulse => DuelSession.Row ? DuelSession.RowImpulse
+                                     : DuelSession.Well ? DuelSession.WellImpulse
+                                     : DuelSession.Impulse;
     public int MePlayer => Net != null ? Net.LocalPlayer : ActivePlayer;
-    public bool Watching => Net != null && Match != null
-                            && ((CurrentStep == Step.Shoot && Match.Turn != Net.LocalPlayer)
-                             || (CurrentStep == Step.Place && Match.HasPlaced(Net.LocalPlayer))
-                             || (CurrentStep == Step.Toss && !Net.IsMyTurnToToss));
+    public bool Watching
+    {
+        get
+        {
+            if (Net == null) return false;
+            if (CurrentStep == Step.Toss) return !Net.IsMyTurnToToss;
+            if (DuelSession.Well) return Well != null && Well.Turn != Net.LocalPlayer;
+            if (Match == null) return false;
+            return (CurrentStep == Step.Shoot && Match.Turn != Net.LocalPlayer)
+                || (CurrentStep == Step.Place && Match.HasPlaced(Net.LocalPlayer));
+        }
+    }
 
     public void AttachNet(DuelNetSession session)
     {
@@ -102,6 +122,7 @@ public class DuelController : MonoBehaviour
     private void OnDestroy()
     {
         if (Instance == this) Instance = null;
+        if (hole != null) { Destroy(hole.gameObject); hole = null; }
         if (Net != null) Net.Applied -= OnNetApplied;
         Unhook();
         if (duelMaterial != null) { Destroy(duelMaterial); duelMaterial = null; }
@@ -131,6 +152,7 @@ public class DuelController : MonoBehaviour
         tossShotTaken = false;
         BuildTossData();
         level.ConfigureForDuel(data);
+        EnsureHole();
         ApplyDuelPhysics();
         Hook();
         waiting = false; settleTimer = 0f; elapsed = 0f;
@@ -231,6 +253,13 @@ public class DuelController : MonoBehaviour
     private void StartMatchProper()
     {
         Unhook();
+        if (DuelSession.Well)
+        {
+            Well = new WellMatch(DuelSession.FirstPlacer);
+            BeginWell();
+            return;
+        }
+
         // Ag modunda maci oturum kurar (sira atisi bitince); burada degil.
         if (Net == null) localMatch = new DuelMatch(DuelSession.FirstPlacer);
         BeginRound();
@@ -389,11 +418,141 @@ public class DuelController : MonoBehaviour
 
     // ---------------- Atis ----------------
 
+    // Cukur sadece kuyu modunda ve arena kuruldugunda var olur.
+    private void EnsureHole()
+    {
+        if (!DuelSession.Well)
+        {
+            if (hole != null) { Destroy(hole.gameObject); hole = null; }
+            return;
+        }
+        if (hole != null || arena == null) return;
+        var line = arena.GetComponent<LineRenderer>();
+        hole = DuelHole.Create(arena.transform, DuelSession.HoleRadius,
+                               line != null ? line.sharedMaterial : null);
+    }
+
+    // ---------------- KUYU ----------------
+
+    private void BeginWell()
+    {
+        CurrentStep = Step.Shoot;
+        if (Well == null) Well = new WellMatch(DuelSession.FirstPlacer);
+        BuildWellData();
+        level.ConfigureForDuel(data);
+        EnsureHole();
+        ApplyDuelPhysics();
+        Hook();
+        waiting = false; settleTimer = 0f; elapsed = 0f;
+        PlaceWellPieces();
+        Refresh();
+    }
+
+    // Sahada tek hedef var: RAKIBIN misketi. Atan oyuncununki ShotController'in
+    // aticisi; sirasi gelince roller degisiyor.
+    private void BuildWellData()
+    {
+        data.levelName = "KUYU";
+        data.shape = ArenaShape.Circle;
+        data.arenaSize = DuelSession.WellSize;
+        data.shotCount = 999;
+        data.oneStarTarget = data.twoStarTarget = data.threeStarTarget = 99;
+        data.starsToPass = 1;
+        data.obstacles = null; data.obstacleCount = 0;
+        data.shooterHalfWidth = 0f; data.shooterOffsetX = 0f;
+        data.shooterStartPosition = new Vector3(0f, .25f, DuelSession.ShooterZ);
+
+        int rakip = 1 - Well.Turn;
+        if (Well.OnLine(rakip))
+        {
+            // Rakip henuz ilk atisini yapmadi: sahada degil, cizgide bekliyor.
+            data.marbles = new MarbleSpot[0];
+        }
+        else data.marbles = new[] { new MarbleSpot(Well.X(rakip), Well.Z(rakip)) };
+    }
+
+    private void PlaceWellPieces()
+    {
+        int me = Well.Turn, rakip = 1 - me;
+
+        wellRival = null;
+        var spawned = arena.SpawnedMarbles;
+        if (spawned.Count > 0 && spawned[0] != null)
+        {
+            wellRival = spawned[0];
+            Tint(wellRival, DuelSession.PlayerColor(rakip));
+        }
+
+        if (shooter == null) return;
+        Vector3 yer = Well.OnLine(me)
+            ? new Vector3(0f, .25f, DuelSession.ShooterZ)
+            : new Vector3(Well.X(me), .25f, Well.Z(me));
+        shooter.ResetTo(yer);
+        shooter.ShootingEnabled = !Watching;
+        shooter.DuelImpulseScale = DuelSession.WellImpulse / .65f;
+        var visual = shooter.GetComponent<MarbleVisual>();
+        if (visual != null) visual.SetSkin(DuelSession.Skin[Mathf.Clamp(me, 0, 1)]);
+    }
+
+    private void ResolveWell(Vector3 sp)
+    {
+        int me = Well.Turn;
+        bool cukurda = hole != null && hole.Contains(sp);
+        bool disarida = arena != null && arena.IsOutside(sp);
+
+        // Rakibin misketi kipirdadiysa ona VURULMUS demektir. Temas geri
+        // cagrisi yerine yer degistirmeye bakiyoruz: zincirle itilmeyi de
+        // yakaliyor ve dizi modunda zaten olculmus bir esik var.
+        bool vurdu = false;
+        Vector3 rakipYer = wellRival != null ? wellRival.transform.position : Vector3.zero;
+        if (wellRival != null && rowHome.TryGetValue(wellRival, out Vector3 eski))
+            vurdu = Vector3.Distance(rakipYer, eski) > DuelSession.RowNudge;
+
+        var sonuc = disarida ? WellMatch.ShotResult.OutOfField
+                  : cukurda ? WellMatch.ShotResult.InHole
+                  : vurdu ? WellMatch.ShotResult.Hit
+                  : WellMatch.ShotResult.Miss;
+
+        // Cukura giren misket agzin kenarina cikarilir: merkezde birakilsa
+        // bir sonraki atista kendiliginden yine "iceride" sayilirdi.
+        Vector3 benim = sp;
+        if (sonuc == WellMatch.ShotResult.InHole)
+        {
+            float d = WellMatch.HoleExitDistance(DuelSession.HoleRadius);
+            Vector2 yon = new Vector2(sp.x, sp.z);
+            yon = yon.sqrMagnitude < .0001f ? new Vector2(0f, -1f) : yon.normalized;
+            benim = new Vector3(yon.x * d, .25f, yon.y * d);
+        }
+
+        int rakip = 1 - me;
+        Vector3 rakipSon = Well.OnLine(rakip) ? new Vector3(Well.X(rakip), .25f, Well.Z(rakip)) : rakipYer;
+        // Rakibin misketi sahadan cikmissa o da cizgiye doner.
+        if (wellRival != null && arena != null && arena.IsOutside(rakipYer)) rakipSon = Vector3.zero;
+
+        Well.Resolve(sonuc, benim.x, benim.z, rakipSon.x, rakipSon.z);
+
+        if (Well.State == WellMatch.Phase.Finished)
+        {
+            if (shooter != null) shooter.ShootingEnabled = false;
+            CurrentStep = Step.Done;
+            Refresh();
+            return;
+        }
+
+        BuildWellData();
+        arena.Configure(data.shape, data.arenaSize, data.rings, data.triangleRows, data.marbles);
+        arena.Rebuild();
+        ApplyDuelPhysics();
+        PlaceWellPieces();
+        Refresh();
+    }
+
     private void StartShooting()
     {
         CurrentStep = Step.Shoot;
         BuildLevelData();
         level.ConfigureForDuel(data);
+        EnsureHole();
         AssignOwners();
         ApplyDuelPhysics();
         Hook();
@@ -446,7 +605,7 @@ public class DuelController : MonoBehaviour
     private void RememberRow()
     {
         rowHome.Clear();
-        if (!DuelSession.Row || arena == null) return;
+        if (!(DuelSession.Row || DuelSession.Well) || arena == null) return;
         foreach (var m in arena.SpawnedMarbles)
             if (m != null) rowHome[m] = m.transform.position;
     }
@@ -474,7 +633,8 @@ public class DuelController : MonoBehaviour
             tossShotTaken = true; settleTimer = 0f; elapsed = 0f;
             Refresh(); return;
         }
-        if (Match == null || Match.State != DuelMatch.Phase.Shooting) return;
+        if (!DuelSession.Well && (Match == null || Match.State != DuelMatch.Phase.Shooting)) return;
+        if (DuelSession.Well && (Well == null || Well.State != WellMatch.Phase.Shooting)) return;
         knocked.Clear();
         RememberRow();
         waiting = true; settleTimer = 0f; elapsed = 0f;
@@ -512,7 +672,8 @@ public class DuelController : MonoBehaviour
 
     private void UpdateShooting()
     {
-        if (!waiting || Match == null) return;
+        if (!waiting) return;
+        if (!DuelSession.Well && Match == null) return;
 
         elapsed += Time.deltaTime;
         if (elapsed > 8f)
@@ -552,6 +713,13 @@ public class DuelController : MonoBehaviour
         // Kenarda durmak guvenli: olcum, "cemberin herhangi bir yeri" kuralinin
         // atislarin %60'inda tetiklendigini gosterdi, o da secim degil vergi olurdu.
         Vector3 sp = shooter != null ? shooter.transform.position : Vector3.zero;
+
+        // KUYU kendi kural motorunu kullanir (WellMatch): kese yok, SAYI var.
+        if (DuelSession.Well)
+        {
+            ResolveWell(sp);
+            return;
+        }
 
         // DIZI: cikarma yok, KIPIRDATMA var. Atici cemberde kalma kurali da
         // yok, cunku cember yok.
@@ -659,6 +827,16 @@ public class DuelController : MonoBehaviour
 
     public void Rematch()
     {
+        if (DuelSession.Well)
+        {
+            DuelSession.MatchNumber++;
+            Well = Well != null ? Well.Rematch() : new WellMatch(0);
+            DuelSession.FirstPlacer = Well.Starter;
+            Unhook();
+            BeginWell();
+            return;
+        }
+
         if (Net != null)
         {
             Net.LocalRematch();
@@ -726,7 +904,7 @@ public class DuelController : MonoBehaviour
         var sc = shooter != null ? shooter.GetComponent<Collider>() : null;
         if (sc != null) sc.sharedMaterial = duelMaterial;
         if (shooter != null)
-            shooter.DuelImpulseScale = (DuelSession.Row ? DuelSession.RowImpulse : DuelSession.Impulse) / .65f;
+            shooter.DuelImpulseScale = ModImpulse / .65f;
     }
 
     private void PlaceShooterOnLine()
