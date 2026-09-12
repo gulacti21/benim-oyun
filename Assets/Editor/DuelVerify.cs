@@ -180,6 +180,87 @@ public static class DuelVerify
         Check(r.Round == 1 && r.State == DuelMatch.Phase.Placing, "Rovans ilk elden baslar");
         Check(r.PlacementRights(0) == DuelMatch.ExtraPlacements, "Rovansta ekstra hak geri gelir");
 
+        // --- Sira belirleme atisi ---
+        DuelToss.Reset(0);
+        Check(!DuelToss.Done, "Sira atisi basta bitmemis");
+        Check(DuelToss.Shooter == 0, "Sira atisini birinci oyuncu baslatir");
+        Check(DuelToss.Winner == -1, "Atis bitmeden kazanan yok");
+        Check(DuelToss.ScoreText(0) == "\u2014", "Atmayan oyuncunun skoru bos");
+
+        // Cizgi: cemberde uzak kenar, ucgende uzak YATAY kenar (z = .5r).
+        Check(Mathf.Approximately(DuelToss.Line, DuelSession.CircleSize), "Cemberde cizgi uzak kenar");
+
+        Check(Mathf.Approximately(DuelToss.Measure(0f, DuelToss.Line, false), 0f),
+              "Cizginin uzerinde duran sifir alir");
+        Check(DuelToss.Measure(0f, DuelToss.Line - 1f, false) > DuelToss.Measure(0f, DuelToss.Line - .2f, false),
+              "Cizgiye yakin olan daha iyi");
+        Check(DuelToss.Measure(1.5f, DuelToss.Line - .2f, false) > DuelToss.Measure(0f, DuelToss.Line - .2f, false),
+              "Yandan sapan ceza alir");
+
+        // Yanma SADECE cizgiyi gecmekle olur. Atici sahanin gerisinden
+        // basliyor, o yuzden "sahanin disinda" olmak yanma sayilmaz.
+        Check(!DuelToss.Crossed(DuelToss.Line - .01f), "Cizginin gerisi yanmaz");
+        Check(DuelToss.Crossed(DuelToss.Line + .01f), "Cizgiyi gecen yanar");
+        Check(DuelToss.Measure(0f, -4f, false) < DuelToss.FoulPenalty,
+              "Kisa kalan atis yanmaz, sadece kotu puan alir");
+        Check(DuelToss.Measure(0f, DuelToss.Line + .1f, false) > DuelToss.FoulPenalty,
+              "Cizgiyi gecen atis yanik puani alir");
+        Check(DuelToss.Measure(0f, 0f, true) > DuelToss.FoulPenalty,
+              "Dunyadan dusen atis da yanar");
+
+        DuelToss.Record(0, DuelToss.Measure(0f, DuelToss.Line - .5f, false));
+        Check(DuelToss.HasShot(0) && !DuelToss.HasShot(1), "Birinci atti, ikinci atmadi");
+        Check(DuelToss.Shooter == 1, "Sira digerine gecer");
+        float ilk = DuelToss.Score(0);
+        DuelToss.Record(0, 0f);
+        Check(Mathf.Approximately(DuelToss.Score(0), ilk), "Bir oyuncu iki kez atmaz");
+
+        DuelToss.Record(1, DuelToss.Measure(0f, DuelToss.Line - 1.5f, false));
+        Check(DuelToss.Done, "Iki atis sonra biter");
+        Check(DuelToss.Winner == 0, "Cizgiye yakin olan kazanir");
+        // Kazanan ONCE ATAR; kurallarda once atan ikinci dizendir.
+        Check(DuelToss.FirstPlacer == 1, "Atisi kaybeden once dizer");
+        var mt = new DuelMatch(DuelToss.FirstPlacer);
+        Check(mt.Turn == DuelToss.Winner, "Atisi kazanan ilk atisi yapar");
+
+        // Yanan oyuncu, cizginin gerisinde kalan rakibe kaybeder.
+        DuelToss.Reset(1);
+        Check(DuelToss.Shooter == 1, "Sira atisini ikinci oyuncu da baslatabilir");
+        DuelToss.Record(1, DuelToss.Measure(0f, DuelToss.Line + .3f, false));
+        DuelToss.Record(0, DuelToss.Measure(0f, 0f, false));
+        Check(DuelToss.Fouled(1) && !DuelToss.Fouled(0), "Cizgiyi gecen yanar");
+        Check(DuelToss.ScoreText(1) == "YANDI", "Yanan oyuncunun skoru yazili");
+        Check(DuelToss.Winner == 0, "Yanan oyuncu kaybeder");
+
+        // Ikisi de yandiysa az tasan kazanir.
+        DuelToss.Reset(0);
+        DuelToss.Record(0, DuelToss.Measure(0f, DuelToss.Line + 2f, false));
+        DuelToss.Record(1, DuelToss.Measure(0f, DuelToss.Line + .2f, false));
+        Check(DuelToss.Winner == 1, "Iki yanik atista az tasan kazanir");
+
+        // Atis gucu: cizgi sliderin ortalarinda olmali. Olculdu (bkz.
+        // DuelPhysicsVerify): guc 1.0 ile misket 27 birim gidiyor, cizgi
+        // cemberde 7.4 birim otede. Sinirlar disina kayarsa fizik taramasi
+        // "pencere dar" ya da "cizgi gecilemiyor" diyecek.
+        for (int t = 0; t < 2; t++)
+        {
+            var eski = DuelSession.Type;
+            DuelSession.Type = t == 0 ? DuelSession.GameType.Cember : DuelSession.GameType.Ucgen;
+            float yol = DuelToss.Line - DuelSession.ShooterZ;
+            float tahmin = DuelSession.TossImpulse * DuelSession.TossTravelPerImpulse;
+            Check(yol > 0f, "Cizgi aticinin onunde");
+            Check(tahmin > yol, "Tam gucte cizgi gecilebiliyor");
+            Check(tahmin < yol * 2f, "Tam guc cizgiyi fahis asmiyor");
+            Check(DuelSession.TossImpulse < DuelSession.Impulse,
+                  "Sira atisi mac atisindan hafif");
+            DuelSession.Type = eski;
+        }
+
+        // Saha sinirlari: dizme payi olmayan sade kontrol.
+        Check(DuelPlacement.InsideArena(0f, 0f, 3.2f), "Sahanin ortasi sahada");
+        Check(DuelPlacement.InsideArena(0f, 3.1f, 3.2f), "Cizgiye yapisik nokta hala sahada");
+        Check(!DuelPlacement.InsideArena(0f, 3.3f, 3.2f), "Cizgiyi gecen nokta sahada degil");
+
         // --- Ucgen sahada dizme ---
         var eskiTur = DuelSession.Type;
         try
@@ -190,6 +271,9 @@ public static class DuelVerify
             // cemberde 1.03. Ucgenin gucu DUSUK olmali, yoksa saha bedava.
             Check(DuelSession.Impulse < 1f, "Ucgende atis gucu cemberden dusuk");
             Check(DuelSession.ArenaSize > DuelSession.CircleSize, "Ucgen saha cemberden buyuk");
+            // Ucgenin koseleri 270/30/150: uzak taraf z = .5r yatay kenari.
+            Check(Mathf.Approximately(DuelToss.Line, u * .5f), "Ucgende cizgi uzak yatay kenar");
+            Check(DuelToss.Line < DuelSession.CircleSize, "Ucgende cizgi cemberdekinden yakin");
             Check(DuelPlacement.Inside(0f, u * .15f, u), "Ucgenin ortasi gecerli");
             Check(!DuelPlacement.Inside(0f, u * 1.2f, u), "Ucgenin disi reddedilir");
             // Cemberin icinde ama ucgenin disinda kalan bir kose noktasi.

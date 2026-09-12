@@ -28,6 +28,8 @@ public class MahalleUI : MonoBehaviour
     private bool duelResultShown;
     private int duelScreenShown=-1;
     private TextMeshProUGUI placeCount,placeHint;
+    private TextMeshProUGUI tossWho,tossHint,tossScoreA,tossScoreB;
+    private GameObject tossGo;
     private bool resultShown;
     public RectTransform Root => root;
     private void Start()
@@ -291,16 +293,17 @@ public class MahalleUI : MonoBehaviour
         kart.radius = 28;
         string[] satir =
         {
-            "Kese 20 misket · her el 5'er ortaya",
+            "Kese " + DuelMatch.StartingPouch + " misket · her el " + DuelMatch.AntePerRound + "'er ortaya",
             "Çıkardığın misket kesene girer",
-            "Çıkardıysan tekrar atarsın, turda en fazla 3",
+            "Çıkardıysan tekrar atarsın, turda en fazla " + DuelMatch.MaxShotsPerTurn,
             "Atıcın çemberin ortasında kalırsa onu kaybedersin",
+            "Maç başı sıra atışı: kenara yakın duran önce atar",
             "Herkes aynı misketi kullanır, güç yok"
         };
         for (int i = 0; i < satir.Length; i++)
         {
-            Art(kart.transform, "Nokta", MahalleGraphic.Shape.Marble, 40, 34 + i * 58, 30, 30, Gold);
-            Text(kart.transform, satir[i], 92, 22 + i * 58, 780, 54, 26, new Color(.86f, .88f, .8f));
+            Art(kart.transform, "Nokta", MahalleGraphic.Shape.Marble, 40, 30 + i * 52, 28, 28, Gold);
+            Text(kart.transform, satir[i], 92, 18 + i * 52, 780, 50, 25, new Color(.86f, .88f, .8f));
         }
 
         // Iki klasik misket oyunu. Kurallar ayni, saha sekli farkli.
@@ -333,6 +336,63 @@ public class MahalleUI : MonoBehaviour
         if (duel == null) duel = controller.gameObject.AddComponent<DuelController>();
         duelScreenShown = -1;
         duel.BeginMatch();
+    }
+
+    // MAC BASI: SIRA BELIRLEME ATISI.
+    // Bos sahaya birer atis; uzak kenara en yakin duran once atar.
+    private void ShowToss()
+    {
+        ClearPage();
+        var top = Panel(page, "Sıra atışı başlığı", 24, 12, 1032, 250, Ink); top.radius = 30;
+        Text(top.transform, "SIRA ATIŞI", 28, 14, 600, 56, 34, Cream);
+        LabelButton(top.transform, "ÇIK", 872, 16, 134, 88, new Color(.28f, .38f, .31f), Cream, LeaveDuel, 30);
+        Text(top.transform, "Sahanın UZAK kenarına en yakın duran önce atar · çizgiyi geçen yanar",
+             28, 104, 976, 40, 23, new Color(.72f, .76f, .68f));
+
+        for (int p = 0; p < 2; p++)
+        {
+            var box = Panel(top.transform, "Atış " + p, 24 + p * 502, 150, 482, 88, new Color(.24f, .34f, .29f));
+            Art(box.transform, "Renk", MahalleGraphic.Shape.Marble, 16, 18, 50, 50, DuelSession.PlayerColor(p));
+            Text(box.transform, DuelSession.PlayerName(p), 78, 12, 210, 36, 24, new Color(.8f, .84f, .75f));
+            var value = Text(box.transform, "—", 78, 46, 380, 36, 26, Cream);
+            if (p == 0) tossScoreA = value; else tossScoreB = value;
+        }
+
+        tossWho = Text(page, "", 48, 0, 984, 62, 34, Cream, TextAlignmentOptions.Center);
+        Bottom(tossWho.rectTransform, 48, 300, 984, 62);
+        tossHint = Text(page, "", 48, 0, 984, 46, 24, new Color(.81f, .84f, .75f), TextAlignmentOptions.Center);
+        Bottom(tossHint.rectTransform, 48, 254, 984, 46);
+
+        var git = LabelButton(page, "MAÇA BAŞLA", 90, 0, 900, 116, Gold, new Color(.16f, .20f, .16f),
+                              () => { duelScreenShown = -1; duel.TossDone(); }, 36);
+        Bottom((RectTransform)git.transform, 90, 120, 900, 116);
+        tossGo = git.gameObject;
+        RefreshToss();
+    }
+
+    private void RefreshToss()
+    {
+        if (duel == null || tossWho == null) return;
+        if (tossScoreA != null) tossScoreA.SetText(DuelToss.ScoreText(0));
+        if (tossScoreB != null) tossScoreB.SetText(DuelToss.ScoreText(1));
+
+        bool bitti = DuelToss.Done;
+        if (tossGo != null) tossGo.SetActive(bitti);
+
+        if (bitti)
+        {
+            int k = DuelToss.Winner;
+            tossWho.SetText(DuelSession.PlayerName(k) + " ÖNCE ATIYOR");
+            tossWho.color = DuelSession.PlayerColor(k);
+            tossHint.SetText(DuelSession.PlayerName(DuelToss.FirstPlacer) + " misketlerini önce dizer");
+            return;
+        }
+
+        int atan = DuelToss.Shooter;
+        tossWho.SetText(DuelSession.PlayerName(atan) + " ATIYOR");
+        tossWho.color = DuelSession.PlayerColor(atan);
+        tossHint.SetText(DuelToss.HasShot(1 - atan) ? "Rakibinden daha yakın durdurmaya çalış"
+                                                    : "Uzak kenara olabildiğince yakın durdur");
     }
 
     // Elin basinda: "ekstra dizme hakkini kullanacak misin?"
@@ -386,8 +446,12 @@ public class MahalleUI : MonoBehaviour
         int n = duel.PlacedCount, toplam = duel.NeedCount;
         placeCount.SetText(n + " / " + toplam + " misket dizildi");
         if (placeHint != null)
-            placeHint.SetText((n >= toplam ? "Hazırsan HAZIRIM'a bas" : (toplam - n) + " misket daha koy")
-                              + "   ·   " + duel.Diag);
+        {
+            string uyari = duel.Hint;
+            placeHint.SetText(uyari.Length > 0 ? uyari
+                              : n >= toplam ? "Hazırsan HAZIRIM'a bas"
+                              : (toplam - n) + " misket daha koy");
+        }
     }
 
     private void ShowHandOver()
@@ -725,6 +789,7 @@ public class MahalleUI : MonoBehaviour
                 duelScreenShown=want;
                 switch(duel.CurrentStep)
                 {
+                    case DuelController.Step.Toss:      ShowToss(); break;
                     case DuelController.Step.Offer:     ShowOffer(); break;
                     case DuelController.Step.Place:     ShowPlacement(); break;
                     case DuelController.Step.HandOver:  ShowHandOver(); break;
@@ -733,6 +798,7 @@ public class MahalleUI : MonoBehaviour
                     case DuelController.Step.Done:      DuelResult(); break;
                 }
             }
+            else if(duel.CurrentStep==DuelController.Step.Toss)RefreshToss();
             else if(duel.CurrentStep==DuelController.Step.Place)RefreshPlacement();
             else if(duel.CurrentStep==DuelController.Step.Shoot)RefreshDuel();
             return;

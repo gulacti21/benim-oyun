@@ -23,6 +23,19 @@ public static class DuelPlacement
         return new Vector2(x, z).sqrMagnitude <= limit * limit;
     }
 
+    // SAHANIN KENDISI. Inside() dizme icindir ve cizgiye pay birakir; bu ise
+    // "misket hala sahada mi" sorusunun cevabi, pay yok. Sira belirleme
+    // atisinda cizgiyi gecip gecmedigi buradan anlasilir.
+    public static bool InsideArena(float x, float z, float arenaSize)
+    {
+        if (!DuelSession.Triangle) return new Vector2(x, z).sqrMagnitude <= arenaSize * arenaSize;
+        var c = TriangleCorners(arenaSize);
+        var p = new Vector2(x, z);
+        for (int i = 0; i < 3; i++)
+            if (EdgeDistance(p, c[i], c[(i + 1) % 3]) > 0f) return false;
+        return true;
+    }
+
     // Ucgen: koseler 270, 30 ve 150 derecede, yaricap arenaSize.
     // MarbleArena ile ayni geometri; kenara pay birakilir.
     public static Vector2[] TriangleCorners(float arenaSize)

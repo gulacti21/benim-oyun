@@ -48,6 +48,24 @@ public static class DuelSession
     public const float Bounciness = .45f;
     public const float FrictionMul = .7f;
 
+    // SIRA BELIRLEME ATISININ GUCU.
+    //
+    // Olculdu: bos sahada mac gucuyle (1.0) atilan misket 22.8'de duruyor,
+    // yani 27 birim yol yapiyor. Cizgi ise 7-8 birim otede. Mac gucuyle
+    // atilirsa kullanilir guc araligi 0.20-0.30 arasina sikisiyor: oyuncu
+    // sliderin %10'luk diliminde isabet etmeye calisir, bu beceri degil sans.
+    //
+    // O yuzden sira atisinin gucu cizgi mesafesinden TURETILIYOR: cizgi
+    // sliderin %75'ine denk gelsin. Altinda kalmak guvenli (kisa atis),
+    // ustu yaniyor. Iki sahada cizgi ayni uzaklikta olmadigi icin guc de
+    // sahaya gore degisiyor; boylece iki modda da ayni his olusuyor.
+    public const float TossTravelPerImpulse = 27f;   // olculdu: guc 1.0 -> 27 birim
+    // .75 ile olculdugunde cizgi sliderin %85'ine denk geldi (turetme sabit
+    // bir yol payini hesaba katmiyor); %78'e cekmek icin biraz yukseltildi.
+    public const float TossAimPower = .68f;          // cizgi sliderin bu kadarinda
+    public static float TossImpulse =>
+        (DuelToss.Line - ShooterZ) / (TossTravelPerImpulse * TossAimPower);
+
     // ATICI TEHLIKE BOLGESI. Atici cemberin ORTASINDA kalirsa kaybedilir;
     // kenarda durursa kurtulur. Yaricapin bu kadarlik ic bolgesi tehlikeli.
     //

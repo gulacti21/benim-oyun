@@ -10,11 +10,14 @@ using UnityEngine.InputSystem;
 // Bir elin akisi:
 //   [hak teklifi] -> dizme (elle ya da otomatik) -> telefon devri -> atis
 //   -> el sonu -> sonraki el
+//
+// Macin en basinda bir de SIRA BELIRLEME ATISI var (DuelToss): iki oyuncu
+// bos sahaya birer atis yapar, uzak kenara en yakin duran once atar.
 public class DuelController : MonoBehaviour
 {
     public static DuelController Instance { get; private set; }
 
-    public enum Step { Offer, Place, HandOver, Shoot, RoundOver, Done }
+    public enum Step { Toss, Offer, Place, HandOver, Shoot, RoundOver, Done }
 
     private LevelController level;
     private MarbleArena arena;
@@ -30,6 +33,7 @@ public class DuelController : MonoBehaviour
     private int orderIndex;
 
     private bool waiting;
+    private bool tossShotTaken;
     private float settleTimer, elapsed;
     private const float SettleDelay = .4f;
 
@@ -38,7 +42,9 @@ public class DuelController : MonoBehaviour
     public int ActivePlayer => order[Mathf.Clamp(orderIndex, 0, 1)];
     public int PlacedCount => spots[Mathf.Clamp(ActivePlayer, 0, 1)].Count;
     public int NeedCount => Match != null ? Match.AnteFor(ActivePlayer) : 0;
-    public string Diag = "hazir";
+    // Dizme ekraninda oyuncuya gosterilen kisa uyari. Teknik ayiklama
+    // metni DEGIL: sadece oyuncunun duzeltebilecegi durumlari yazar.
+    public string Hint = "";
     public event Action Changed;
 
     private void Awake() { Instance = this; }
@@ -57,8 +63,105 @@ public class DuelController : MonoBehaviour
         if (level == null) { Debug.LogError("DUELLO: LevelController bulunamadi."); return; }
         arena = level.Arena; shooter = level.Shooter;
 
-        Match = new DuelMatch(DuelSession.FirstPlacer);
         if (data == null) data = ScriptableObject.CreateInstance<LevelData>();
+
+        // Rovansta sira atisi tekrar yapilmaz: kural "ilk baslayan degisir".
+        if (DuelSession.MatchNumber > 0) { StartMatchProper(); return; }
+        BeginToss();
+    }
+
+    // ---------------- Sira belirleme atisi ----------------
+
+    private void BeginToss()
+    {
+        CurrentStep = Step.Toss;
+        DuelToss.Reset(0);
+        tossShotTaken = false;
+        BuildTossData();
+        level.ConfigureForDuel(data);
+        ApplyDuelPhysics();
+        Hook();
+        waiting = false; settleTimer = 0f; elapsed = 0f;
+        PlaceTossShooter();
+        Refresh();
+    }
+
+    private void BuildTossData()
+    {
+        data.levelName = "SIRA ATIŞI";
+        data.shape = DuelSession.Triangle ? ArenaShape.Triangle : ArenaShape.Circle;
+        data.arenaSize = DuelSession.ArenaSize;
+        data.shotCount = 999;
+        data.oneStarTarget = data.twoStarTarget = data.threeStarTarget = 99;
+        data.starsToPass = 1;
+        data.obstacles = null; data.obstacleCount = 0;
+        data.shooterHalfWidth = 0f; data.shooterOffsetX = 0f;
+        data.shooterStartPosition = new Vector3(0f, .25f, DuelSession.ShooterZ);
+        data.marbles = new MarbleSpot[0];      // saha bos: sadece cizgiye atilir
+    }
+
+    private void PlaceTossShooter()
+    {
+        if (shooter == null) return;
+        shooter.ResetTo(new Vector3(0f, .25f, DuelSession.ShooterZ));
+        shooter.ShootingEnabled = true;
+        // Sira atisi mac atisindan DAHA HAFIF: bkz. DuelSession.TossImpulseFactor.
+        shooter.DuelImpulseScale = DuelSession.TossImpulse / .65f;
+        var visual = shooter.GetComponent<MarbleVisual>();
+        if (visual != null) visual.SetSkin(DuelSession.Skin[Mathf.Clamp(DuelToss.Shooter, 0, 1)]);
+    }
+
+    private void UpdateToss()
+    {
+        if (!tossShotTaken) return;
+
+        elapsed += Time.deltaTime;
+        bool zorla = elapsed > 8f;
+        if (!zorla)
+        {
+            if (shooter != null)
+            {
+                var p = shooter.transform.position;
+                // Dunyadan dusen atici asla durmaz; dustugu an olcup bitir.
+                if (p.y < -1f) zorla = true;
+            }
+            if (!zorla)
+            {
+                if (shooter != null && !shooter.AtRest) { settleTimer = 0f; return; }
+                settleTimer += Time.deltaTime;
+                if (settleTimer < SettleDelay) return;
+            }
+        }
+
+        tossShotTaken = false;
+        Vector3 sp = shooter != null ? shooter.transform.position : Vector3.zero;
+        // Cizgiyi gecmek yaniktir; kisa kalmak degil. Karar DuelToss'ta.
+        bool dustu = shooter == null || sp.y < -1f;
+        int atan = DuelToss.Shooter;
+        DuelToss.Record(atan, DuelToss.Measure(sp.x, sp.z, dustu));
+
+        if (DuelToss.Done)
+        {
+            if (shooter != null) shooter.ShootingEnabled = false;
+            Refresh();          // UI sonucu gosterir, oyuncu MACA BASLA'ya basar
+            return;
+        }
+        PlaceTossShooter();
+        Refresh();
+    }
+
+    // Sira atisi bitti; oyuncu onayladi.
+    public void TossDone()
+    {
+        if (CurrentStep != Step.Toss || !DuelToss.Done) return;
+        DuelSession.FirstPlacer = DuelToss.FirstPlacer;
+        StartMatchProper();
+    }
+
+    private void StartMatchProper()
+    {
+        Unhook();
+        Match = new DuelMatch(DuelSession.FirstPlacer);
         BeginRound();
     }
 
@@ -262,6 +365,11 @@ public class DuelController : MonoBehaviour
 
     private void OnShotFired()
     {
+        if (CurrentStep == Step.Toss)
+        {
+            tossShotTaken = true; settleTimer = 0f; elapsed = 0f;
+            Refresh(); return;
+        }
         if (Match == null || Match.State != DuelMatch.Phase.Shooting) return;
         knocked.Clear();
         waiting = true; settleTimer = 0f; elapsed = 0f;
@@ -292,6 +400,7 @@ public class DuelController : MonoBehaviour
 
     private void Update()
     {
+        if (CurrentStep == Step.Toss) { UpdateToss(); return; }
         if (CurrentStep == Step.Place) { UpdatePlacing(); return; }
         if (CurrentStep == Step.Shoot) UpdateShooting();
     }
@@ -311,7 +420,7 @@ public class DuelController : MonoBehaviour
                     var b = m.GetComponent<Rigidbody>();
                     if (b != null && !b.isKinematic) { b.linearVelocity = Vector3.zero; b.angularVelocity = Vector3.zero; }
                 }
-            waiting = false; Diag = "atis zaman asimina ugradi";
+            waiting = false;
             Resolve(); return;
         }
 
@@ -414,8 +523,18 @@ public class DuelController : MonoBehaviour
 
     private void ApplyDuelPhysics()
     {
+        // Kaynak malzeme: ortadaki misketlerden biri. Sira belirleme atisinda
+        // saha BOS oldugu icin orada atici kendi malzemesini verir, yoksa
+        // toss atisi mac atislarindan farkli hissederdi.
         var source = arena != null && arena.SpawnedMarbles.Count > 0
             ? arena.SpawnedMarbles[0].GetComponent<Collider>()?.sharedMaterial : null;
+        if (source == null && shooter != null)
+        {
+            var own = shooter.GetComponent<Collider>();
+            if (own != null) source = own.sharedMaterial;
+        }
+        if (source == null) return;
+        if (source == duelMaterial) source = null;   // kendi kendini kaynak almasin
         if (source == null) return;
 
         if (duelMaterial == null) duelMaterial = new PhysicsMaterial("Duello misketi");
@@ -496,20 +615,20 @@ public class DuelController : MonoBehaviour
     private void UpdatePlacing()
     {
         var pointer = Pointer.current;
-        if (pointer == null) { Diag = "pointer yok"; return; }
+        if (pointer == null) return;
         if (!pointer.press.wasPressedThisFrame) return;
 
         Vector2 sp = pointer.position.ReadValue();
-        if (sp.y < Screen.height * .22f) { Diag = "alt serit (buton alani)"; return; }
-        if (Camera.main == null) { Diag = "Camera.main yok"; return; }
-        if (!PointerToGround(out Vector3 w)) { Diag = "dokunus zemine dusmedi"; return; }
+        // Alt serit buton alani; oradaki dokunus dizme sayilmaz ve uyari da
+        // gerektirmez, oyuncu zaten butona basmaya calisiyor.
+        if (sp.y < Screen.height * .22f) return;
+        if (Camera.main == null) return;
+        if (!PointerToGround(out Vector3 w)) return;
 
-        float r = new Vector2(w.x, w.z).magnitude;
         if (!DuelPlacement.Inside(w.x, w.z, DuelSession.ArenaSize))
-        { Diag = "cember disi: " + r.ToString("0.0") + " / " +
-                 (DuelSession.ArenaSize - DuelPlacement.MarbleRadius - DuelPlacement.EdgeMargin).ToString("0.0"); return; }
+        { Hint = DuelSession.Triangle ? "Üçgenin içine koy" : "Çizginin içine koy"; return; }
 
-        if (AddSpot(new Vector2(w.x, w.z))) Diag = "kondu (" + w.x.ToString("0.0") + ", " + w.z.ToString("0.0") + ")";
-        else Diag = "dolu yer, bos nokta sec";
+        if (AddSpot(new Vector2(w.x, w.z))) Hint = "";
+        else Hint = "Burası dolu, boş bir yer seç";
     }
 }

@@ -95,6 +95,12 @@ public static class DuelPhysicsVerify
                                          bounciness = .45f, frictionMul = .7f });
             report.Add("");
 
+            // SIRA BELIRLEME ATISI olculebilir mi?
+            // Soru: oyuncu cizgiye (sahanin uzak kenari) ULASABILIYOR mu ve
+            // tam gucte GECIYOR mu. Ikisi de olmazsa atis beceri testi degil,
+            // "sonuna kadar bas" oyunu olur.
+            TossReport();
+
             // Atici nerede duruyor? Kural esigini buna gore secilecek.
             report.Add("ATICI NEREDE DURUYOR (cember yaricapinin yuzdesi icinde kalma orani)");
             foreach (var (ad, st) in new (string, Setting)[]
@@ -123,6 +129,100 @@ public static class DuelPhysicsVerify
         Directory.CreateDirectory("Logs");
         File.WriteAllLines("Logs/DuelPhysicsVerify.txt", report);
         Debug.Log("DUEL_PHYSICS_DONE: Logs/DuelPhysicsVerify.txt");
+    }
+
+    // Bos sahada tek atis: hangi gucte nerede duruyor.
+    // Sira belirleme atisinin oynanabilirligi buna bagli.
+    private static void TossReport()
+    {
+        // Sira atisi oynanabilir mi? Iki sey olmali:
+        //  1) cizgi sliderin ORTALARINDA olsun (cok erken = pencere dar,
+        //     cok gec = "sonuna kadar bas" oyunu),
+        //  2) cizgiyi gecmek mumkun olsun, yoksa yanma kurali laf olur.
+        foreach (bool tri in new[] { false, true })
+        {
+            var eskiTur = DuelSession.Type;
+            DuelSession.Type = tri ? DuelSession.GameType.Ucgen : DuelSession.GameType.Cember;
+            float boy = DuelSession.ArenaSize, cizgi = DuelToss.Line;
+            float secili = DuelSession.TossImpulse;
+
+            report.Add("SIRA BELIRLEME ATISI · " + (tri ? "ucgen " : "cember ")
+                       + boy.ToString("0.0") + " · cizgi z=" + cizgi.ToString("0.00")
+                       + " · atici z=" + ShooterZ.ToString("0.0")
+                       + " · yol=" + (cizgi - ShooterZ).ToString("0.0"));
+            report.Add("  guc    cizgiye varan slider   tam gucte z   yorum");
+
+            foreach (float guc in new[] { secili, secili * .7f, secili * 1.4f, 1f })
+            {
+                var s = new Setting
+                {
+                    arena = boy, triangle = tri, impulse = guc,
+                    bounciness = DuelSession.Bounciness,
+                    frictionMul = DuelSession.FrictionMul,
+                };
+                ArenaSize = boy; triangleMode = tri;
+                BuildEmpty(s);
+
+                float varan = -1f, tamZ = 0f;
+                for (int i = 1; i <= 20; i++)
+                {
+                    float pw = i / 20f;
+                    var (z, _) = TossShot(s, pw);
+                    simCount++;
+                    if (varan < 0f && z > cizgi) varan = pw;
+                    if (i == 20) tamZ = z;
+                }
+                Cleanup();
+
+                string yorum = varan < 0f ? "cizgi GECILEMIYOR -- yanma kurali islemez"
+                             : varan <= .40f ? "cizgi cok erken, pencere dar"
+                             : varan >= .95f ? "cizgi sliderin ta ucunda"
+                             : "IYI: cizgi sliderin %" + Mathf.RoundToInt(varan * 100) + "'inde";
+                report.Add(string.Format("  {0,4:0.00}   {1,19}   {2,11:0.0}   {3}{4}",
+                                         guc, varan < 0f ? "yok" : varan.ToString("0.00"), tamZ, yorum,
+                                         Mathf.Approximately(guc, secili) ? "   <-- SECILI" : ""));
+            }
+            report.Add("");
+            DuelSession.Type = eskiTur;
+        }
+    }
+
+    // Sahayi bos kurar: sira atisinda ortada misket yok.
+    private static void BuildEmpty(Setting s)
+    {
+        Cleanup();
+        scene = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+        physics = scene.GetPhysicsScene();
+        bodies.Clear();
+        var ground = Make(PrimitiveType.Cube, new Vector3(0, -.25f, 0), new Vector3(40, .5f, 40));
+        ground.GetComponent<Collider>().sharedMaterial = groundMat;
+
+        if (testMat == null) testMat = new PhysicsMaterial("Duello (test)");
+        testMat.dynamicFriction = marbleMat.dynamicFriction * s.frictionMul;
+        testMat.staticFriction = marbleMat.staticFriction * s.frictionMul;
+        testMat.bounciness = s.bounciness < 0f ? marbleMat.bounciness : s.bounciness;
+        testMat.frictionCombine = marbleMat.frictionCombine;
+        testMat.bounceCombine = marbleMat.bounceCombine;
+        home = new Vector3[0];
+    }
+
+    // Duz ileri tek atis; durdugu z ve sahayi terk edip etmedigi.
+    private static (float z, bool disarida) TossShot(Setting s, float power)
+    {
+        var from = new Vector3(0f, TargetY, ShooterZ);
+        var shot = MakeMarble(from, BaseScale, BaseMass * s.massMul, BaseDrag * s.dragMul, testMat);
+        shot.AddForce(Vector3.forward * (s.impulse * power), ForceMode.Impulse);
+        for (int f = 0; f < MaxFrames; f++)
+        {
+            physics.Simulate(.02f);
+            if (shot.linearVelocity.magnitude <= RestSpeed) break;
+        }
+        var p = shot.position;
+        // Oyundaki kural DuelPlacement.InsideArena ile ayni: pay yok.
+        bool disarida = triangleMode ? Disarida(new Vector2(p.x, p.z))
+                                     : new Vector2(p.x, p.z).magnitude > s.arena;
+        UnityEngine.Object.DestroyImmediate(shot.gameObject);
+        return (p.z, disarida);
     }
 
     private static void Aday(string ad, Setting s)
