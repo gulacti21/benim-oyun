@@ -22,7 +22,9 @@ public static class DuelSession
 
     // Duello arenasi. Kampanyadan bagimsiz: burayi degistirmek hicbir bolumu etkilemez.
     // Cember 3.2; ucgen ayni yaricapa yazili oldugu icin alani cok daha
-    // kucuk kalir, o yuzden biraz buyuk tutuldu.
+    // kucuk kalir, o yuzden biraz buyuk tutuldu. Olculdu: ucgen 3.2 cok
+    // kucuk (bos atis %16, her atis misket cikariyor), 4.0 ise 0.89 ile
+    // hedefin altinda kaliyor. 3.6 + guc 0.80 = 1.04, ortadaki deger.
     public const float CircleSize = 3.2f;
     public const float TriangleSize = 3.6f;
     public static float ArenaSize => Triangle ? TriangleSize : CircleSize;
@@ -37,7 +39,12 @@ public static class DuelSession
     // kendisinde: daha sekici ve daha kaygan, temas sonrasi yola devam
     // ediyorlar. Kampanyanin hicbir ayari degismiyor.
 
-    public const float Impulse = 1f;
+    // OLCULDU (3900 atis): ayni guc iki sahada ayni hissi VERMIYOR. Ucgenin
+    // koseleri misketi disari hunileyip goturuyor, o yuzden cemberde 1.00 ile
+    // atis basina 1.03 misket cikarken ucgende ayni guc 1.68 cikardi -- yani
+    // ucgen bedava kazanilan bir sahaya donusuyordu. Ucgen 3.6'da guc 0.80
+    // atis basina 1.04 veriyor; iki sahanin da hedefi tuttugu tek eslesme bu.
+    public static float Impulse => Triangle ? .8f : 1f;
     public const float Bounciness = .45f;
     public const float FrictionMul = .7f;
 

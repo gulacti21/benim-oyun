@@ -88,6 +88,13 @@ public static class DuelPhysicsVerify
             Aday("E · guc .85 + sekme .45 + cember 3.0", new Setting { impulse = .85f, bounciness = .45f, arena = 3.0f });
             report.Add("");
 
+            report.Add("UCGEN SAHA (koseler 270/30/150, sivri uc aticiya bakiyor)");
+            foreach (float boy in new[] { 3.2f, 3.6f, 4.0f })
+                Sweep("  ucgen boyu " + boy.ToString("0.0"), new[] { .80f, .90f, 1.00f },
+                      v => new Setting { impulse = v, arena = boy, triangle = true,
+                                         bounciness = .45f, frictionMul = .7f });
+            report.Add("");
+
             // Atici nerede duruyor? Kural esigini buna gore secilecek.
             report.Add("ATICI NEREDE DURUYOR (cember yaricapinin yuzdesi icinde kalma orani)");
             foreach (var (ad, st) in new (string, Setting)[]
@@ -219,6 +226,7 @@ public static class DuelPhysicsVerify
     {
         public float massMul = 1f, dragMul = 1f, frictionMul = 1f, impulse = BaseImpulse, bounciness = -1f;
         public float arena = 3.2f;
+        public bool triangle;
     }
 
     private static void Sweep(string title, float[] values, Func<float, Setting> build)
@@ -240,7 +248,7 @@ public static class DuelPhysicsVerify
     // sonuc TEK bir atisin ortalama verimi.
     private static (float avg, int best, float zeroRate, float strandRate) Measure(Setting s)
     {
-        ArenaSize = s.arena;
+        ArenaSize = s.arena; triangleMode = s.triangle;
         Build(s);
         float total = 0f; int best = 0, shots = 0, zero = 0, strand = 0;
         for (int i = 0; i < bands.Length; i++) bands[i] = 0;
@@ -303,8 +311,9 @@ public static class DuelPhysicsVerify
         testMat.frictionCombine = marbleMat.frictionCombine;
         testMat.bounceCombine = marbleMat.bounceCombine;
 
-        for (int i = 0; i < Layout.GetLength(0); i++)
-            bodies.Add(MakeMarble(new Vector3(Layout[i, 0], TargetY, Layout[i, 1]),
+        var yerlesim = triangleMode ? TriLayout : Layout;
+        for (int i = 0; i < yerlesim.GetLength(0); i++)
+            bodies.Add(MakeMarble(new Vector3(yerlesim[i, 0], TargetY, yerlesim[i, 1]),
                                   BaseScale, BaseMass * s.massMul, BaseDrag * s.dragMul, testMat));
 
         home = new Vector3[bodies.Count];
@@ -327,7 +336,7 @@ public static class DuelPhysicsVerify
         Vector3 dir = (aim - from); dir.y = 0f; dir.Normalize();
         shot.AddForce(dir * (s.impulse * power), ForceMode.Impulse);
 
-        float exit = ArenaSize + ExitMargin;
+        // (cikis testi Disarida() icinde)
         for (int f = 0; f < MaxFrames; f++)
         {
             physics.Simulate(.02f);
@@ -342,16 +351,43 @@ public static class DuelPhysicsVerify
         for (int i = 0; i < bodies.Count; i++)
         {
             var p = bodies[i].position;
-            if (new Vector2(p.x, p.z).magnitude > exit) outCount++;
+            if (Disarida(new Vector2(p.x, p.z))) outCount++;
         }
 
-        // Atici nerede durdu? Yeni kuralda cemberin ortasinda kalmak misket kaybi.
+        // Atici nerede durdu? Yeni kuralda sahanin ortasinda kalmak misket kaybi.
         var sp = shot.position;
         float endR = new Vector2(sp.x, sp.z).magnitude;
 
         UnityEngine.Object.DestroyImmediate(shot.gameObject);
         return (outCount, endR);
     }
+
+    private static bool triangleMode;
+
+    // Saha disinda mi? MarbleArena ile ayni geometri.
+    private static bool Disarida(Vector2 p)
+    {
+        if (!triangleMode) return p.magnitude > ArenaSize + ExitMargin;
+        for (int i = 0; i < 3; i++)
+        {
+            float a0 = (270f + i * 120f) * Mathf.Deg2Rad, a1 = (270f + (i + 1) * 120f) * Mathf.Deg2Rad;
+            Vector2 c0 = new Vector2(Mathf.Cos(a0), Mathf.Sin(a0)) * ArenaSize;
+            Vector2 c1 = new Vector2(Mathf.Cos(a1), Mathf.Sin(a1)) * ArenaSize;
+            Vector2 kenar = c1 - c0;
+            Vector2 n = new Vector2(kenar.y, -kenar.x).normalized;
+            if (Vector2.Dot(p - c0, n) > ExitMargin) return true;
+        }
+        return false;
+    }
+
+    // Ucgen sahada temsili dizilis: agirlik merkezi cevresinde on misket.
+    private static readonly float[,] TriLayout =
+    {
+        { -0.62f, 0.30f }, { 0f, 0.30f }, { 0.62f, 0.30f },
+        { -0.31f, 0.86f }, { 0.31f, 0.86f },
+        { -0.93f, -0.26f }, { -0.31f, -0.26f }, { 0.31f, -0.26f }, { 0.93f, -0.26f },
+        { 0f, 1.42f }
+    };
 
     private static GameObject Make(PrimitiveType kind, Vector3 position, Vector3 scale)
     {

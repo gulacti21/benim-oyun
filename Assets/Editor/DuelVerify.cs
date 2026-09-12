@@ -186,6 +186,10 @@ public static class DuelVerify
         {
             DuelSession.Type = DuelSession.GameType.Ucgen;
             float u = DuelSession.TriangleSize;
+            // Olculdu: ayni guc ucgende atis basina 1.68 misket cikariyor,
+            // cemberde 1.03. Ucgenin gucu DUSUK olmali, yoksa saha bedava.
+            Check(DuelSession.Impulse < 1f, "Ucgende atis gucu cemberden dusuk");
+            Check(DuelSession.ArenaSize > DuelSession.CircleSize, "Ucgen saha cemberden buyuk");
             Check(DuelPlacement.Inside(0f, u * .15f, u), "Ucgenin ortasi gecerli");
             Check(!DuelPlacement.Inside(0f, u * 1.2f, u), "Ucgenin disi reddedilir");
             // Cemberin icinde ama ucgenin disinda kalan bir kose noktasi.
@@ -204,6 +208,9 @@ public static class DuelVerify
             }
         }
         finally { DuelSession.Type = eskiTur; }
+
+        Check(DuelSession.Type == DuelSession.GameType.Cember, "Test sonrasi tur cembere doner");
+        Check(Mathf.Approximately(DuelSession.Impulse, 1f), "Cemberde atis gucu tam");
 
         // --- Dizme kurallari (cember) ---
         const float arena = 3.2f;
