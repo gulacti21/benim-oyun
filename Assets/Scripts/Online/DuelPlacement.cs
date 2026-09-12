@@ -13,19 +13,70 @@ public static class DuelPlacement
     // yoksa oyuncu misketini kenara dizip ilk dokunusta kaybeder.
     public static bool Inside(float x, float z, float arenaSize)
     {
+        return DuelSession.Triangle ? InsideTriangle(x, z, arenaSize)
+                                    : InsideCircle(x, z, arenaSize);
+    }
+
+    private static bool InsideCircle(float x, float z, float arenaSize)
+    {
         float limit = arenaSize - MarbleRadius - EdgeMargin;
         return new Vector2(x, z).sqrMagnitude <= limit * limit;
+    }
+
+    // Ucgen: koseler 270, 30 ve 150 derecede, yaricap arenaSize.
+    // MarbleArena ile ayni geometri; kenara pay birakilir.
+    public static Vector2[] TriangleCorners(float arenaSize)
+    {
+        var c = new Vector2[3];
+        for (int i = 0; i < 3; i++)
+        {
+            float a = (270f + i * 120f) * Mathf.Deg2Rad;
+            c[i] = new Vector2(Mathf.Cos(a) * arenaSize, Mathf.Sin(a) * arenaSize);
+        }
+        return c;
+    }
+
+    private static bool InsideTriangle(float x, float z, float arenaSize)
+    {
+        var c = TriangleCorners(arenaSize);
+        var p = new Vector2(x, z);
+        float pay = MarbleRadius + EdgeMargin;
+        for (int i = 0; i < 3; i++)
+            if (EdgeDistance(p, c[i], c[(i + 1) % 3]) > -pay) return false;
+        return true;
+    }
+
+    // Noktanin kenarin disinda kalma miktari. Negatifse iceride.
+    private static float EdgeDistance(Vector2 point, Vector2 from, Vector2 to)
+    {
+        Vector2 edge = to - from;
+        Vector2 normal = new Vector2(edge.y, -edge.x).normalized;
+        return Vector2.Dot(point - from, normal);
     }
 
     // Cemberin icine geri ceker. Disari tasan dokunuslar reddedilmek yerine
     // en yakin gecerli noktaya kaydirilir -- parmakla dizerken bu daha iyi.
     public static Vector2 Clamp(float x, float z, float arenaSize)
     {
-        float limit = arenaSize - MarbleRadius - EdgeMargin;
         var p = new Vector2(x, z);
-        // Tam sinira degil, kil payi icine. Sinirin uzerine koyulan bir nokta
-        // ondalik yuvarlama yuzunden "disarida" sayilabiliyordu.
-        return p.magnitude <= limit ? p : p.normalized * (limit - .002f);
+        if (Inside(p.x, p.y, arenaSize)) return p;
+
+        if (!DuelSession.Triangle)
+        {
+            float limit = arenaSize - MarbleRadius - EdgeMargin;
+            // Tam sinira degil, kil payi icine: sinirin uzerine koyulan bir
+            // nokta ondalik yuvarlama yuzunden "disarida" sayilabiliyordu.
+            return p.magnitude <= limit ? p : p.normalized * (limit - .002f);
+        }
+
+        // Ucgende merkeze dogru cekerek ilk gecerli noktayi bul.
+        var merkez = new Vector2(0f, arenaSize * .12f);
+        for (int i = 1; i <= 60; i++)
+        {
+            var q = Vector2.Lerp(p, merkez, i / 60f);
+            if (Inside(q.x, q.y, arenaSize)) return q;
+        }
+        return merkez;
     }
 
     // Ust uste binmeyi cozer. Iki oyuncu birbirini gormeden dizdigi icin
@@ -64,8 +115,23 @@ public static class DuelPlacement
     public static List<Vector2> DefaultLayout(int player, int count, float arenaSize)
     {
         var list = new List<Vector2>();
-        // Iki oyuncu cemberin iki yarisina yerlesir: baslangic simetrik ve adil.
         float side = player == 0 ? -1f : 1f;
+
+        if (DuelSession.Triangle)
+        {
+            // Ucgende misketler agirlik merkezine yakin dizilir; iki oyuncu
+            // ucgenin iki yarisina.
+            float yukseklik = arenaSize * .35f;
+            for (int i = 0; i < count; i++)
+            {
+                float t = count == 1 ? .5f : i / (float)(count - 1);
+                list.Add(Clamp(side * (.25f + t * .45f) * arenaSize * .5f,
+                               -arenaSize * .05f + t * yukseklik, arenaSize));
+            }
+            return Resolve(list, arenaSize);
+        }
+
+        // Cemberde iki oyuncu cemberin iki yarisina yerlesir.
         float r = (arenaSize - MarbleRadius - EdgeMargin) * .55f;
         for (int i = 0; i < count; i++)
         {

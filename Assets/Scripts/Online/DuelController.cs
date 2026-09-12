@@ -223,7 +223,7 @@ public class DuelController : MonoBehaviour
     private void BuildLevelData()
     {
         data.levelName = "DÜELLO";
-        data.shape = ArenaShape.Circle;
+        data.shape = DuelSession.Triangle ? ArenaShape.Triangle : ArenaShape.Circle;
         data.arenaSize = DuelSession.ArenaSize;
         data.shotCount = 999;
         data.oneStarTarget = data.twoStarTarget = data.threeStarTarget = 99;
@@ -339,7 +339,10 @@ public class DuelController : MonoBehaviour
         // atislarin %60'inda tetiklendigini gosterdi, o da secim degil vergi olurdu.
         Vector3 sp = shooter != null ? shooter.transform.position : Vector3.zero;
         float sr = new Vector2(sp.x, sp.z).magnitude;
-        bool stranded = shooter != null && sr <= DuelSession.ArenaSize * DuelSession.StrandRadiusFactor;
+        // Ucgenin ic yaricapi kenar yaricapinin yarisi kadardir; tehlike
+        // bolgesi de ona gore olceklenir ki iki modda ayni oranda tetiklensin.
+        float tehlike = DuelSession.ArenaSize * DuelSession.StrandRadiusFactor * (DuelSession.Triangle ? .5f : 1f);
+        bool stranded = shooter != null && sr <= tehlike;
 
         bool sameTurn = Match.ResolveShot(knocked, stranded, sp.x, sp.z);
         knocked.Clear();

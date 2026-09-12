@@ -303,19 +303,26 @@ public class MahalleUI : MonoBehaviour
             Text(kart.transform, satir[i], 92, 22 + i * 58, 780, 54, 26, new Color(.86f, .88f, .8f));
         }
 
-        LabelButton(page, "AYNI CİHAZDA OYNA", 90, 800, 900, 128, Gold, new Color(.16f, .20f, .16f),
-                    () => { DuelSession.Begin(DuelSession.Mode.HotSeat); SceneManager.LoadScene(GameSession.GameSceneName); }, 38);
-        Text(page, "İki kişi tek telefonda, sırayla", 90, 936, 900, 40, 24,
-             new Color(1, .97f, .89f, .5f), TextAlignmentOptions.Center);
+        // Iki klasik misket oyunu. Kurallar ayni, saha sekli farkli.
+        Text(page, "AYNI CİHAZDA OYNA · İki kişi tek telefonda", 90, 786, 900, 44, 25,
+             new Color(1, .97f, .89f, .55f), TextAlignmentOptions.Center);
+        var cember = LabelButton(page, "ÇEMBER", 90, 836, 435, 124, Gold, new Color(.16f, .20f, .16f),
+                    () => { DuelSession.Begin(DuelSession.Mode.HotSeat, DuelSession.GameType.Cember);
+                            SceneManager.LoadScene(GameSession.GameSceneName); }, 36);
+        var ucgen = LabelButton(page, "ÜÇGEN", 555, 836, 435, 124, new Color(.82f, .56f, .22f), new Color(.16f, .20f, .16f),
+                    () => { DuelSession.Begin(DuelSession.Mode.HotSeat, DuelSession.GameType.Ucgen);
+                            SceneManager.LoadScene(GameSession.GameSceneName); }, 36);
+        Text(cember.transform, "yuvarlak saha", 12, 86, 411, 34, 22, new Color(.16f, .20f, .16f, .7f), TextAlignmentOptions.Center);
+        Text(ucgen.transform, "sivri uç, dar açılar", 12, 86, 411, 34, 22, new Color(.16f, .20f, .16f, .7f), TextAlignmentOptions.Center);
 
         // Ag katmani henuz yok; akis burada duruyor ki yeri belli olsun.
-        var oda = LabelButton(page, "ODA KUR", 90, 1010, 435, 104, new Color(.22f, .26f, .24f), new Color(1, .97f, .89f, .35f),
+        var oda = LabelButton(page, "ODA KUR", 90, 990, 435, 104, new Color(.22f, .26f, .24f), new Color(1, .97f, .89f, .35f),
                               () => Toast("Oda kurma henüz hazır değil."), 30);
-        var katil = LabelButton(page, "ODAYA KATIL", 555, 1010, 435, 104, new Color(.22f, .26f, .24f), new Color(1, .97f, .89f, .35f),
+        var katil = LabelButton(page, "ODAYA KATIL", 555, 990, 435, 104, new Color(.22f, .26f, .24f), new Color(1, .97f, .89f, .35f),
                                 () => Toast("Odaya katılma henüz hazır değil."), 30);
         oda.interactable = katil.interactable = true;
 
-        LabelButton(page, "ANA MENÜ", 90, 1150, 900, 96, new Color(.20f, .25f, .23f), new Color(1, .97f, .89f, .82f),
+        LabelButton(page, "ANA MENÜ", 90, 1130, 900, 96, new Color(.20f, .25f, .23f), new Color(1, .97f, .89f, .82f),
                     () => ShowTitle(true), 29);
     }
 
@@ -356,7 +363,7 @@ public class MahalleUI : MonoBehaviour
         var top = Panel(page, "Dizme başlığı", 24, 12, 1032, 200, Ink); top.radius = 30;
         Art(top.transform, "Renk", MahalleGraphic.Shape.Marble, 28, 26, 58, 58, DuelSession.PlayerColor(me));
         Text(top.transform, DuelSession.PlayerName(me) + " · EL " + duel.Match.Round, 100, 20, 900, 60, 34, Cream);
-        Text(top.transform, "Çemberin içine dokunarak misketlerini diz. Rakibin dizilişini görmüyorsun.",
+        Text(top.transform, "Sahanın içine dokunarak misketlerini diz. Rakibin dizilişini görmüyorsun.",
              28, 88, 976, 70, 25, new Color(.81f, .84f, .75f));
         placeCount = Text(top.transform, "", 28, 148, 976, 44, 29, Gold);
 
@@ -401,7 +408,7 @@ public class MahalleUI : MonoBehaviour
     {
         ClearPage();
         var top = Panel(page, "Düello başlığı", 24, 12, 1032, 250, Ink); top.radius = 30;
-        Text(top.transform, "EL " + duel.Match.Round + " / " + DuelMatch.RoundsPerMatch, 28, 14, 600, 56, 34, Cream);
+        Text(top.transform, DuelSession.TypeName + " · EL " + duel.Match.Round + " / " + DuelMatch.RoundsPerMatch, 28, 14, 600, 56, 34, Cream);
         LabelButton(top.transform, "ÇIK", 872, 16, 134, 88, new Color(.28f, .38f, .31f), Cream, LeaveDuel, 30);
 
         // Kazanani KESE belirliyor: cikardigin misket senin olur.

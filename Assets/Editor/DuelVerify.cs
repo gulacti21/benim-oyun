@@ -180,7 +180,32 @@ public static class DuelVerify
         Check(r.Round == 1 && r.State == DuelMatch.Phase.Placing, "Rovans ilk elden baslar");
         Check(r.PlacementRights(0) == DuelMatch.ExtraPlacements, "Rovansta ekstra hak geri gelir");
 
-        // --- Dizme kurallari ---
+        // --- Ucgen sahada dizme ---
+        var eskiTur = DuelSession.Type;
+        try
+        {
+            DuelSession.Type = DuelSession.GameType.Ucgen;
+            float u = DuelSession.TriangleSize;
+            Check(DuelPlacement.Inside(0f, u * .15f, u), "Ucgenin ortasi gecerli");
+            Check(!DuelPlacement.Inside(0f, u * 1.2f, u), "Ucgenin disi reddedilir");
+            // Cemberin icinde ama ucgenin disinda kalan bir kose noktasi.
+            Check(!DuelPlacement.Inside(u * .8f, -u * .5f, u), "Ucgenin kestigi kose reddedilir");
+            var kirpilmis = DuelPlacement.Clamp(u * 2f, -u * 2f, u);
+            Check(DuelPlacement.Inside(kirpilmis.x, kirpilmis.y, u), "Ucgende tasan nokta ice cekilir");
+
+            for (int pl = 0; pl < 2; pl++)
+            {
+                var d = DuelPlacement.DefaultLayout(pl, DuelMatch.AntePerRound, u);
+                Check(d.Count == DuelMatch.AntePerRound, "Ucgende hazir dizilis tam sayida");
+                foreach (var q in d) Check(DuelPlacement.Inside(q.x, q.y, u), "Ucgende hazir dizilis sahanin icinde");
+                for (int i = 0; i < d.Count; i++)
+                    for (int j = i + 1; j < d.Count; j++)
+                        Check(Vector2.Distance(d[i], d[j]) > DuelPlacement.MinGap - .02f, "Ucgende cakisma yok");
+            }
+        }
+        finally { DuelSession.Type = eskiTur; }
+
+        // --- Dizme kurallari (cember) ---
         const float arena = 3.2f;
         Check(DuelPlacement.Inside(0f, 0f, arena), "Merkez gecerli");
         Check(!DuelPlacement.Inside(3.1f, 0f, arena), "Cizgiye yapisik nokta reddedilir");
