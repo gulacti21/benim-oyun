@@ -138,6 +138,17 @@ public class MarbleArena : MonoBehaviour
 
     public bool IsOutside(Vector3 worldPosition)
     {
+        // DIZI modunda "disari cikma" diye bir sey yok: kazanma kosulu
+        // misketi kipirdatmak, cikarmak degil. Yine de dunyadan kacan bir
+        // misket elenebilsin diye cok genis bir sinir birakiliyor.
+        if (shape == ArenaShape.Line)
+        {
+            Vector3 c = transform.position;
+            float dx = worldPosition.x - c.x, dz = worldPosition.z - c.z;
+            float limit = (size + exitMargin) * 4f;
+            return (dx * dx) + (dz * dz) > limit * limit;
+        }
+
         return shape == ArenaShape.Triangle
             ? IsOutsideTriangle(worldPosition)
             : IsOutsideCircle(worldPosition);
@@ -210,6 +221,22 @@ public class MarbleArena : MonoBehaviour
         outline.widthMultiplier = outlineWidth;
         outline.startColor = outlineColor;
         outline.endColor = outlineColor;
+
+        // DIZI: tebesirle cekilmis tek duz cizgi. Misketler bunun uzerine
+        // dizilir. Kapali bir alan olmadigi icin halka cizilmez.
+        if (shape == ArenaShape.Line)
+        {
+            outline.loop = false;
+            const int n = 48;
+            outline.positionCount = n;
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)(n - 1);
+                float x = Mathf.Lerp(-size, size, t);
+                outline.SetPosition(i, new Vector3(x, outlineHeight, Mathf.Sin(i * 5.1f) * .012f));
+            }
+            return;
+        }
 
         if (shape == ArenaShape.Triangle)
         {

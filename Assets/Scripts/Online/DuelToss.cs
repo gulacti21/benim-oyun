@@ -25,8 +25,11 @@ public class DuelToss
     // Cemberde bu yaricapin kendisi. Ucgende koseler 270/30/150 derecede,
     // yani uzak taraf 30 ve 150 dereceyi birlestiren YATAY kenar: z = .5r.
     // (Sivri uc aticiya bakiyor.)
-    public static float Line => DuelSession.Triangle ? DuelSession.ArenaSize * .5f
-                                                     : DuelSession.ArenaSize;
+    // DIZI modunda cizgi ZATEN var: misketlerin dizildigi sira. Sira
+    // belirleme atisi da ona yapilir, gercek oyundaki gibi.
+    public static float Line => DuelSession.Row ? DuelSession.RowZ
+                              : DuelSession.Triangle ? DuelSession.ArenaSize * .5f
+                              : DuelSession.ArenaSize;
 
     // Cizgiyi gecmenin cezasi. Herhangi bir gecerli uzakliktan buyuk olmasi
     // yeterli; kac birim tastigi da eklenir ki iki oyuncu da yaktiysa az

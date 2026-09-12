@@ -34,6 +34,9 @@ public class DuelController : MonoBehaviour
 
     private bool waiting;
     private bool tossShotTaken;
+    // DIZI modu: atis oncesi misketlerin durdugu yerler. Kazanma kosulu
+    // "kipirdattigin misket senin" oldugu icin karsilastirma buna gore.
+    private readonly Dictionary<TargetMarble, Vector3> rowHome = new Dictionary<TargetMarble, Vector3>();
     private float settleTimer, elapsed;
     private const float SettleDelay = .4f;
 
@@ -138,7 +141,7 @@ public class DuelController : MonoBehaviour
     private void BuildTossData()
     {
         data.levelName = "SIRA ATIŞI";
-        data.shape = DuelSession.Triangle ? ArenaShape.Triangle : ArenaShape.Circle;
+        data.shape = DuelSession.Shape;
         data.arenaSize = DuelSession.ArenaSize;
         data.shotCount = 999;
         data.oneStarTarget = data.twoStarTarget = data.threeStarTarget = 99;
@@ -250,6 +253,11 @@ public class DuelController : MonoBehaviour
         {
             int p = order[orderIndex];
             if (Match.HasPlaced(p)) { orderIndex++; continue; }
+
+            // DIZI modunda dizme asamasi YOK: misketler siraya otomatik
+            // dizilir. Modun butun meselesi herkesin ayni siraya bakmasi;
+            // dizilis taktigi olsaydi cember modundan farki kalmazdi.
+            if (DuelSession.Row) { AutoPlace(p); orderIndex++; continue; }
 
             // Ilk el herkes elle dizer, teklif yok.
             if (Match.Round == 1) { CurrentStep = Step.Place; Refresh(); return; }
@@ -397,7 +405,7 @@ public class DuelController : MonoBehaviour
     private void BuildLevelData()
     {
         data.levelName = "DÜELLO";
-        data.shape = DuelSession.Triangle ? ArenaShape.Triangle : ArenaShape.Circle;
+        data.shape = DuelSession.Shape;
         data.arenaSize = DuelSession.ArenaSize;
         data.shotCount = 999;
         data.oneStarTarget = data.twoStarTarget = data.threeStarTarget = 99;
@@ -434,6 +442,31 @@ public class DuelController : MonoBehaviour
         return DuelSession.PlayerColor(m.placedBy);
     }
 
+    // DIZI: atistan HEMEN ONCE misketlerin yerini not et.
+    private void RememberRow()
+    {
+        rowHome.Clear();
+        if (!DuelSession.Row || arena == null) return;
+        foreach (var m in arena.SpawnedMarbles)
+            if (m != null) rowHome[m] = m.transform.position;
+    }
+
+    // Baslangic yerinden RowNudge'dan fazla ayrilan misket KIPIRDAMIS
+    // sayilir ve atanin olur.
+    private List<int> MovedMarbles()
+    {
+        var list = new List<int>();
+        foreach (var pair in rowHome)
+        {
+            var m = pair.Key;
+            if (m == null) continue;
+            if (Vector3.Distance(m.transform.position, pair.Value) <= DuelSession.RowNudge) continue;
+            if (indexOf.TryGetValue(m, out int i) && !list.Contains(i)) list.Add(i);
+        }
+        list.Sort();
+        return list;
+    }
+
     private void OnShotFired()
     {
         if (CurrentStep == Step.Toss)
@@ -443,6 +476,7 @@ public class DuelController : MonoBehaviour
         }
         if (Match == null || Match.State != DuelMatch.Phase.Shooting) return;
         knocked.Clear();
+        RememberRow();
         waiting = true; settleTimer = 0f; elapsed = 0f;
         Refresh();
     }
@@ -518,6 +552,31 @@ public class DuelController : MonoBehaviour
         // Kenarda durmak guvenli: olcum, "cemberin herhangi bir yeri" kuralinin
         // atislarin %60'inda tetiklendigini gosterdi, o da secim degil vergi olurdu.
         Vector3 sp = shooter != null ? shooter.transform.position : Vector3.zero;
+
+        // DIZI: cikarma yok, KIPIRDATMA var. Atici cemberde kalma kurali da
+        // yok, cunku cember yok.
+        if (DuelSession.Row)
+        {
+            knocked.Clear();
+            knocked.AddRange(MovedMarbles());
+            if (Net != null) { Net.LocalShot(knocked, false, sp.x, sp.z); knocked.Clear(); SyncAfterShot(); return; }
+            bool devam = Match.ResolveShot(knocked, false, sp.x, sp.z);
+            knocked.Clear();
+            if (Match.State != DuelMatch.Phase.Shooting)
+            {
+                if (shooter != null) shooter.ShootingEnabled = false;
+                CurrentStep = Match.State == DuelMatch.Phase.Finished ? Step.Done : Step.RoundOver;
+                Refresh(); return;
+            }
+            // Kipirdayan misket kazanildi, kipirdamayan YERINE DONER.
+            // Boylece sira her atista ayni kalir: hem kural net, hem de
+            // agda iki cihaz ayni diziliste bulusur.
+            RebuildRing();
+            PlaceShooterOnLine();
+            Refresh();
+            return;
+        }
+
         float sr = new Vector2(sp.x, sp.z).magnitude;
         // Ucgenin ic yaricapi kenar yaricapinin yarisi kadardir; tehlike
         // bolgesi de ona gore olceklenir ki iki modda ayni oranda tetiklensin.
@@ -666,7 +725,8 @@ public class DuelController : MonoBehaviour
         }
         var sc = shooter != null ? shooter.GetComponent<Collider>() : null;
         if (sc != null) sc.sharedMaterial = duelMaterial;
-        if (shooter != null) shooter.DuelImpulseScale = DuelSession.Impulse / .65f;
+        if (shooter != null)
+            shooter.DuelImpulseScale = (DuelSession.Row ? DuelSession.RowImpulse : DuelSession.Impulse) / .65f;
     }
 
     private void PlaceShooterOnLine()

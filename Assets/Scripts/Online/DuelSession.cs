@@ -7,13 +7,20 @@ public static class DuelSession
     public enum Mode { HotSeat, Online }
     // Oyun turu. Gercek misket oyununun iki klasik cesidi; kurallar ayni,
     // degisen sey sahanin sekli ve dolayisiyla acilar.
-    public enum GameType { Cember, Ucgen }
+    // Gercek misket oyununun uc klasik cesidi:
+    //   Cember -- misketler cembere dizilir, cikaran kazanir
+    //   Ucgen  -- ayni kural, saha ucgen; koseler oyunu sertlestirir
+    //   Dizi   -- "kondik/bas oyunu": misketler tek siraya dizilir,
+    //             KIPIRDATTIGIN misket senin olur (cikarmak degil)
+    public enum GameType { Cember, Ucgen, Dizi }
 
     public static bool Active { get; private set; }
     public static Mode Kind { get; private set; } = Mode.HotSeat;
     public static GameType Type { get; set; } = GameType.Cember;
     public static bool Triangle => Type == GameType.Ucgen;
-    public static string TypeName => Type == GameType.Ucgen ? "ÜÇGEN" : "ÇEMBER";
+    public static bool Row => Type == GameType.Dizi;
+    public static string TypeName => Type == GameType.Ucgen ? "ÜÇGEN"
+                                  : Type == GameType.Dizi ? "DİZİ" : "ÇEMBER";
     // Ilk dizen oyuncu. Atisa DIGERI baslar; rovansta el degisir.
     public static int FirstPlacer { get; set; }
     public static int MatchNumber { get; set; }
@@ -27,7 +34,22 @@ public static class DuelSession
     // hedefin altinda kaliyor. 3.6 + guc 0.80 = 1.04, ortadaki deger.
     public const float CircleSize = 3.2f;
     public const float TriangleSize = 3.6f;
-    public static float ArenaSize => Triangle ? TriangleSize : CircleSize;
+    // DIZI: siranin yarim uzunlugu. OLCULDU: dar sira (2.2, aralik .63)
+    // zincirleme deviriyor -- tek atis ortalama 2.0, en iyisi 6 misket
+    // aliyordu, yani el uc atista bitiyordu. Aralik genisledikce zincir
+    // kiriliyor ve nisan onem kazaniyor:
+    //   2.2 -> atis basina 2.00   (en iyi 6)
+    //   2.8 -> 1.38               (en iyi 2)
+    //   3.4 -> 1.38               (en iyi 3, iska %15)   <-- secildi
+    //   4.0 -> 1.23               (en iyi 3, iska %23)
+    // 3.4 secildi: ortalama makul, usta atis hala uc misket alabiliyor,
+    // sira da ekrana sigacak kadar kisa.
+    public const float RowSize = 3.4f;
+    // Siranin zemindeki yeri. Atici z=-4.2'den atar, yani sira 4.2 birim otede.
+    public const float RowZ = 0f;
+    public static float ArenaSize => Triangle ? TriangleSize : Row ? RowSize : CircleSize;
+    public static ArenaShape Shape => Triangle ? ArenaShape.Triangle
+                                    : Row ? ArenaShape.Line : ArenaShape.Circle;
 
     // Duello fizigi. 2925 atis simule edilerek secildi; hedef "ortalama bir
     // atis ~1 misket cikarsin"di, bu ayar 1.07 veriyor ve bos atis orani en
@@ -45,6 +67,18 @@ public static class DuelSession
     // ucgen bedava kazanilan bir sahaya donusuyordu. Ucgen 3.6'da guc 0.80
     // atis basina 1.04 veriyor; iki sahanin da hedefi tuttugu tek eslesme bu.
     public static float Impulse => Triangle ? .8f : 1f;
+
+    // DIZI: kazanmak icin misketi kipirdatmak yeterli oldugundan atis gucu
+    // olcumle ayri seciliyor; degeri DuelPhysicsVerify'in DIZI bolumunden
+    // geliyor (hedef yine atis basina ~1 misket).
+    public const float RowImpulse = .55f;
+    // Bir misket bu kadar yer degistirdiyse KIPIRDADI sayilir. Titresim ve
+    // fizik gurultusunun ustunde, GERCEK bir temasin altinda olmasi lazim.
+    // Olculdu: secili ayarda (sira 3.4, guc .55) gercek temasta en kucuk
+    // yer degistirme .094, cogunlukla .30 uzeri. Esik .08 onun altinda.
+    // Bu esigin ALTINDA kalan siyirma bilerek sayilmiyor: kuralin adi
+    // "kipirdatmak", degip gecmek degil.
+    public const float RowNudge = .08f;
     public const float Bounciness = .45f;
     public const float FrictionMul = .7f;
 

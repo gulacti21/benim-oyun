@@ -13,8 +13,17 @@ public static class DuelPlacement
     // yoksa oyuncu misketini kenara dizip ilk dokunusta kaybeder.
     public static bool Inside(float x, float z, float arenaSize)
     {
+        if (DuelSession.Row) return InsideRow(x, z, arenaSize);
         return DuelSession.Triangle ? InsideTriangle(x, z, arenaSize)
                                     : InsideCircle(x, z, arenaSize);
+    }
+
+    // DIZI: gecerli yer siranin UZERI. Elle dizme yok ama otomatik dizilisin
+    // ve cakisma cozumunun sinira ihtiyaci var.
+    private static bool InsideRow(float x, float z, float arenaSize)
+    {
+        float limit = arenaSize - MarbleRadius * .5f;
+        return Mathf.Abs(x) <= limit && Mathf.Abs(z - DuelSession.RowZ) <= MarbleRadius;
     }
 
     private static bool InsideCircle(float x, float z, float arenaSize)
@@ -74,6 +83,12 @@ public static class DuelPlacement
         var p = new Vector2(x, z);
         if (Inside(p.x, p.y, arenaSize)) return p;
 
+        if (DuelSession.Row)
+        {
+            float lim = arenaSize - MarbleRadius * .5f;
+            return new Vector2(Mathf.Clamp(p.x, -lim, lim), DuelSession.RowZ);
+        }
+
         if (!DuelSession.Triangle)
         {
             float limit = arenaSize - MarbleRadius - EdgeMargin;
@@ -110,7 +125,11 @@ public static class DuelPlacement
 
                     // Tam ust uste geldiyse yon yok; sabit bir yone acilsin ki
                     // sonuc her cihazda ayni olsun (ag icin onemli).
-                    Vector2 dir = dist > .0001f ? d / dist : new Vector2(Mathf.Cos(i * 1.7f), Mathf.Sin(i * 1.7f));
+                    // DIZI'de misketler ayni sirada durmali: ayirma sadece
+                    // yan yana olur, yoksa siradan tasarlar.
+                    Vector2 dir = DuelSession.Row ? new Vector2(d.x >= 0f ? 1f : -1f, 0f)
+                                : dist > .0001f ? d / dist
+                                : new Vector2(Mathf.Cos(i * 1.7f), Mathf.Sin(i * 1.7f));
                     float push = (MinGap - dist) * .5f + .001f;
                     p[i] -= dir * push;
                     p[j] += dir * push;
@@ -129,6 +148,24 @@ public static class DuelPlacement
     {
         var list = new List<Vector2>();
         float side = player == 0 ? -1f : 1f;
+
+        // DIZI: tek duz sira. Iki oyuncunun misketleri BIRBIRINE GECMELI
+        // diziliyor -- yan yana dizilse oyuncu kendi tarafina nisan alip
+        // rakibinin misketine hic dokunmadan oynardi, oysa sira oyununda
+        // kimin misketi oldugu onemsiz: kipirdattigin senin olur. Gecmeli
+        // dizilis siranin ortasini da en degerli yer yapiyor.
+        if (DuelSession.Row)
+        {
+            int slots = Mathf.Max(2, count * 2);
+            float lim = arenaSize - MarbleRadius * .5f;
+            for (int i = 0; i < count; i++)
+            {
+                int slot = i * 2 + (player & 1);
+                float t = slots == 1 ? .5f : slot / (float)(slots - 1);
+                list.Add(new Vector2(Mathf.Lerp(-lim, lim, t), DuelSession.RowZ));
+            }
+            return Resolve(list, arenaSize);
+        }
 
         if (DuelSession.Triangle)
         {

@@ -318,14 +318,21 @@ public class MahalleUI : MonoBehaviour
         Text(cember.transform, "yuvarlak saha", 12, 86, 411, 34, 22, new Color(.16f, .20f, .16f, .7f), TextAlignmentOptions.Center);
         Text(ucgen.transform, "sivri uç, dar açılar", 12, 86, 411, 34, 22, new Color(.16f, .20f, .16f, .7f), TextAlignmentOptions.Center);
 
+        // DIZI (kondik): kural farkli -- cikarmak degil kipirdatmak.
+        var dizi = LabelButton(page, "DİZİ", 90, 972, 900, 116, new Color(.55f, .62f, .40f), new Color(.16f, .20f, .16f),
+                    () => { DuelSession.Begin(DuelSession.Mode.HotSeat, DuelSession.GameType.Dizi);
+                            SceneManager.LoadScene(GameSession.GameSceneName); }, 36);
+        Text(dizi.transform, "tek sıra · kıpırdattığın misket senin", 12, 80, 876, 34, 22,
+             new Color(.16f, .20f, .16f, .7f), TextAlignmentOptions.Center);
+
         // Ag katmani henuz yok; akis burada duruyor ki yeri belli olsun.
-        var oda = LabelButton(page, "ODA KUR", 90, 990, 435, 104, new Color(.22f, .26f, .24f), new Color(1, .97f, .89f, .35f),
+        var oda = LabelButton(page, "ODA KUR", 90, 1116, 435, 104, new Color(.22f, .26f, .24f), new Color(1, .97f, .89f, .35f),
                               () => Toast("Oda kurma henüz hazır değil."), 30);
-        var katil = LabelButton(page, "ODAYA KATIL", 555, 990, 435, 104, new Color(.22f, .26f, .24f), new Color(1, .97f, .89f, .35f),
+        var katil = LabelButton(page, "ODAYA KATIL", 555, 1116, 435, 104, new Color(.22f, .26f, .24f), new Color(1, .97f, .89f, .35f),
                                 () => Toast("Odaya katılma henüz hazır değil."), 30);
         oda.interactable = katil.interactable = true;
 
-        LabelButton(page, "ANA MENÜ", 90, 1130, 900, 96, new Color(.20f, .25f, .23f), new Color(1, .97f, .89f, .82f),
+        LabelButton(page, "ANA MENÜ", 90, 1248, 900, 96, new Color(.20f, .25f, .23f), new Color(1, .97f, .89f, .82f),
                     () => ShowTitle(true), 29);
     }
 

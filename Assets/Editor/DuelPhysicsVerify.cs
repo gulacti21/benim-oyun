@@ -95,6 +95,12 @@ public static class DuelPhysicsVerify
                                          bounciness = .45f, frictionMul = .7f });
             report.Add("");
 
+            // DIZI (KONDIK) MODU: kural farkli, olcum de farkli.
+            // Kazanmak icin misketi CIKARMAK degil KIPIRDATMAK yeterli.
+            // Iki soru: (1) hangi guc atis basina ~1 misket veriyor,
+            // (2) "kipirdadi" esigi gurultuden ayirt edilebiliyor mu.
+            DiziReport();
+
             // SIRA BELIRLEME ATISI olculebilir mi?
             // Soru: oyuncu cizgiye (sahanin uzak kenari) ULASABILIYOR mu ve
             // tam gucte GECIYOR mu. Ikisi de olmazsa atis beceri testi degil,
@@ -133,6 +139,143 @@ public static class DuelPhysicsVerify
 
     // Bos sahada tek atis: hangi gucte nerede duruyor.
     // Sira belirleme atisinin oynanabilirligi buna bagli.
+    // Sekiz misket tek sirada, aralik ~.63.
+    private static float[,] RowLayout(float yariBoy, int adet)
+    {
+        var a = new float[adet, 2];
+        float lim = yariBoy - .125f;
+        for (int i = 0; i < adet; i++)
+        {
+            float t = adet == 1 ? .5f : i / (float)(adet - 1);
+            a[i, 0] = Mathf.Lerp(-lim, lim, t);
+            a[i, 1] = DuelSession.RowZ;
+        }
+        return a;
+    }
+
+    private static void DiziReport()
+    {
+        report.Add("DIZI (KONDIK) MODU · sira yarim boyu " + DuelSession.RowSize.ToString("0.0")
+                   + " · 8 misket · kazanma: KIPIRDATMAK");
+        report.Add("  ORT = atis basina kipirdayan misket · ISKA = hicbirine degmeyen atis");
+        report.Add("  guc    ORT   EN IYI   ISKA    en kucuk gercek oynama   yorum");
+
+        float eskiBoy = ArenaSize; bool eskiTri = triangleMode;
+        var eskiTur = DuelSession.Type;
+        DuelSession.Type = DuelSession.GameType.Dizi;
+
+        // Sira GENISLIGI de taranir: dar sirada tek atis butun sirayi
+        // devirir (zincir), genis sirada nisan almak gerekir.
+        foreach (float boy in new[] { 2.2f, 2.8f, 3.4f, 4.0f })
+        {
+            report.Add("  -- yarim boy " + boy.ToString("0.0")
+                       + " (aralik " + (boy * 2f / 7f).ToString("0.00") + ")");
+            foreach (float guc in new[] { .35f, .45f, .55f, .70f, 1.00f })
+            {
+                var s = new Setting
+                {
+                    arena = boy, triangle = false, impulse = guc,
+                    bounciness = DuelSession.Bounciness, frictionMul = DuelSession.FrictionMul,
+                };
+                ArenaSize = s.arena; triangleMode = false;
+                BuildRow(s, 8);
+
+                float toplam = 0f; int atis = 0, iska = 0, best = 0;
+                float enKucuk = 999f;
+                // Nisan noktalari siranin UCLARININ da disina tasar: gercek
+                // oyuncu her zaman siraya isabet ettiremez, iska orani
+                // ancak boyle olculebilir.
+                for (int a = 0; a < 13; a++)
+                {
+                    float ax = Mathf.Lerp(-boy * 1.35f, boy * 1.35f, a / 12f);
+                    var (oynayan, minOynama) = RowShot(s, ax);
+                    toplam += oynayan; atis++; simCount++;
+                    if (oynayan == 0) iska++;
+                    if (oynayan > best) best = oynayan;
+                    if (minOynama > 0f && minOynama < enKucuk) enKucuk = minOynama;
+                }
+                Cleanup();
+
+                float ort = atis == 0 ? 0f : toplam / atis;
+                string yorum = Mathf.Abs(ort - 1f) < .25f ? "   <-- hedefe yakin" : "";
+                report.Add(string.Format("  {0,4:0.00}  {1,5:0.00}   {2,4}   %{3,3:0}   {4,20}{5}",
+                                         guc, ort, best, iska * 100f / Mathf.Max(1, atis),
+                                         enKucuk > 100f ? "yok" : enKucuk.ToString("0.000"), yorum));
+            }
+        }
+
+        report.Add("  secili guc: " + DuelSession.RowImpulse.ToString("0.00")
+                   + " · kipirdama esigi: " + DuelSession.RowNudge.ToString("0.00"));
+        report.Add("  (esik, yukaridaki 'en kucuk gercek oynama' degerlerinin ALTINDA olmali;");
+        report.Add("   ustunde olursa gercek temas sayilmaz, cok altinda olursa titresim sayilir)");
+        report.Add("");
+
+        DuelSession.Type = eskiTur;
+        ArenaSize = eskiBoy; triangleMode = eskiTri;
+    }
+
+    private static Vector3[] rowHome;
+
+    private static void BuildRow(Setting s, int adet)
+    {
+        Cleanup();
+        scene = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+        physics = scene.GetPhysicsScene();
+        bodies.Clear();
+        var ground = Make(PrimitiveType.Cube, new Vector3(0, -.25f, 0), new Vector3(40, .5f, 40));
+        ground.GetComponent<Collider>().sharedMaterial = groundMat;
+
+        if (testMat == null) testMat = new PhysicsMaterial("Duello (test)");
+        testMat.dynamicFriction = marbleMat.dynamicFriction * s.frictionMul;
+        testMat.staticFriction = marbleMat.staticFriction * s.frictionMul;
+        testMat.bounciness = s.bounciness < 0f ? marbleMat.bounciness : s.bounciness;
+        testMat.frictionCombine = marbleMat.frictionCombine;
+        testMat.bounceCombine = marbleMat.bounceCombine;
+
+        var yer = RowLayout(s.arena, adet);
+        for (int i = 0; i < adet; i++)
+            bodies.Add(MakeMarble(new Vector3(yer[i, 0], TargetY, yer[i, 1]),
+                                  BaseScale, BaseMass * s.massMul, BaseDrag * s.dragMul, testMat));
+
+        home = new Vector3[bodies.Count];
+        rowHome = new Vector3[bodies.Count];
+        for (int i = 0; i < bodies.Count; i++) home[i] = rowHome[i] = bodies[i].position;
+    }
+
+    // Tek atis; kac misketin KIPIRDADIGI ve en kucuk gercek yer degistirme.
+    private static (int oynayan, float enKucukOynama) RowShot(Setting s, float aimX)
+    {
+        for (int i = 0; i < bodies.Count; i++)
+        {
+            bodies[i].position = rowHome[i];
+            bodies[i].linearVelocity = Vector3.zero; bodies[i].angularVelocity = Vector3.zero;
+        }
+
+        var from = new Vector3(0f, TargetY, ShooterZ);
+        var shot = MakeMarble(from, BaseScale, BaseMass * s.massMul, BaseDrag * s.dragMul, testMat);
+        Vector3 dir = (new Vector3(aimX, TargetY, DuelSession.RowZ) - from); dir.y = 0f; dir.Normalize();
+        shot.AddForce(dir * s.impulse, ForceMode.Impulse);
+
+        for (int f = 0; f < MaxFrames; f++)
+        {
+            physics.Simulate(.02f);
+            bool moving = shot.linearVelocity.magnitude > RestSpeed;
+            if (!moving)
+                for (int i = 0; i < bodies.Count && !moving; i++)
+                    if (bodies[i].linearVelocity.magnitude > RestSpeed) moving = true;
+            if (!moving) break;
+        }
+
+        int oynayan = 0; float enKucuk = 999f;
+        for (int i = 0; i < bodies.Count; i++)
+        {
+            float d = Vector3.Distance(bodies[i].position, rowHome[i]);
+            if (d > DuelSession.RowNudge) { oynayan++; if (d < enKucuk) enKucuk = d; }
+        }
+        UnityEngine.Object.DestroyImmediate(shot.gameObject);
+        return (oynayan, enKucuk);
+    }
+
     private static void TossReport()
     {
         // Sira atisi oynanabilir mi? Iki sey olmali:

@@ -32,6 +32,13 @@ public static class DuelVerify
         return list;
     }
 
+    private static List<(float, float)> ToTuple(List<Vector2> v)
+    {
+        var list = new List<(float, float)>();
+        foreach (var q in v) list.Add((q.x, q.y));
+        return list;
+    }
+
     private static DuelMatch Ready(int firstPlacer = 0)
     {
         var m = new DuelMatch(firstPlacer);
@@ -255,6 +262,60 @@ public static class DuelVerify
                   "Sira atisi mac atisindan hafif");
             DuelSession.Type = eski;
         }
+
+        // --- DIZI (KONDIK) MODU ---
+        {
+            var eski = DuelSession.Type;
+            DuelSession.Type = DuelSession.GameType.Dizi;
+            float sira = DuelSession.RowSize;
+            Check(DuelSession.Row, "Dizi modu taniniyor");
+            Check(DuelSession.Shape == ArenaShape.Line, "Dizi modunda saha sekli cizgi");
+            Check(Mathf.Approximately(DuelToss.Line, DuelSession.RowZ), "Dizide cizgi siranin kendisi");
+            Check(DuelSession.RowImpulse < DuelSession.Impulse,
+                  "Dizide atis gucu cemberden dusuk");
+            // Esik gercek temasin altinda, gurultunun ustunde olmali.
+            Check(DuelSession.RowNudge > .01f && DuelSession.RowNudge < .09f,
+                  "Kipirdama esigi olculen bantta");
+
+            Check(DuelPlacement.Inside(0f, DuelSession.RowZ, sira), "Siranin ortasi gecerli");
+            Check(!DuelPlacement.Inside(0f, DuelSession.RowZ + 1f, sira), "Siranin disi (onu) reddedilir");
+            Check(!DuelPlacement.Inside(sira * 2f, DuelSession.RowZ, sira), "Siranin ucunu asan reddedilir");
+            var kirp = DuelPlacement.Clamp(sira * 3f, 2f, sira);
+            Check(DuelPlacement.Inside(kirp.x, kirp.y, sira), "Tasan nokta siraya cekilir");
+            Check(Mathf.Approximately(kirp.y, DuelSession.RowZ), "Kirpilan nokta siranin uzerinde");
+
+            // Otomatik dizilis: iki oyuncu GECMELI dizilir, cakisma yok.
+            var d0 = DuelPlacement.DefaultLayout(0, DuelMatch.AntePerRound, sira);
+            var d1 = DuelPlacement.DefaultLayout(1, DuelMatch.AntePerRound, sira);
+            Check(d0.Count == DuelMatch.AntePerRound && d1.Count == DuelMatch.AntePerRound,
+                  "Dizide hazir dizilis tam sayida");
+            foreach (var q in d0) Check(Mathf.Approximately(q.y, DuelSession.RowZ), "Dizilis tek sirada (1. oyuncu)");
+            foreach (var q in d1) Check(Mathf.Approximately(q.y, DuelSession.RowZ), "Dizilis tek sirada (2. oyuncu)");
+            var hepsi = new List<Vector2>(d0); hepsi.AddRange(d1);
+            for (int i = 0; i < hepsi.Count; i++)
+                for (int j = i + 1; j < hepsi.Count; j++)
+                    Check(Vector2.Distance(hepsi[i], hepsi[j]) > DuelPlacement.MinGap - .02f,
+                          "Dizide iki misket cakismaz");
+            // Gecmeli: her oyuncunun misketleri birbirinin arasina giriyor mu?
+            hepsi.Sort((a, b) => a.x.CompareTo(b.x));
+            bool gecmeli = false;
+            for (int i = 0; i + 1 < hepsi.Count; i++)
+            {
+                bool ilkSol = d0.Contains(hepsi[i]);
+                bool ikiSol = d0.Contains(hepsi[i + 1]);
+                if (ilkSol != ikiSol) gecmeli = true;
+            }
+            Check(gecmeli, "Iki oyuncunun misketleri gecmeli diziliyor");
+
+            // Kural motoru degismiyor: dizi de ayni kese/el duzenini kullanir.
+            var dm = new DuelMatch(0);
+            dm.Place(0, ToTuple(d0)); dm.Place(1, ToTuple(d1));
+            Check(dm.State == DuelMatch.Phase.Shooting, "Dizide de iki dizilis sonrasi atisa gecilir");
+            Check(dm.RemainingInRing == DuelMatch.AntePerRound * 2, "Sirada sekiz misket var");
+
+            DuelSession.Type = eski;
+        }
+        Check(DuelSession.Type == DuelSession.GameType.Cember, "Dizi testinden sonra tur cembere doner");
 
         // Saha sinirlari: dizme payi olmayan sade kontrol.
         Check(DuelPlacement.InsideArena(0f, 0f, 3.2f), "Sahanin ortasi sahada");
