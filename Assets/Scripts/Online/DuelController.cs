@@ -496,27 +496,28 @@ public class DuelController : MonoBehaviour
 
     private void ResolveWell(Vector3 sp)
     {
-        int me = Well.Turn;
+        int me = Well.Turn, rakip = 1 - me;
+
         bool cukurda = hole != null && hole.Contains(sp);
-        bool disarida = arena != null && arena.IsOutside(sp);
+        bool kendiCikti = arena != null && arena.IsOutside(sp);
 
-        // Rakibin misketi kipirdadiysa ona VURULMUS demektir. Temas geri
-        // cagrisi yerine yer degistirmeye bakiyoruz: zincirle itilmeyi de
-        // yakaliyor ve dizi modunda zaten olculmus bir esik var.
-        bool vurdu = false;
+        // Rakibin misketi: kipirdadi mi, sahayi terk etti mi?
+        // Temas geri cagrisi yerine YER DEGISTIRMEYE bakiyoruz -- zincirle
+        // itilmeyi de yakaliyor, ve esik dizi modunda olculmus durumda.
         Vector3 rakipYer = wellRival != null ? wellRival.transform.position : Vector3.zero;
-        if (wellRival != null && rowHome.TryGetValue(wellRival, out Vector3 eski))
-            vurdu = Vector3.Distance(rakipYer, eski) > DuelSession.RowNudge;
-
-        var sonuc = disarida ? WellMatch.ShotResult.OutOfField
-                  : cukurda ? WellMatch.ShotResult.InHole
-                  : vurdu ? WellMatch.ShotResult.Hit
-                  : WellMatch.ShotResult.Miss;
+        bool rakipKipirdadi = false, rakipCikti = false;
+        if (wellRival != null)
+        {
+            if (rowHome.TryGetValue(wellRival, out Vector3 eski))
+                rakipKipirdadi = Vector3.Distance(rakipYer, eski) > DuelSession.RowNudge;
+            // Zeminden dusen misket de sahayi terk etmis sayilir.
+            rakipCikti = rakipYer.y < -1f || (arena != null && arena.IsOutside(rakipYer));
+        }
 
         // Cukura giren misket agzin kenarina cikarilir: merkezde birakilsa
         // bir sonraki atista kendiliginden yine "iceride" sayilirdi.
         Vector3 benim = sp;
-        if (sonuc == WellMatch.ShotResult.InHole)
+        if (cukurda && !kendiCikti)
         {
             float d = WellMatch.HoleExitDistance(DuelSession.HoleRadius);
             Vector2 yon = new Vector2(sp.x, sp.z);
@@ -524,12 +525,8 @@ public class DuelController : MonoBehaviour
             benim = new Vector3(yon.x * d, .25f, yon.y * d);
         }
 
-        int rakip = 1 - me;
-        Vector3 rakipSon = Well.OnLine(rakip) ? new Vector3(Well.X(rakip), .25f, Well.Z(rakip)) : rakipYer;
-        // Rakibin misketi sahadan cikmissa o da cizgiye doner.
-        if (wellRival != null && arena != null && arena.IsOutside(rakipYer)) rakipSon = Vector3.zero;
-
-        Well.Resolve(sonuc, benim.x, benim.z, rakipSon.x, rakipSon.z);
+        Well.Resolve(cukurda && !kendiCikti, rakipCikti, kendiCikti, rakipKipirdadi,
+                     benim.x, benim.z, rakipYer.x, rakipYer.z);
 
         if (Well.State == WellMatch.Phase.Finished)
         {
@@ -539,12 +536,39 @@ public class DuelController : MonoBehaviour
             return;
         }
 
+        if (Well.State == WellMatch.Phase.RoundOver)
+        {
+            // Tur bitti (ya da iptal edildi): ara ekran gelsin.
+            if (shooter != null) shooter.ShootingEnabled = false;
+            CurrentStep = Step.RoundOver;
+            Refresh();
+            return;
+        }
+
+        RefreshWellScene();
+    }
+
+    // Sahayi mac durumuna gore yeniden kurar. Atistan sonra ve tur basinda
+    // ayni kod calisiyor, boylece iki yol arasinda fark olusmuyor.
+    private void RefreshWellScene()
+    {
         BuildWellData();
         arena.Configure(data.shape, data.arenaSize, data.rings, data.triangleRows, data.marbles);
         arena.Rebuild();
+        EnsureHole();
         ApplyDuelPhysics();
         PlaceWellPieces();
         Refresh();
+    }
+
+    // Sonraki tur.
+    public void NextWellRound()
+    {
+        if (!DuelSession.Well || Well == null) return;
+        if (Well.State != WellMatch.Phase.RoundOver) return;
+        Well.NextRound();
+        CurrentStep = Step.Shoot;
+        RefreshWellScene();
     }
 
     private void StartShooting()
@@ -818,6 +842,7 @@ public class DuelController : MonoBehaviour
     public void NextRound()
     {
         if (CurrentStep != Step.RoundOver) return;
+        if (DuelSession.Well) { NextWellRound(); return; }
         if (Net != null) { Net.LocalNextRound(); if (Match.State == DuelMatch.Phase.Placing) { DuelSession.FirstPlacer = Match.FirstPlacer; BeginRound(); } return; }
         Match.NextRound();
         if (Match.State == DuelMatch.Phase.Finished) { CurrentStep = Step.Done; Refresh(); return; }

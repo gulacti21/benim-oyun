@@ -29,7 +29,7 @@ public class MahalleUI : MonoBehaviour
     private int duelScreenShown=-1;
     private TextMeshProUGUI placeCount,placeHint;
     private TextMeshProUGUI tossWho,tossHint,tossScoreA,tossScoreB;
-    private TextMeshProUGUI wellCookA,wellCookB;
+    private TextMeshProUGUI wellCookA,wellCookB,wellRoundLabel;
     private GameObject tossGo;
     private bool resultShown;
     public RectTransform Root => root;
@@ -483,26 +483,29 @@ public class MahalleUI : MonoBehaviour
                     () => { duelScreenShown = -1; duel.HandOverDone(); }, 40);
     }
 
-    // KUYU'nun kendi ekrani: kese yok, SAYI var (12'ye ilk ulasan kazanir).
+    // KUYU'nun kendi ekrani. Kese yok, sayi yok: TUR var.
+    // Bir turu almak icin once cukura girip PISMEK, sonra rakibi sahadan
+    // cikarmak gerekiyor. Uc turdan ikisini alan maci kazanir.
     private void ShowWell()
     {
         ClearPage();
         var top = Panel(page, "Kuyu başlığı", 24, 12, 1032, 250, Ink); top.radius = 30;
-        Text(top.transform, "KUYU · 12 SAYI", 28, 14, 600, 56, 34, Cream);
+        wellRoundLabel = Text(top.transform, "", 28, 14, 600, 56, 34, Cream);
         LabelButton(top.transform, "ÇIK", 872, 16, 134, 88, new Color(.28f, .38f, .31f), Cream, LeaveDuel, 30);
 
         for (int p = 0; p < 2; p++)
         {
             var box = Panel(top.transform, "Oyuncu " + p, 24 + p * 502, 96, 482, 134, new Color(.24f, .34f, .29f));
             Art(box.transform, "Renk", MahalleGraphic.Shape.Marble, 20, 20, 54, 54, DuelSession.PlayerColor(p));
-            Text(box.transform, DuelSession.PlayerName(p), 88, 16, 300, 40, 26, new Color(.8f, .84f, .75f));
-            var pismis = Text(box.transform, "", 396, 16, 80, 40, 20, Gold);
-            var value = Text(box.transform, "0", 88, 56, 380, 60, 44, Cream);
-            if (p == 0) { duelCountA = value; wellCookA = pismis; }
-            else { duelCountB = value; wellCookB = pismis; }
+            Text(box.transform, DuelSession.PlayerName(p), 88, 16, 260, 40, 26, new Color(.8f, .84f, .75f));
+            // Pisme durumu: turun kapi bekcisi, o yuzden en gorunur yerde.
+            var durum = Text(box.transform, "", 352, 14, 120, 44, 24, Gold);
+            var tur = Text(box.transform, "0", 88, 56, 380, 60, 44, Cream);
+            if (p == 0) { duelCountA = tur; wellCookA = durum; }
+            else { duelCountB = tur; wellCookB = durum; }
         }
-        Text(top.transform, "Çukura sokan sayı alır · çukura giren PİŞER, pişen rakibi de avlayabilir",
-             28, 236, 976, 34, 22, new Color(.72f, .76f, .68f));
+        Text(top.transform, "Önce çukura gir (PİŞ), sonra rakibi sahadan çıkar · 3 turdan 2'sini alan kazanır",
+             28, 236, 976, 34, 21, new Color(.72f, .76f, .68f));
 
         duelTurnLabel = Text(page, "", 48, 0, 984, 62, 34, Cream, TextAlignmentOptions.Center);
         Bottom(duelTurnLabel.rectTransform, 48, 240, 984, 62);
@@ -515,10 +518,19 @@ public class MahalleUI : MonoBehaviour
     {
         if (duel == null || duel.Well == null) return;
         var w = duel.Well;
-        if (duelCountA != null) duelCountA.SetText(w.Score(0) + " / " + WellMatch.TargetScore);
-        if (duelCountB != null) duelCountB.SetText(w.Score(1) + " / " + WellMatch.TargetScore);
-        if (wellCookA != null) wellCookA.SetText(w.Cooked(0) ? "PİŞTİ" : "");
-        if (wellCookB != null) wellCookB.SetText(w.Cooked(1) ? "PİŞTİ" : "");
+
+        if (wellRoundLabel != null) wellRoundLabel.SetText("KUYU · " + w.RoundText);
+        if (duelCountA != null) duelCountA.SetText(w.RoundsWon(0) + " tur");
+        if (duelCountB != null) duelCountB.SetText(w.RoundsWon(1) + " tur");
+
+        for (int p = 0; p < 2; p++)
+        {
+            var alan = p == 0 ? wellCookA : wellCookB;
+            if (alan == null) continue;
+            bool pismis = w.Cooked(p);
+            alan.SetText(pismis ? "PİŞTİ" : "ÇİĞ");
+            alan.color = pismis ? Gold : new Color(.62f, .66f, .70f);
+        }
 
         if (duelTurnLabel != null)
         {
@@ -528,11 +540,36 @@ public class MahalleUI : MonoBehaviour
         }
         if (duelTurnsLabel != null)
         {
-            int kalan = WellMatch.MaxShotsPerTurn - w.ShotsThisTurn;
-            duelTurnsLabel.SetText(w.ShotsThisTurn > 0 ? "Bu turda " + kalan + " atış hakkın daha var"
-                                 : w.Cooked(w.Turn) ? "Piştin: rakibin misketine vurmak da sayı"
-                                 : "Önce çukura sok, sonra rakibi avlayabilirsin");
+            // Once son atisin sonucu, sonra siradaki oyuncunun hedefi.
+            string olan = w.OutcomeText(1 - w.Turn);
+            if (w.ShotsThisTurn > 0)
+                duelTurnsLabel.SetText("Bu turda " + (WellMatch.MaxShotsPerTurn - w.ShotsThisTurn) + " atış hakkın daha var");
+            else if (olan.Length > 0)
+                duelTurnsLabel.SetText(olan);
+            else
+                duelTurnsLabel.SetText(w.Cooked(w.Turn) ? "Piştin: rakibi sahadan çıkar, tur senin"
+                                                        : "Önce çukura gir");
         }
+    }
+
+    // Tur bitti ya da iptal edildi.
+    private void WellRoundOver()
+    {
+        var w = duel.Well;
+        var box = Modal("Tur sonucu", 600);
+        bool iptal = w.LastRoundWinner < 0;
+
+        Text(box, iptal ? "TUR İPTAL" : DuelSession.PlayerName(w.LastRoundWinner) + " TURU ALDI",
+             30, 40, 924, 80, 46, Ink, TextAlignmentOptions.Center);
+        Text(box, w.ScoreText, 30, 140, 924, 90, 62, Muted, TextAlignmentOptions.Center);
+        Text(box, "tur", 30, 236, 924, 44, 26, Muted, TextAlignmentOptions.Center);
+        if (iptal)
+            Text(box, "Dört tur üst üste kimse bir şey yapamadı, tur baştan başlıyor",
+                 30, 286, 924, 60, 23, new Color(.72f, .32f, .24f), TextAlignmentOptions.Center);
+
+        LabelButton(box, iptal ? "TEKRAR" : "SONRAKİ TUR", 36, 360, 912, 116, Ink, Cream,
+                    () => { CloseModal(false); duelScreenShown = -1; duel.NextRound(); }, 38);
+        LabelButton(box, "ANA MENÜ", 36, 490, 912, 96, new Color(.88f, .83f, .69f), Ink, LeaveDuel, 30);
     }
 
     private void WellResult()
@@ -540,8 +577,8 @@ public class MahalleUI : MonoBehaviour
         var w = duel.Well;
         var box = Modal("Kuyu sonucu", 660);
         Text(box, DuelSession.PlayerName(w.Winner) + " KAZANDI", 30, 40, 924, 80, 50, Ink, TextAlignmentOptions.Center);
-        Text(box, w.Score(0) + "  ·  " + w.Score(1), 30, 140, 924, 90, 64, Muted, TextAlignmentOptions.Center);
-        Text(box, "sayı", 30, 236, 924, 44, 26, Muted, TextAlignmentOptions.Center);
+        Text(box, w.ScoreText, 30, 140, 924, 90, 64, Muted, TextAlignmentOptions.Center);
+        Text(box, "tur", 30, 236, 924, 44, 26, Muted, TextAlignmentOptions.Center);
         LabelButton(box, "RÖVANŞ", 36, 320, 912, 116, Ink, Cream,
                     () => { CloseModal(false); duelScreenShown = -1; duel.Rematch(); }, 38);
         Text(box, "ilk atan değişir", 36, 444, 912, 40, 23, Muted, TextAlignmentOptions.Center);
@@ -876,7 +913,7 @@ public class MahalleUI : MonoBehaviour
                     case DuelController.Step.Place:     ShowPlacement(); break;
                     case DuelController.Step.HandOver:  ShowHandOver(); break;
                     case DuelController.Step.Shoot:     if(DuelSession.Well)ShowWell();else ShowDuel(); break;
-                    case DuelController.Step.RoundOver: ShowRoundOver(); break;
+                    case DuelController.Step.RoundOver: if(DuelSession.Well)WellRoundOver();else ShowRoundOver(); break;
                     case DuelController.Step.Done:      if(DuelSession.Well)WellResult();else DuelResult(); break;
                 }
             }

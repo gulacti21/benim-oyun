@@ -290,9 +290,10 @@ public static class DuelPhysicsVerify
         report.Add("KUYU MODU · saha " + saha.ToString("0.0")
                    + " · cukur yaricapi " + DuelSession.HoleRadius.ToString("0.00")
                    + " · cizgiden cukura " + (0f - ShooterZ).ToString("0.0") + " birim");
-        report.Add("  Hedef: cukura girme orani makul olsun; 12 sayi icin gereken");
-        report.Add("  atis sayisi da ondan cikiyor.");
-        report.Add("  cukur   guc    CUKUR%   SAHA DISI%   12 sayi icin ~atis");
+        report.Add("  Hedef: cukura girme orani makul olsun. Yeni kuralda cukur turu");
+        report.Add("  kazandirmiyor, sadece PISIRIYOR -- turu almak icin sonra");
+        report.Add("  rakibi sahadan cikarmak gerekiyor.");
+        report.Add("  cukur   guc    CUKUR%   SAHA DISI%   pismek icin ~atis");
 
         float secili = DuelSession.WellImpulse;
         foreach (float cukur in new[] { .35f, .45f, DuelSession.HoleRadius, .55f, .70f })
@@ -326,8 +327,10 @@ public static class DuelPhysicsVerify
                 Cleanup();
 
                 float oran = atis == 0 ? 0f : giren / (float)atis;
+                // Yeni kuralda sayi yok: turu almak icin BIR kez pismek yeterli,
+                // gerisi rakibi cikarmak. Yani onemli olan "kac atista pisersin".
                 string tahmin = oran <= .001f ? "ulasilmaz"
-                              : Mathf.RoundToInt(WellMatch.TargetScore / oran).ToString();
+                              : Mathf.RoundToInt(1f / oran) + " atis";
                 report.Add(string.Format("  {0,5:0.00}  {1,4:0.00}   %{2,5:0}   %{3,9:0}   {4,17}{5}",
                                          cukur, guc, oran * 100f, disari * 100f / Mathf.Max(1, atis), tahmin,
                                          Mathf.Approximately(guc, secili) && Mathf.Approximately(cukur, DuelSession.HoleRadius)

@@ -1,65 +1,82 @@
-using System;
+using UnityEngine;
 
 // KUYU (CUKUR) OYUNUNUN KURAL MOTORU.
 //
-// Diger uc mod (cember, ucgen, dizi) ayni ekonomiyi paylasir: kese, her el
-// ortaya konan misketler, bes el. KUYU o ailenin disinda -- geleneksel
-// kuralinda kese yoktur, SAYI vardir: "12 sayiya ulasan oyunu kazanir".
-// O yuzden DuelMatch'i zorlamak yerine kendi motoru var. Ikisi birbirine
-// hic dokunmuyor.
+// Bu mod diger uclunun (cember, ucgen, dizi) disinda: orada kese var, her el
+// ortaya misket konur, bes el sonunda kesesi kalabalik olan kazanir. Kuyuda
+// ne kese var ne misket alisverisi -- TUR var.
 //
-// Belgelenen kisim: zemine 3-4 cm derinlikte bir cukur kazilir, oyuncular
-// misketlerini cukura sokmaya calisir, 12 sayiya ulasan kazanir.
-// Geri kalani (pisme, avlanma, ceza) tasarim: kuralin tamami hicbir
-// kaynakta yazili degil, sadece iskeleti var.
+// BIR TURU KAZANMAK ICIN IKI SEY, SIRAYLA:
+//   1) Cukura gir  -> PISTIN
+//   2) Pistikten sonra rakibin misketini SAHADAN CIKAR -> turu aldin
 //
-// Tasarimin mantigi: sadece "cukura sok" olsa oyun iki kisinin sirayla
-// ayni atisi tekrarlamasi olurdu, rakibin varligi hic onemli olmazdi.
-// PISME kurali oyunu ikiye boluyor: once herkes cukuru kovaliyor, cukura
-// giren "pismis" oluyor ve artik rakibin misketini de avlayabiliyor.
-// Boylece cukura ilk giren one geciyor ama merkeze yakin durdugu icin
-// kendisi de acik hedef oluyor.
+// Sira onemli. Pismeden rakibi disari atarsan tur bitmez; rakibin misketi
+// atis cizgisine doner, o kadar. Yani cukur, kazanmanin kapi bekcisi.
+//
+// Ayni atista hem cukura girip hem rakibi cikarmak turu KAZANDIRMAZ: vurus
+// aninda henuz pismemistin. Pismislik atistan ONCEKI duruma gore bakiliyor.
+//
+// UC TUR oynanir, IKI turu alan maci kazanir (2-0 ya da 2-1).
+// Her tur sifirdan baslar: pismislik sifirlanir, iki misket de cizgiye doner.
+//
+// Neden bu kural iyi: cukur guc kontrolu becerisi, rakibi disari atmak nisan
+// ve sertlik becerisi -- ikisi de gerekiyor. Ustelik pistikten sonra misketin
+// sahanin tam ortasinda kaliyor, yani rakibi avlamaya cikarken kendin de
+// acik hedef oluyorsun.
 public class WellMatch
 {
-    // Belgelenen hedef: 12 sayi.
-    public const int TargetScore = 12;
-    // Ust uste atis hakki. Diger modlarla ayni: zincir odullendirilsin ama
-    // bir oyuncu tek turda maci bitiremesin.
+    public const int TotalRounds = 3;
+    public const int RoundsToWin = 2;
+    // Zincir: kazandiran atistan sonra devam edersin, turda en fazla bu kadar.
     public const int MaxShotsPerTurn = 3;
+    // Kimse bir sey yapamazsa tur kilitlenmesin: bu kadar bos turdan sonra
+    // tur iptal edilir ve bastan baslar (kimseye sayilmaz).
+    public const int StaleTurnLimit = 4;
 
-    public enum Phase { Shooting, Finished }
+    public enum Phase { Shooting, RoundOver, Finished }
 
-    public enum ShotResult
+    // Bir atisin turu nasil etkiledigi. Arayuz bunu okuyup ne olduguna gore
+    // mesaj gosteriyor.
+    public enum Outcome
     {
-        Miss = 0,        // ne cukur ne rakip: sira gecer
-        InHole = 1,      // cukura girdi: +1 ve pisme
-        Hit = 2,         // rakibin misketine vurdu: pismisse +1
-        OutOfField = 3,  // sahayi terk etti: sayi yok, misket cizgiye doner
+        Miss,          // hicbir sey olmadi
+        Cooked,        // cukura girdi, pisti
+        AlreadyCooked, // cukura tekrar girdi, degisen bir sey yok
+        RivalReset,    // rakibi cikardi ama pismemisti: rakip cizgiye dondu
+        RoundWon,      // pismisti ve rakibi cikardi: tur onun
+        SelfOut,       // kendi misketi sahadan cikti
+        Nudge,         // rakibe vurdu ama cikaramadi
     }
 
-    private readonly int[] score = { 0, 0 };
+    private readonly int[] rounds = { 0, 0 };
     private readonly bool[] cooked = { false, false };
-    // Iki misketin sahadaki yeri. Kurallarin parcasi: sira gecince misket
-    // durdugu yerde kalir, o yuzden motorun da bilmesi gerekiyor (ag
-    // uzerinden iki cihaz ayni yeri gormeli).
+    // Iki misketin sahadaki yeri. Kuralin parcasi: iskaladiginda misketin
+    // durdugu yerde kalir ve rakip icin acik hedef olur. Agda iki cihazin
+    // ayni yeri gormesi icin motorun da bilmesi gerekiyor.
     private readonly float[] px = { 0f, 0f };
     private readonly float[] pz = { 0f, 0f };
     private readonly bool[] onLine = { true, true };
 
     public Phase State { get; private set; } = Phase.Shooting;
     public int Turn { get; private set; }
+    public int Round { get; private set; } = 1;
     public int ShotsThisTurn { get; private set; }
+    public int ScorelessTurns { get; private set; }
     public int Starter { get; private set; }
     public int MatchNumber { get; private set; }
+    // Son biten turu kim aldi. -1 = tur iptal edildi (kimse alamadi).
+    public int LastRoundWinner { get; private set; } = -1;
+    public Outcome LastOutcome { get; private set; } = Outcome.Miss;
 
-    public int Score(int player) => score[player & 1];
+    public int RoundsWon(int player) => rounds[player & 1];
     public bool Cooked(int player) => cooked[player & 1];
     public bool OnLine(int player) => onLine[player & 1];
     public float X(int player) => px[player & 1];
     public float Z(int player) => pz[player & 1];
 
     public int Winner => State != Phase.Finished ? -1
-                       : score[0] >= TargetScore ? 0 : 1;
+                       : rounds[0] >= RoundsToWin ? 0
+                       : rounds[1] >= RoundsToWin ? 1 : -1;
 
     public WellMatch(int starter = 0)
     {
@@ -68,73 +85,147 @@ public class WellMatch
     }
 
     // Bir atisin sonucu.
-    //   result : ne oldu
-    //   mx, mz : atan oyuncunun misketinin durdugu yer
-    //   ox, oz : rakibin misketinin durdugu yer (vurulmus olabilir)
+    //   inHole   : atan oyuncunun misketi cukurda durdu
+    //   rivalOut : rakibin misketi sahayi terk etti
+    //   selfOut  : atan oyuncunun misketi sahayi terk etti
+    //   rivalMoved : rakibin misketi kipirdadi (cikmadan)
+    //   mx,mz / ox,oz : iki misketin son yeri
     // Donen deger: sira ayni oyuncuda mi kaldi.
-    public bool Resolve(ShotResult result, float mx, float mz, float ox, float oz)
+    public bool Resolve(bool inHole, bool rivalOut, bool selfOut, bool rivalMoved,
+                        float mx, float mz, float ox, float oz)
     {
         if (State != Phase.Shooting) return false;
 
         int me = Turn, rakip = 1 - Turn;
 
-        // Konumlar her atista guncellenir: rakibin misketi de itilmis olabilir.
-        px[rakip] = ox; pz[rakip] = oz; onLine[rakip] = false;
+        // Konumlar: rakibin misketi de itilmis olabilir.
+        if (rivalOut) { onLine[rakip] = true; px[rakip] = 0f; pz[rakip] = 0f; }
+        else { onLine[rakip] = false; px[rakip] = ox; pz[rakip] = oz; }
 
-        if (result == ShotResult.OutOfField)
+        if (selfOut) { onLine[me] = true; px[me] = 0f; pz[me] = 0f; }
+        else { onLine[me] = false; px[me] = mx; pz[me] = mz; }
+
+        // ONCELIK SIRASI. Tek atista birden fazla sey olabilir, karar burada
+        // veriliyor ki cagiran tarafta belirsizlik kalmasin.
+        //
+        // 1) Pismisken rakibi cikardin: TUR SENIN.
+        if (cooked[me] && rivalOut)
         {
-            // Sahadan cikan misket atis cizgisine doner. Sayi yok, ceza da
-            // yok: negatif sayi tutmak oyuncuyu kizdiriyor, sirayi
-            // kaybetmek zaten yeterli ceza.
-            onLine[me] = true; px[me] = 0f; pz[me] = 0f;
-            EndTurn();
+            LastOutcome = Outcome.RoundWon;
+            WinRound(me);
             return false;
         }
 
-        px[me] = mx; pz[me] = mz; onLine[me] = false;
-
-        bool kazandi = false;
-
-        if (result == ShotResult.InHole)
+        // 2) Cukura girdin: pistin, tekrar atarsin.
+        if (inHole)
         {
-            score[me]++;
-            cooked[me] = true;          // cukura giren artik avlanabilir
-            kazandi = true;
-        }
-        else if (result == ShotResult.Hit)
-        {
-            // PISMEMIS oyuncunun vurusu sayilmaz. Kural boyle olmasa oyun
-            // "cukuru bosver, rakibi kovala"ya donerdi ve cukurun anlami
-            // kalmazdi.
-            if (cooked[me]) { score[me]++; kazandi = true; }
+            bool yeni = !cooked[me];
+            cooked[me] = true;
+            LastOutcome = yeni ? Outcome.Cooked : Outcome.AlreadyCooked;
+            ShotsThisTurn++;
+            ScorelessTurns = 0;
+            if (ShotsThisTurn < MaxShotsPerTurn) return true;
+            EndTurn(true);
+            return false;
         }
 
-        if (score[me] >= TargetScore) { State = Phase.Finished; return false; }
+        // 3) Rakibi cikardin ama pismemistin: rakip cizgiye dondu, sira gecer.
+        if (rivalOut)
+        {
+            LastOutcome = Outcome.RivalReset;
+            EndTurn(false);
+            return false;
+        }
 
-        ShotsThisTurn++;
-        if (kazandi && ShotsThisTurn < MaxShotsPerTurn) return true;
+        // 4) Kendin sahadan ciktin. Pismislik DURUYOR -- pisme bir durum,
+        //    pozisyon degil. Kaybettigin sey yerin ve siran.
+        if (selfOut)
+        {
+            LastOutcome = Outcome.SelfOut;
+            EndTurn(false);
+            return false;
+        }
 
-        EndTurn();
+        // 5) Rakibe vurdun ama cikaramadin / iska.
+        LastOutcome = rivalMoved ? Outcome.Nudge : Outcome.Miss;
+        EndTurn(false);
         return false;
     }
 
-    private void EndTurn()
+    private void EndTurn(bool kazandi)
     {
         ShotsThisTurn = 0;
+        ScorelessTurns = kazandi ? 0 : ScorelessTurns + 1;
         Turn = 1 - Turn;
+
+        // Tur kilitlendi: kimse cukuru tutturamiyor, kimse rakibi cikaramiyor.
+        // Tur iptal edilir ve bastan baslar; kimseye sayilmaz, yoksa mac
+        // sonsuza kadar surerdi.
+        if (ScorelessTurns >= StaleTurnLimit) CancelRound();
     }
 
-    // Cukura giren misket nereye konur: agzin kenarina. Merkezde birakmak
-    // onu bir sonraki atista kendiliginden tekrar "iceride" yapardi.
+    private void WinRound(int player)
+    {
+        rounds[player]++;
+        LastRoundWinner = player;
+        if (rounds[player] >= RoundsToWin) { State = Phase.Finished; return; }
+        State = Phase.RoundOver;
+    }
+
+    private void CancelRound()
+    {
+        LastRoundWinner = -1;
+        State = Phase.RoundOver;
+    }
+
+    // Sonraki tur (ya da iptal edilen turun tekrari).
+    public void NextRound()
+    {
+        if (State != Phase.RoundOver) return;
+
+        // Iptal edilen tur sayilmaz, numarasi ayni kalir.
+        if (LastRoundWinner >= 0) Round++;
+
+        cooked[0] = cooked[1] = false;
+        onLine[0] = onLine[1] = true;
+        px[0] = px[1] = pz[0] = pz[1] = 0f;
+        ShotsThisTurn = 0; ScorelessTurns = 0;
+        LastOutcome = Outcome.Miss;
+
+        // Turlar arasinda ilk atan degisir.
+        Starter = 1 - Starter;
+        Turn = Starter;
+        State = Phase.Shooting;
+    }
+
+    // Cukura giren misket nereye konur: agzin kenarina. Merkezde birakilsa
+    // bir sonraki atista kendiliginden yine "iceride" sayilirdi.
     public static float HoleExitDistance(float holeRadius) => holeRadius + .34f;
 
     public WellMatch Rematch()
     {
-        // Rovansta ilk atan degisir; diger modlarla ayni kural.
         var next = new WellMatch(1 - Starter);
         next.MatchNumber = MatchNumber + 1;
         return next;
     }
 
-    public string ScoreText(int player) => Score(player) + " / " + TargetScore;
+    public string RoundText => "TUR " + Mathf.Min(Round, TotalRounds) + " / " + TotalRounds;
+    public string ScoreText => rounds[0] + " - " + rounds[1];
+
+    public string StateText(int player) => Cooked(player) ? "PİŞTİ" : "ÇİĞ";
+
+    // Atistan sonra oyuncuya gosterilecek kisa mesaj.
+    public string OutcomeText(int shooter)
+    {
+        switch (LastOutcome)
+        {
+            case Outcome.Cooked: return DuelSession.PlayerName(shooter) + " PİŞTİ";
+            case Outcome.AlreadyCooked: return "Çukura tekrar girdi";
+            case Outcome.RivalReset: return "Pişmeden çıkardı · rakip çizgiye döndü";
+            case Outcome.RoundWon: return DuelSession.PlayerName(shooter) + " TURU ALDI";
+            case Outcome.SelfOut: return "Sahadan çıktı";
+            case Outcome.Nudge: return "Vurdu ama çıkaramadı";
+            default: return "";
+        }
+    }
 }

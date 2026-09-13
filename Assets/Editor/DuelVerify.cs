@@ -318,7 +318,9 @@ public static class DuelVerify
         Check(DuelSession.Type == DuelSession.GameType.Cember, "Dizi testinden sonra tur cembere doner");
 
         // --- KUYU (CUKUR) MODU ---
-        // Bu modun kural motoru AYRI (WellMatch): kese yok, sayi var.
+        // Bu modun kural motoru AYRI (WellMatch): kese yok, sayi yok, TUR var.
+        // Bir turu almak icin once cukura girip PISMEK, sonra rakibi sahadan
+        // CIKARMAK gerekiyor. Uc turdan ikisini alan maci kazanir.
         {
             var eskiKuyuTur = DuelSession.Type;
             DuelSession.Type = DuelSession.GameType.Kuyu;
@@ -335,67 +337,130 @@ public static class DuelVerify
             var kirpik = DuelPlacement.Clamp(0f, 0f, a);
             Check(DuelPlacement.Inside(kirpik.x, kirpik.y, a), "Tam merkez disari itilir");
 
+            Check(WellMatch.TotalRounds == 3, "Uc tur oynanir");
+            Check(WellMatch.RoundsToWin == 2, "Iki turu alan kazanir");
+
             var w = new WellMatch(0);
             Check(w.Turn == 0 && w.State == WellMatch.Phase.Shooting, "Kuyu maci atisla baslar");
-            Check(w.Score(0) == 0 && w.Score(1) == 0, "Sayilar sifirdan baslar");
+            Check(w.RoundsWon(0) == 0 && w.RoundsWon(1) == 0, "Turlar sifirdan baslar");
             Check(!w.Cooked(0) && !w.Cooked(1), "Kimse basta pismis degil");
             Check(w.OnLine(0) && w.OnLine(1), "Iki misket de cizgide baslar");
             Check(w.Winner == -1, "Mac bitmeden kazanan yok");
+            Check(w.Round == 1, "Ilk tur");
 
-            // Pismemisken rakibe vurmak SAYI DEGIL.
-            Check(!w.Resolve(WellMatch.ShotResult.Hit, 1f, 1f, 2f, 0f), "Pismemis vurus tekrar atis vermez");
-            Check(w.Score(0) == 0, "Pismemisken vurmak sayi kazandirmaz");
-            Check(w.Turn == 1, "Sayi alamayinca sira gecer");
-            Check(!w.OnLine(0), "Atan misket sahada kalir");
+            // PISMEDEN rakibi cikarmak turu KAZANDIRMAZ; rakip cizgiye doner.
+            Check(!w.Resolve(false, true, false, true, 1f, 1f, 0f, 0f), "Pismemis cikarma tekrar atis vermez");
+            Check(w.RoundsWon(0) == 0, "Pismeden cikarmak tur kazandirmaz");
+            Check(w.OnLine(1), "Cikarilan rakip cizgiye doner");
+            Check(w.LastOutcome == WellMatch.Outcome.RivalReset, "Sonuc: rakip cizgiye dondu");
+            Check(w.Turn == 1, "Tur kazanilamayinca sira gecer");
 
-            // Cukura girmek: sayi + pisme + tekrar atis.
-            Check(w.Resolve(WellMatch.ShotResult.InHole, 0f, .8f, 1f, 1f), "Cukura giren tekrar atar");
-            Check(w.Score(1) == 1, "Cukura girmek sayi kazandirir");
+            // Cukura girmek pisirir ve tekrar atis verir.
+            Check(w.Resolve(true, false, false, false, 0f, .8f, 1f, 1f), "Cukura giren tekrar atar");
             Check(w.Cooked(1), "Cukura giren pisiyor");
-            Check(w.Turn == 1, "Tekrar atista sira degismiyor");
+            Check(!w.Cooked(0), "Rakip pismedi");
+            Check(w.LastOutcome == WellMatch.Outcome.Cooked, "Sonuc: pisti");
+            Check(w.RoundsWon(1) == 0, "Cukura girmek tek basina tur kazandirmaz");
 
-            // Pismisken vurmak sayi.
-            Check(w.Resolve(WellMatch.ShotResult.Hit, .5f, .5f, 1.4f, .2f), "Pismis vurus tekrar atis verir");
-            Check(w.Score(1) == 2, "Pismisken vurmak sayi kazandirir");
+            // PISMISKEN rakibi cikarmak TURU ALIR.
+            Check(!w.Resolve(false, true, false, true, .5f, .5f, 0f, 0f), "Tur alinca zincir biter");
+            Check(w.RoundsWon(1) == 1, "Pismisken cikarmak turu kazandirir");
+            Check(w.LastRoundWinner == 1, "Turu alan isaretli");
+            Check(w.State == WellMatch.Phase.RoundOver, "Tur bitti, mac degil");
+            Check(w.Winner == -1, "Tek turla mac bitmez");
 
-            // Ust uste atis siniri.
-            Check(!w.Resolve(WellMatch.ShotResult.InHole, 0f, .8f, 1.4f, .2f), "Ucuncu atistan sonra sira gecer");
-            Check(w.Score(1) == 3, "Ucuncu atisin sayisi da sayilir");
-            Check(w.Turn == 0, "Hak bitince sira rakibe gecer");
+            // Sonraki tur: her sey sifirlanir, ilk atan degisir.
+            int eskiBaslayan = w.Starter;
+            w.NextRound();
+            Check(w.State == WellMatch.Phase.Shooting, "Sonraki tur basladi");
+            Check(w.Round == 2, "Tur numarasi artti");
+            Check(!w.Cooked(0) && !w.Cooked(1), "Yeni turda pismislik sifirlanir");
+            Check(w.OnLine(0) && w.OnLine(1), "Yeni turda iki misket de cizgide");
+            Check(w.Starter == 1 - eskiBaslayan, "Turlar arasinda ilk atan degisir");
+            Check(w.RoundsWon(1) == 1, "Kazanilan tur duruyor");
 
-            // Iska: sira gecer, sayi yok.
-            int onceki = w.Score(0);
-            Check(!w.Resolve(WellMatch.ShotResult.Miss, 2f, 2f, 0f, .8f), "Iska tekrar atis vermez");
-            Check(w.Score(0) == onceki, "Iska sayi kazandirmaz");
+            // Ayni atista hem cukura girip hem rakibi cikarmak TUR KAZANDIRMAZ:
+            // vurus aninda henuz pismemisti.
+            var ayni = new WellMatch(0);
+            bool devam = ayni.Resolve(true, true, false, true, 0f, .8f, 0f, 0f);
+            Check(ayni.RoundsWon(0) == 0, "Ayni atista pisip cikarmak tur kazandirmaz");
+            Check(ayni.Cooked(0), "Ayni atista pisme yine de islenir");
+            Check(ayni.OnLine(1), "Cikarilan rakip yine cizgiye doner");
+            Check(ayni.LastOutcome == WellMatch.Outcome.Cooked, "Sonuc pisme olarak yazilir");
+            Check(devam, "Pistigi icin tekrar atar");
+            // Bir sonraki atista artik pismis oldugu icin cikarma turu alir.
+            Check(!ayni.Resolve(false, true, false, true, .5f, .5f, 0f, 0f), "Pismis haliyle cikarma turu alir");
+            Check(ayni.RoundsWon(0) == 1, "Sonraki atista tur kazanildi");
 
-            // Saha disi: misket cizgiye doner, sayi yok.
-            w.Resolve(WellMatch.ShotResult.Miss, 1f, 1f, 0f, .8f);     // sira 0'a gelsin
-            while (w.Turn != 0) w.Resolve(WellMatch.ShotResult.Miss, 1f, 1f, 0f, .8f);
-            onceki = w.Score(0);
-            Check(!w.Resolve(WellMatch.ShotResult.OutOfField, 9f, 9f, 0f, .8f), "Saha disi tekrar atis vermez");
-            Check(w.Score(0) == onceki, "Saha disi sayi kazandirmaz");
-            Check(w.OnLine(0), "Sahadan cikan misket cizgiye doner");
+            // Kendi misketin cikarsa: pismislik DURUR, sadece yer ve sira gider.
+            var kendi = new WellMatch(0);
+            kendi.Resolve(true, false, false, false, 0f, .8f, 1f, 1f);   // pisti
+            Check(kendi.Cooked(0), "Pisti");
+            kendi.Resolve(false, false, true, false, 9f, 9f, 1f, 1f);    // sahadan cikti
+            Check(kendi.Cooked(0), "Sahadan cikinca pismislik durur");
+            Check(kendi.OnLine(0), "Sahadan cikan misket cizgiye doner");
+            Check(kendi.LastOutcome == WellMatch.Outcome.SelfOut, "Sonuc: sahadan cikti");
+            Check(kendi.Turn == 1, "Sahadan cikinca sira gecer");
 
-            // 12 sayiya ulasan kazanir.
-            var yaris = new WellMatch(0);
+            // Iska ve itme sira gecirir, misket durdugu yerde kalir.
+            var iska = new WellMatch(0);
+            Check(!iska.Resolve(false, false, false, false, 1.5f, .5f, 1f, 1f), "Iska tekrar atis vermez");
+            Check(!iska.OnLine(0), "Iskalayan misket sahada kalir");
+            Check(Mathf.Approximately(iska.X(0), 1.5f), "Misket durdugu yerde kaliyor");
+            Check(iska.LastOutcome == WellMatch.Outcome.Miss, "Sonuc: iska");
+            iska.Resolve(false, false, false, true, 1f, 1f, .5f, .5f);
+            Check(iska.LastOutcome == WellMatch.Outcome.Nudge, "Vurup cikaramamak ayri sonuc");
+
+            // Ust uste atis siniri: cukura girmeye devam etsen bile turda uc atis.
+            var zincir = new WellMatch(0);
+            Check(zincir.Resolve(true, false, false, false, 0f, .8f, 1f, 1f), "Birinci zincir atisi");
+            Check(zincir.Resolve(true, false, false, false, 0f, .8f, 1f, 1f), "Ikinci zincir atisi");
+            Check(!zincir.Resolve(true, false, false, false, 0f, .8f, 1f, 1f), "Turda en fazla uc atis");
+            Check(zincir.Turn == 1, "Uc atistan sonra sira gecer");
+
+            // Tur kilitlenmesi: kimse bir sey yapamazsa tur IPTAL, kimseye sayilmaz.
+            var kilit = new WellMatch(0);
+            for (int t = 0; t < WellMatch.StaleTurnLimit; t++)
+                kilit.Resolve(false, false, false, false, 1f, 1f, -1f, -1f);
+            Check(kilit.State == WellMatch.Phase.RoundOver, "Bos turlar sonunda tur biter");
+            Check(kilit.LastRoundWinner == -1, "Iptal edilen turu kimse almaz");
+            Check(kilit.RoundsWon(0) == 0 && kilit.RoundsWon(1) == 0, "Iptal turu kimseye sayilmaz");
+            int turNo = kilit.Round;
+            kilit.NextRound();
+            Check(kilit.Round == turNo, "Iptal edilen tur numarasi artmaz");
+
+            // Iki turu alan maci kazanir.
+            var mac = new WellMatch(0);
             int guvenlik = 0;
-            while (yaris.State == WellMatch.Phase.Shooting && guvenlik++ < 200)
-                yaris.Resolve(WellMatch.ShotResult.InHole, 0f, .8f, 1f, 1f);
-            Check(yaris.State == WellMatch.Phase.Finished, "Mac bitiyor");
-            Check(yaris.Score(yaris.Winner) >= WellMatch.TargetScore, "Kazanan hedefe ulasmis");
-            Check(WellMatch.TargetScore == 12, "Hedef geleneksel kuraldaki gibi 12");
-            Check(yaris.Winner == 0 || yaris.Winner == 1, "Kazanan belli");
+            while (mac.State != WellMatch.Phase.Finished && guvenlik++ < 60)
+            {
+                if (mac.State == WellMatch.Phase.RoundOver) { mac.NextRound(); continue; }
+                // Sirasi gelen oyuncu pisip rakibi cikarsin.
+                if (!mac.Cooked(mac.Turn)) mac.Resolve(true, false, false, false, 0f, .8f, 1f, 1f);
+                else mac.Resolve(false, true, false, true, .5f, .5f, 0f, 0f);
+            }
+            Check(guvenlik < 60, "Mac sonsuz donmuyor");
+            Check(mac.State == WellMatch.Phase.Finished, "Iki tur alinca mac biter");
+            Check(mac.Winner == 0 || mac.Winner == 1, "Kazanan belli");
+            Check(mac.RoundsWon(mac.Winner) == WellMatch.RoundsToWin, "Kazanan iki tur almis");
+            Check(mac.RoundsWon(1 - mac.Winner) < WellMatch.RoundsToWin, "Kaybeden ikiye ulasamamis");
 
-            // Cukurdan cikis noktasi cukurun DISINDA olmali, yoksa misket
-            // bir sonraki atista kendiliginden yine iceride sayilirdi.
+            // Bitmis macta atis islenmez.
+            int son = mac.RoundsWon(mac.Winner);
+            Check(!mac.Resolve(true, false, false, false, 0f, .8f, 1f, 1f), "Bitmis macta atis islenmez");
+            Check(mac.RoundsWon(mac.Winner) == son, "Bitmis macta tur sayisi degismez");
+
+            // Cukurdan cikis noktasi cukurun DISINDA olmali, yoksa misket bir
+            // sonraki atista kendiliginden yine iceride sayilirdi.
             Check(WellMatch.HoleExitDistance(DuelSession.HoleRadius) > DuelSession.HoleRadius,
                   "Cukurdan cikan misket agzin disina konur");
 
-            // Rovans: ilk atan degisir, sayilar sifirlanir.
-            var rov = yaris.Rematch();
-            Check(rov.Starter == 1 - yaris.Starter, "Rovansta ilk atan degisir");
-            Check(rov.Score(0) == 0 && rov.Score(1) == 0, "Rovansta sayilar sifirlanir");
-            Check(!rov.Cooked(0) && !rov.Cooked(1), "Rovansta pisme sifirlanir");
+            // Rovans: ilk atan degisir, her sey sifirlanir.
+            var rov = mac.Rematch();
+            Check(rov.Starter == 1 - mac.Starter, "Rovansta ilk atan degisir");
+            Check(rov.RoundsWon(0) == 0 && rov.RoundsWon(1) == 0, "Rovansta turlar sifirlanir");
+            Check(!rov.Cooked(0) && !rov.Cooked(1), "Rovansta pismislik sifirlanir");
+            Check(rov.Round == 1, "Rovans ilk turdan baslar");
 
             DuelSession.Type = eskiKuyuTur;
         }
