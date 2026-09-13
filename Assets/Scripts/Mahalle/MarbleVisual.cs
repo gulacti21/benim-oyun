@@ -9,10 +9,20 @@ public class MarbleVisual : MonoBehaviour
     public void SetSkin(int index)
     {
         skin = Mathf.Clamp(index, 0, Campaign.SkinCount - 1);
+        // MOR MISKET HATASI.
         // Materyaller static: sahneler arasi yasiyorlar. Unity sahne degisiminde
-        // kullanilmayan bir materyali temizlerse o slot null kalir ve o desendeki
-        // misket MOR cizilir. Eskiden yalnizca materials[0] kontrol ediliyordu,
-        // bu yuzden hata tek bir miskette gorunuyordu. Artik hepsi kontrol ediliyor.
+        // ya da bellek baskisinda "kullanilmiyor" sandigi bir materyali
+        // temizleyebiliyor; o slot null kalinca o desendeki misket MOR cizilir.
+        //
+        // Onceki duzeltme butun slotlari kontrol edip yeniden kuruyordu ama
+        // EKSIKTI: yeniden kurma sadece o an SetSkin cagiran misketi
+        // toparliyor, sahnede zaten duran misket eski (yok edilmis) materyale
+        // bakmaya devam ediyordu. Telefonda tek bir misketin mor kalmasinin
+        // sebebi buydu.
+        //
+        // Asil cozum asagida: materyallere HideAndDontSave veriliyor, boylece
+        // Unity onlari hic temizlemiyor. Ustune LateUpdate'te ucuz bir kontrol
+        // var -- materyal yine de kaybolursa misket kendini onariyor.
         bool rebuild = materials == null || materials.Length != Campaign.SkinCount;
         if (!rebuild)
             for (int i = 0; i < materials.Length; i++)
@@ -25,6 +35,8 @@ public class MarbleVisual : MonoBehaviour
             for (int i=0;i<Campaign.SkinCount;i++)
             {
                 materials[i] = new Material(shader);
+                // Unity'nin kullanilmayan varlik temizligi bunlara dokunmasin.
+                materials[i].hideFlags = HideFlags.HideAndDontSave;
                 materials[i].SetColor("_BaseColor", Campaign.SkinColors[i]);
                 materials[i].SetColor("_SwirlColor", SpecialMarbles.Accent(i));
                 if (materials[i].HasProperty("_Smoothness")) materials[i].SetFloat("_Smoothness",.95f);
@@ -48,6 +60,7 @@ public class MarbleVisual : MonoBehaviour
                 return;
             }
             shadowMaterial = new Material(shader);
+            shadowMaterial.hideFlags = HideFlags.HideAndDontSave;
         }
         var go = GameObject.CreatePrimitive(PrimitiveType.Quad); go.name="Misket gölgesi";
         Destroy(go.GetComponent<Collider>()); shadow=go.transform;
@@ -56,6 +69,11 @@ public class MarbleVisual : MonoBehaviour
     }
     private void LateUpdate()
     {
+        // Emniyet: materyal her seye ragmen kaybolduysa misketi mor birakma.
+        // Tek bir null karsilastirmasi, her karede calissa bile bedeli yok.
+        var r = GetComponent<Renderer>();
+        if (r != null && r.sharedMaterial == null) SetSkin(skin);
+
         if(shadow==null) return;
         var p=transform.position; shadow.position=new Vector3(p.x+.06f,.024f,p.z-.06f);
         shadow.localScale=Vector3.one*transform.localScale.x*1.6f;
