@@ -898,6 +898,8 @@ public class MahalleUI : MonoBehaviour
             string imza="#"+controller.LevelIndex+" · "+mn+"m "+en+"e · saha "+L.arenaSize.ToString("0.00");
             if(mn>0)imza+=" · ilk "+L.marbles[0].x.ToString("0.00")+","+L.marbles[0].z.ToString("0.00");
             Text(top.transform,imza,26,236,960,30,21,new Color(1f,.55f,.30f,.85f));
+            // Cizim tanisi: mor/eksik nesne varsa adiyla yazar.
+            Text(top.transform,MahalleWorld.Diagnose(),26,264,960,30,21,new Color(1f,.45f,.35f,.9f));
         }
         var dock=Panel(page,"Atış alanı",24,0,1032,178,Ink);Bottom(dock.rectTransform,24,18,1032,178);
         var bag=Button(dock.transform,"Misket kesesi",16,18,330,140,new Color(.3f,.4f,.3f),OpenBag);

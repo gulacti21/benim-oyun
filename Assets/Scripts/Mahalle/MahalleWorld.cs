@@ -4,6 +4,37 @@ using UnityEngine.Rendering;
 public class MahalleWorld : MonoBehaviour
 {
     private Material groundMaterial, stoneMaterial;
+
+    // TANI ARACI.
+    // "Editorde boyle, telefonda boyle" durumlarini tahminle degil olcumle
+    // ayirt etmek icin. Sahnedeki butun cizilen nesneleri tarar, materyali
+    // ya da shader'i bozuk olani ADIYLA ve BOYUTUYLA bildirir. Mor cizilen
+    // nesnenin ne oldugu boylece ekranda yaziyor.
+    public static int BuiltObstacles { get; private set; }
+
+    public static string Diagnose()
+    {
+        int toplam = 0, bozuk = 0;
+        string ilk = null;
+        foreach (var r in FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+        {
+            if (r == null) continue;
+            toplam++;
+            var m = r.sharedMaterial;
+            bool kotu = m == null || m.shader == null || m.shader.name.Contains("InternalError");
+            if (!kotu) continue;
+            bozuk++;
+            if (ilk != null) continue;
+            var b = r.bounds.size;
+            var p = r.transform.position;
+            ilk = r.name + " " + b.x.ToString("0.0") + "x" + b.z.ToString("0.0")
+                + " @" + p.x.ToString("0.0") + "," + p.z.ToString("0.0")
+                + " · " + (m == null ? "mat yok" : m.shader == null ? "shader yok" : "shader hata");
+        }
+        return bozuk == 0
+            ? "cizim ok · " + toplam + " nesne · " + BuiltObstacles + " engel"
+            : "BOZUK " + bozuk + "/" + toplam + " · " + ilk;
+    }
     private GameObject decor;
     private static readonly Color[] GroundColors={new Color(.57f,.42f,.28f),new Color(.53f,.52f,.44f),new Color(.47f,.49f,.30f),new Color(.64f,.43f,.28f),new Color(.57f,.51f,.40f)};
     public static void Apply(LevelController controller)
@@ -25,6 +56,7 @@ public class MahalleWorld : MonoBehaviour
             if(groundMaterial==null)
             {
                 groundMaterial=new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                groundMaterial.hideFlags=HideFlags.HideAndDontSave;
                 var texture=new Texture2D(128,128,TextureFormat.RGBA32,true);
                 for(int y=0;y<128;y++) for(int x=0;x<128;x++)
                 {float grain=.82f+Mathf.PerlinNoise(x*.38f,y*.38f)*.28f; texture.SetPixel(x,y,new Color(grain,grain,grain,1));}
@@ -62,7 +94,21 @@ public class MahalleWorld : MonoBehaviour
             // Kenarda parmak payı: misketi geri çekmek için ekranda yer kalsın.
             line.FitToCamera(camera,1.05f);
         }
-        if(stoneMaterial==null) {stoneMaterial=new Material(Shader.Find("Universal Render Pipeline/Lit"));stoneMaterial.SetColor("_BaseColor",new Color(.3f,.32f,.28f));}
+        if(stoneMaterial==null)
+        {
+            // ENGELLER TELEFONDA GORUNMUYORDU.
+            // Shader.Find calisma aninda arar ve build'e dahil edilmemis bir
+            // shader icin null doner; null shader'li materyal mor cizilir ya
+            // da hic cizilmez. Projede build'de hayatta kaldigi bilinen kendi
+            // shader'imiz var (ParkCorners onu kullaniyor), engeller de artik
+            // once onu deniyor. URP/Lit sadece yedek.
+            var sh=Resources.Load<Shader>("Mahalle/Environment");
+            if(sh==null||!sh.isSupported) sh=Shader.Find("Universal Render Pipeline/Lit");
+            stoneMaterial=new Material(sh);
+            // Unity'nin kullanilmayan varlik temizligi bu materyale dokunmasin.
+            stoneMaterial.hideFlags=HideFlags.HideAndDontSave;
+            stoneMaterial.SetColor("_BaseColor",new Color(.3f,.32f,.28f));
+        }
         var arena=FindFirstObjectByType<MarbleArena>();
         Vector3 centre=arena!=null?arena.transform.position:Vector3.zero;
         var designed=controller.Level.obstacles;
@@ -87,6 +133,8 @@ public class MahalleWorld : MonoBehaviour
             stone.transform.localScale=new Vector3(.65f,.44f,.42f); stone.transform.rotation=Quaternion.Euler(0,i==0?12:-8,0);
             stone.GetComponent<Renderer>().sharedMaterial=stoneMaterial;
         }
+        BuiltObstacles=decor.transform.childCount;
+
         // Small pebbles live outside the aiming corridor and have no colliders.
         for(int i=0;i<(parkStudy?0:18);i++)
         {
