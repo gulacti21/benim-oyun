@@ -45,6 +45,9 @@ public class MahalleWorld : MonoBehaviour
     }
     private void Build(LevelController controller)
     {
+        // Duellodan kalma cukur kampanya bolumune sizmasin.
+        if(!DuelSession.Active) DuelHole.RemoveStray();
+
         if(decor!=null) {decor.SetActive(false);Destroy(decor);}
         decor=new GameObject("Çevre ve engeller"); decor.transform.SetParent(transform);
         int district=controller.Level.district;

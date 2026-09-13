@@ -16,6 +16,7 @@ public class DuelHole : MonoBehaviour
 
     private LineRenderer ring;
     private Transform disc;
+    private Material dip, agiz;
 
     public static DuelHole Create(Transform parent, float radius, Material lineMaterial)
     {
@@ -47,12 +48,17 @@ public class DuelHole : MonoBehaviour
         {
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             mr.receiveShadows = false;
-            var block = new MaterialPropertyBlock();
-            mr.GetPropertyBlock(block);
-            var koyu = new Color(.12f, .10f, .09f, 1f);
-            block.SetColor(Shader.PropertyToID("_BaseColor"), koyu);
-            block.SetColor(Shader.PropertyToID("_Color"), koyu);
-            mr.SetPropertyBlock(block);
+
+            // MATERYAL ATANMALI. CreatePrimitive Unity'nin varsayilan
+            // materyalini verir; o Standard shader kullanir ve URP'de MOR
+            // cizilir. MaterialPropertyBlock rengi degistirir ama shader'i
+            // degistirmez -- ilk surumde hata tam olarak buydu.
+            var sh = Resources.Load<Shader>("Mahalle/Environment");
+            if (sh == null || !sh.isSupported) sh = Shader.Find("Universal Render Pipeline/Lit");
+            dip = new Material(sh);
+            dip.hideFlags = HideFlags.HideAndDontSave;
+            dip.SetColor("_BaseColor", new Color(.12f, .10f, .09f, 1f));
+            mr.sharedMaterial = dip;
         }
 
         // Cukurun agzi: tebesirle cizilmis gibi titrek bir halka.
@@ -64,7 +70,19 @@ public class DuelHole : MonoBehaviour
         ring.widthMultiplier = .045f;
         ring.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         ring.receiveShadows = false;
-        if (lineMaterial != null) ring.material = lineMaterial;
+        // Cizgi materyali: arenanin kendi tebesir materyali. Yoksa ayni
+        // varsayilan-materyal tuzagina dusmemek icin kendi shader'imiz.
+        if (lineMaterial != null) ring.sharedMaterial = lineMaterial;
+        else
+        {
+            var ls = Resources.Load<Shader>("Mahalle/Environment");
+            if (ls != null && ls.isSupported)
+            {
+                agiz = new Material(ls);
+                agiz.hideFlags = HideFlags.HideAndDontSave;
+                ring.sharedMaterial = agiz;
+            }
+        }
         var kirec = new Color(.96f, .94f, .86f);
         ring.startColor = ring.endColor = kirec;
 
@@ -91,4 +109,19 @@ public class DuelHole : MonoBehaviour
 
     // Cukura dusen misketin gorunumu: dibe cekilip kaybolur.
     public Vector3 SettlePoint => transform.position + new Vector3(0f, -.18f, 0f);
+
+    private void OnDestroy()
+    {
+        if (dip != null) Destroy(dip);
+        if (agiz != null) Destroy(agiz);
+    }
+
+    // Duello disinda sahnede cukur KALMAMALI. Cukur arenaya baglaniyor ve
+    // temizlenmezse kampanya bolumunde de ortada duruyor -- Park bolumlerinde
+    // gorulen leke buydu.
+    public static void RemoveStray()
+    {
+        foreach (var h in FindObjectsByType<DuelHole>(FindObjectsSortMode.None))
+            if (h != null) Destroy(h.gameObject);
+    }
 }
