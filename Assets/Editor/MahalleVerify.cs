@@ -68,6 +68,9 @@ public static class MahalleVerify
             if(MahalleProfile.TestUnlockAllLevels)
                 Debug.LogWarning("TEST YAPISI ACIK: MahalleProfile.TestUnlockAllLevels = true. "+
                                  "Butun bolumler kilitsiz ve ekranda TEST damgasi var. Yayindan once false yap.");
+            if(MahalleProfile.TestInfiniteBeads)
+                Debug.LogWarning("TEST YAPISI ACIK: MahalleProfile.TestInfiniteBeads = true. "+
+                                 "Kese hep dolu gorunuyor ve harcamalar dusmuyor. YAYINDAN ONCE false YAPILACAK.");
         }
         finally{MahalleProfile.TestMode=false;MahalleProfile.Reload();if(wasPreview)MahalleProfile.BeginPreview();}
     }

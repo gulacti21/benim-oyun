@@ -50,9 +50,12 @@ public class MahalleUI : MonoBehaviour
         else if(titleShown)ShowHome();
         else ShowTitle();
         // Test yapisi damgasi. Bu yazi ekranda goruniyorsa bu build yayinlanamaz.
-        if(MahalleProfile.TestUnlockAllLevels)
+        if(MahalleProfile.TestUnlockAllLevels||MahalleProfile.TestInfiniteBeads)
         {
-            var stamp=Text(root,"TEST · TÜM BÖLÜMLER AÇIK",0,0,700,44,26,new Color(1f,.45f,.25f,.85f),TextAlignmentOptions.Center);
+            var stamp=Text(root,MahalleProfile.TestUnlockAllLevels&&MahalleProfile.TestInfiniteBeads
+                ?"TEST · TÜM BÖLÜMLER AÇIK · SINIRSIZ BONCUK"
+                :MahalleProfile.TestInfiniteBeads?"TEST · SINIRSIZ BONCUK":"TEST · TÜM BÖLÜMLER AÇIK",
+                0,0,760,44,25,new Color(1f,.45f,.25f,.85f),TextAlignmentOptions.Center);
             stamp.rectTransform.anchorMin=stamp.rectTransform.anchorMax=new Vector2(.5f,0f);
             stamp.rectTransform.pivot=new Vector2(.5f,0f);
             stamp.rectTransform.anchoredPosition=new Vector2(0,6);
@@ -95,7 +98,7 @@ public class MahalleUI : MonoBehaviour
         Text(page,subtitle,50,104,740,42,27,Muted);
         var wallet=Panel(page,"Boncuk",805,35,225,76,Ink);
         Art(wallet.transform,"Boncuk simgesi",MahalleGraphic.Shape.Marble,18,16,44,44,Gold);
-        beadsLabel=Text(wallet.transform,MahalleProfile.Data.beads.ToString(),78,0,130,76,36,Cream);
+        beadsLabel=Text(wallet.transform,MahalleProfile.Beads.ToString(),78,0,130,76,36,Cream);
     }
     private void Nav()
     {
@@ -177,7 +180,7 @@ public class MahalleUI : MonoBehaviour
         // Boncuk kesesi sağ üstte.
         var wallet = Panel(menu, "Boncuk", 805, 35, 225, 76, new Color(.20f, .25f, .23f));
         Art(wallet.transform, "Boncuk simgesi", MahalleGraphic.Shape.Marble, 18, 16, 44, 44, Gold);
-        beadsLabel = Text(wallet.transform, MahalleProfile.Data.beads.ToString(), 78, 0, 130, 76, 36, Cream);
+        beadsLabel = Text(wallet.transform, MahalleProfile.Beads.ToString(), 78, 0, 130, 76, 36, Cream);
 
         if (instant)
         {
@@ -760,7 +763,7 @@ public class MahalleUI : MonoBehaviour
         var wallet=Panel(head.transform,"Boncuk",802,26,230,78,new Color(.24f,.36f,.31f));
         wallet.colorB=new Color(.10f,.18f,.16f);wallet.radius=39;wallet.shadow=9;wallet.highlight=true;
         Art(wallet.transform,"Boncuk simgesi",MahalleGraphic.Shape.Marble,16,17,44,44,Gold);
-        beadsLabel=Text(wallet.transform,MahalleProfile.Data.beads.ToString(),76,0,140,78,36,Cream);
+        beadsLabel=Text(wallet.transform,MahalleProfile.Beads.ToString(),76,0,140,78,36,Cream);
 
         var prev=Button(head.transform,"Önceki mahalle",48,144,96,96,new Color(.88f,.85f,.76f),()=>{district=(district+4)%5;ShowHome();});
         prev.GetComponent<MahalleGraphic>().radius=30;prev.gameObject.AddComponent<MahalleTap>();
@@ -879,7 +882,7 @@ public class MahalleUI : MonoBehaviour
         var shots=Panel(top.transform,"Atış sayacı",374,92,255,100,new Color(.24f,.34f,.29f));
         Text(shots.transform,"KALAN ATIŞ",18,10,219,29,23,new Color(.76f,.8f,.7f));shotsLabel=Text(shots.transform,"5",18,39,219,51,39,Gold);
         var wallet=Panel(top.transform,"Boncuk",649,117,250,75,new Color(.24f,.34f,.29f));
-        Art(wallet.transform,"Boncuk",MahalleGraphic.Shape.Marble,18,16,43,43,Gold);beadsLabel=Text(wallet.transform,MahalleProfile.Data.beads.ToString(),79,4,156,67,34,Cream);
+        Art(wallet.transform,"Boncuk",MahalleGraphic.Shape.Marble,18,16,43,43,Gold);beadsLabel=Text(wallet.transform,MahalleProfile.Beads.ToString(),79,4,156,67,34,Cream);
         Text(top.transform,"HEDEF: "+controller.Level.oneStarTarget+" MİSKETİ ÇİZGİ DIŞINA ÇIKAR",26,202,960,32,25,new Color(.81f,.84f,.75f));
         var dock=Panel(page,"Atış alanı",24,0,1032,178,Ink);Bottom(dock.rectTransform,24,18,1032,178);
         var bag=Button(dock.transform,"Misket kesesi",16,18,330,140,new Color(.3f,.4f,.3f),OpenBag);
@@ -925,7 +928,7 @@ public class MahalleUI : MonoBehaviour
         if(controller==null || scoreLabel==null)return;
         if(lastScore!=controller.Score){lastScore=controller.Score;scoreLabel.SetText(controller.Score+" / "+controller.TotalMarbles);}
         if(lastShots!=controller.ShotsLeft){lastShots=controller.ShotsLeft;shotsLabel.SetText(controller.ShotsLeft.ToString());}
-        beadsLabel.SetText(MahalleProfile.Data.beads.ToString());
+        beadsLabel.SetText(MahalleProfile.Beads.ToString());
         var shooter=controller.Shooter;
         if(shooter!=null)
         {

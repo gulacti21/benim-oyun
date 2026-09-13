@@ -116,6 +116,59 @@ public static class MahalleProfile
     // ---------------------------------------------------------------
     public static readonly bool TestUnlockAllLevels = true;
 
+    // Telefonda deneme yaparken boncuk biriktirmekle ugrasilmasin diye:
+    // acikken kese hep dolu gorunur ve harcamalar keseden dusmez.
+    // TestUnlockAllLevels ile AYNI anahtara bagli degil ama ayni kural
+    // gecerli: YAYINDAN ONCE false YAPILACAK. Acikken oyunun altinda
+    // "TEST" serididir ve MahalleVerify yuksek sesle uyarir.
+    public static readonly bool TestInfiniteBeads = true;
+
+    // Test kesesi. Gercek bir sayi, cunku arayuzun her yerinde boncuk
+    // sayisi yaziliyor; "sonsuz" diye bir deger koyarsak metinler bozulur.
+    public const int TestBeads = 999999;
+
+    // Oyunun her yerinde boncuk BURADAN okunur. Test acikken gercek kese
+    // hic degismez, sadece gorunen deger buyuktur.
+    public static int Beads
+    {
+        get
+        {
+#if UNITY_EDITOR
+            if (TestInfiniteBeads && !TestMode) return TestBeads;
+#else
+            if (TestInfiniteBeads) return TestBeads;
+#endif
+            return Data.beads;
+        }
+    }
+
+    // Iade. Test acikken harcama yapilmadigi icin iade de yapilmaz --
+    // yoksa gercek kese sisip oyuncunun kaydi bozulurdu.
+    public static void RefundBeads(int amount)
+    {
+        if (amount <= 0) return;
+#if UNITY_EDITOR
+        if (TestInfiniteBeads && !TestMode) return;
+#else
+        if (TestInfiniteBeads) return;
+#endif
+        Data.beads += amount;
+    }
+
+    // Boncuk harcamasi. Test acikken kese hic azalmaz.
+    public static bool SpendBeads(int amount)
+    {
+        if (amount <= 0) return true;
+#if UNITY_EDITOR
+        if (TestInfiniteBeads && !TestMode) return true;
+#else
+        if (TestInfiniteBeads) return true;
+#endif
+        if (Data.beads < amount) return false;
+        Data.beads -= amount;
+        return true;
+    }
+
     public static bool Unlocked(int index)
     {
         if (index < 0 || index >= Campaign.Count) return false;
@@ -138,7 +191,7 @@ public static class MahalleProfile
     }
     public static int TotalStars { get { int n = 0; foreach (int s in Data.stars) n += s; return n; } }
     public static int NextLevel { get { for (int i = 0; i < Campaign.Count; i++) if (Unlocked(i) && Data.stars[i] < Required(i)) return i; return Campaign.Count - 1; } }
-    public static bool CanUse(MarblePower power) => power != MarblePower.None && (Data.stock[(int)power] > 0 || Data.beads >= Campaign.PowerPrices[(int)power]);
+    public static bool CanUse(MarblePower power) => power != MarblePower.None && (Data.stock[(int)power] > 0 || Beads >= Campaign.PowerPrices[(int)power]);
     // Spend only when a real shot is released. Previewing, cancelling, pausing or leaving never charges.
     public static bool Consume(MarblePower power)
     {
@@ -154,8 +207,7 @@ public static class MahalleProfile
         int p = (int)power;
         if (p < 0 || p >= Data.stock.Length || p >= Campaign.PowerPrices.Length) return false;
         if (Data.stock[p] > 0) { Data.stock[p]--; usedStock = true; }
-        else if (Data.beads >= Campaign.PowerPrices[p]) Data.beads -= Campaign.PowerPrices[p];
-        else return false;
+        else if (!SpendBeads(Campaign.PowerPrices[p])) return false;
         Save(); return true;
     }
 
@@ -165,7 +217,7 @@ public static class MahalleProfile
         int p = (int)power;
         if (p < 0 || p >= Data.stock.Length || p >= Campaign.PowerPrices.Length) return;
         if (usedStock) Data.stock[p]++;
-        else Data.beads += Campaign.PowerPrices[p];
+        else RefundBeads(Campaign.PowerPrices[p]);
         Save();
     }
     public const int DistrictCompletionBonus = 35;
@@ -186,8 +238,8 @@ public static class MahalleProfile
         if(!CanBuySkin(skin))return false;
         if(!Data.skins[skin])
         {
-            if(Data.beads<Campaign.SkinPrices[skin])return false;
-            Data.beads-=Campaign.SkinPrices[skin];Data.skins[skin]=true;
+            if(Beads<Campaign.SkinPrices[skin])return false;
+            if(!SpendBeads(Campaign.SkinPrices[skin]))return false;Data.skins[skin]=true;
             if(SpecialMarbles.IsSpecial(skin))Data.marbleLife[skin-SpecialMarbles.FirstSkin]=SpecialMarbles.MaxLife;
         }
         if(SpecialMarbles.IsSpecial(skin)&&RemainingLife(skin)==0)return false;
@@ -195,8 +247,8 @@ public static class MahalleProfile
     }
     public static bool RepairMarble(int skin)
     {
-        if(!SpecialMarbles.IsSpecial(skin)||!Data.skins[skin]||RemainingLife(skin)>=SpecialMarbles.MaxLife||Data.beads<SpecialMarbles.RepairPrice)return false;
-        Data.beads-=SpecialMarbles.RepairPrice;Data.marbleLife[skin-SpecialMarbles.FirstSkin]=SpecialMarbles.MaxLife;
+        if(!SpecialMarbles.IsSpecial(skin)||!Data.skins[skin]||RemainingLife(skin)>=SpecialMarbles.MaxLife||Beads<SpecialMarbles.RepairPrice)return false;
+        if(!SpendBeads(SpecialMarbles.RepairPrice))return false;Data.marbleLife[skin-SpecialMarbles.FirstSkin]=SpecialMarbles.MaxLife;
         Save();return true;
     }
     public static void RecordMarbleShot(int skin,MarblePower power)
