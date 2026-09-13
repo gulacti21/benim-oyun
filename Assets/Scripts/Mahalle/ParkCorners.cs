@@ -18,21 +18,36 @@ public class ParkCorners : MonoBehaviour
     }
     private Material Mat(Color color)
     {
-        var m = new Material(Resources.Load<Shader>("Mahalle/Environment"));
+        var shader = Resources.Load<Shader>("Mahalle/Environment");
+        if (shader == null || !shader.isSupported) shader = Shader.Find("Universal Render Pipeline/Lit");
+        var m = new Material(shader);
+        m.hideFlags = HideFlags.HideAndDontSave;
         m.SetColor("_BaseColor",color); materials.Add(m); return m;
     }
     private Transform Part(string name, PrimitiveType type, Vector3 p, Vector3 size, Material m, float yaw=0)
     {
         var go=GameObject.CreatePrimitive(type); go.name=name; go.transform.SetParent(transform,false);
-        var collider=go.GetComponent<Collider>(); collider.enabled=false; Destroy(collider);
+
+        // MATERYAL VE KONUM ONCE. Asagidaki collider satiri telefonda
+        // null gelip exception atinca metot yarida kesiliyordu: nesne
+        // arenanin ortasinda, olceksiz ve VARSAYILAN (mor) materyalle
+        // kaliyordu. "Bank yani cim adasi 1.0x1.0 @0,0,0" tam buydu.
+        // Simdi gorunume ait her sey once yapiliyor, collider en sonda ve
+        // null'a karsi korumali.
         p.x += Mathf.Sign(p.x) * (Mathf.Abs(p.x) > 2.3f ? .65f : 0f);
         go.transform.localPosition=p; go.transform.localScale=size; go.transform.localRotation=Quaternion.Euler(0,yaw,0);
-        go.GetComponent<Renderer>().sharedMaterial=m; return go.transform;
+        var renderer=go.GetComponent<Renderer>();
+        if(renderer!=null) renderer.sharedMaterial=m;
+
+        // Dekorun carpismasi yok. Collider bazi platformlarda gelmeyebilir.
+        var collider=go.GetComponent<Collider>();
+        if(collider!=null) { collider.enabled=false; Destroy(collider); }
+        return go.transform;
     }
     private void Box(string name,float x,float y,float z,float w,float h,float d,Material m,float yaw=0)
         => Part(name,PrimitiveType.Cube,new Vector3(x,y,z),new Vector3(w,h,d),m,yaw);
     private void Patch(string name,float x,float z,float w,float d,Material m)
-        => Part(name,PrimitiveType.Cylinder,new Vector3(x,.008f,z),new Vector3(w,.005f,d),m);
+        => Part(name,PrimitiveType.Sphere,new Vector3(x,.006f,z),new Vector3(w,.012f,d),m);
     private void Bed(float x,float z,float length)
     {
         Box("Çim şeridi",x,.005f,z,1.2f,.015f,length,grass);
@@ -87,7 +102,8 @@ public class ParkCorners : MonoBehaviour
     {
         Bed(3.7f,-.7f,11);
         Patch("Ağaç toprağı",-3.3f,2.2f,3.0f,4.4f,wood);
-        Part("Ağaç gövdesi",PrimitiveType.Cylinder,new Vector3(-3.35f,.88f,2.3f),new Vector3(.64f,.9f,.7f),wood);
+        // Govde de Cube: Cylinder telefonda sorun cikardi (bkz. Part).
+        Part("Ağaç gövdesi",PrimitiveType.Cube,new Vector3(-3.35f,.88f,2.3f),new Vector3(.52f,1.8f,.56f),wood,18f);
         for(int i=0;i<5;i++)
         {
             float angle=i*72f;
