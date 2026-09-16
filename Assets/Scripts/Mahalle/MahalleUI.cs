@@ -105,18 +105,21 @@ public class MahalleUI : MonoBehaviour
         var bg=Panel(page,"Alt menü",24,0,1032,132,new Color(.21f,.32f,.28f));
         bg.colorB=new Color(.11f,.18f,.16f);bg.radius=34;bg.shadow=14;bg.highlight=true;
         Bottom(bg.rectTransform,24,18,1032,132);
-        string[] names={"MAHALLE","KESEM","GÖREVLER"};
-        var shapes=new[]{MahalleGraphic.Shape.TabMap,MahalleGraphic.Shape.Bag,MahalleGraphic.Shape.TabTask};
+        // Dördüncü sekme "MENÜ": açılış ekranına (başlık menüsü) döner.
+        string[] names={"MENÜ","MAHALLE","KESEM","GÖREVLER"};
+        var shapes=new[]{MahalleGraphic.Shape.Chevron,MahalleGraphic.Shape.TabMap,MahalleGraphic.Shape.Bag,MahalleGraphic.Shape.TabTask};
         var faded=new Color(1,.97f,.89f,.6f);
-        for(int i=0;i<3;i++)
+        for(int i=0;i<4;i++)
         {
-            int id=i;bool on=i==tab;
-            var b=Button(bg.transform,names[i],10+i*337,10,331,112,on?new Color(1,1,1,.1f):new Color(1,1,1,0),()=>{tab=id;ShowHome();});
+            int id=i-1;bool on=id==tab;
+            System.Action act=id<0?(System.Action)(()=>ShowTitle(true)):()=>{tab=id;ShowHome();};
+            var b=Button(bg.transform,names[i],10+i*253,10,247,112,on?new Color(1,1,1,.1f):new Color(1,1,1,0),act);
             b.GetComponent<MahalleGraphic>().radius=26;
             b.gameObject.AddComponent<MahalleTap>();
-            var icon=Art(b.transform,"Simge",shapes[i],131,12,70,64,on?Gold:faded);
+            var icon=id<0?Art(b.transform,"Simge",shapes[i],98,18,52,52,faded):Art(b.transform,"Simge",shapes[i],88,12,70,64,on?Gold:faded);
             icon.accent=on?Gold:faded;
-            Text(b.transform,names[i],10,80,311,36,24,on?Gold:faded,TextAlignmentOptions.Center);
+            if(id<0)icon.mirror=true;
+            Text(b.transform,names[i],10,80,227,36,24,on?Gold:faded,TextAlignmentOptions.Center);
         }
     }
     // ---------------------------------------------------------------
@@ -1005,12 +1008,13 @@ public class MahalleUI : MonoBehaviour
     }
     private void Pause()
     {
-        controller.SetPaused(true);var box=Modal("Mola",680);
+        controller.SetPaused(true);var box=Modal("Mola",806);
         Text(box,"Bir nefes al",36,34,912,81,57,Ink,TextAlignmentOptions.Center);
         LabelButton(box,"DEVAM ET",36,164,912,100,Ink,Cream,()=>CloseModal());
         LabelButton(box,"TEKRAR DENE",36,290,912,100,new Color(.88f,.83f,.69f),Ink,()=>{CloseModal();controller.RestartLevel();ShowGame();});
         LabelButton(box,"MAHALLEYE DÖN",36,416,912,100,new Color(.88f,.83f,.69f),Ink,()=>controller.OpenLevelSelect());
-        LabelButton(box,"SES VE TİTREŞİM",36,554,912,78,Paper,Muted,Settings,27);
+        LabelButton(box,"ANA MENÜ",36,542,912,100,new Color(.88f,.83f,.69f),Ink,()=>{returnToTitle=true;controller.OpenLevelSelect();});
+        LabelButton(box,"SES VE TİTREŞİM",36,680,912,78,Paper,Muted,Settings,27);
     }
     private void Results()
     {
