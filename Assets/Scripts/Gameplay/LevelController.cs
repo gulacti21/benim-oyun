@@ -21,6 +21,7 @@ public class LevelController : MonoBehaviour
     private int shotsUsed;
     private bool waitingForSettle;
     private float settleTimer;
+    private int scoreAtShot;
     private float shotElapsed;
     public RoundReward LastReward { get; private set; }
     public ShotController Shooter => shooter;
@@ -208,6 +209,7 @@ public class LevelController : MonoBehaviour
         // kontrolu burada calisirsa bolum verisi olmadan sonuc hesaplamaya calisir.
         if (DuelSession.Active) return;
         shotsUsed++;
+        scoreAtShot = Score;
         shotElapsed = 0f;
         waitingForSettle = true;
         settleTimer = 0f;
@@ -248,6 +250,7 @@ public class LevelController : MonoBehaviour
 
     private void EvaluateTurn()
     {
+        MahalleProfile.RecordShot(Score - scoreAtShot);
         bool allMarblesOut = arena != null && arena.RemainingMarbles == 0;
         bool outOfShots = ShotsLeft <= 0;
 

@@ -15,6 +15,9 @@ public class MahalleSave
     public int selectedSkin;
     public int wins;
     public int knocked;
+    // İSTATİSTİK: tek atışta en çok çıkan misket ve mahalle başına bitirilen bölüm sayısı.
+    public int bestShot;
+    public int[] districtPlays = new int[5];
     public bool[] claimed = new bool[3];
     public bool tutorialDone;
     public bool sound = true;
@@ -82,6 +85,8 @@ public static class MahalleProfile
                 if (value.stars[(d + 1) * Campaign.PerDistrict - 1] > 0) value.districtRewards[d] = true;
             value.version = 2;
         }
+        if (value.districtPlays == null) value.districtPlays = new int[Campaign.Districts.Length];
+        Array.Resize(ref value.districtPlays, Campaign.Districts.Length);
         if(value.marbleLife==null)value.marbleLife=new int[SpecialMarbles.Count];
         Array.Resize(ref value.marbleLife,SpecialMarbles.Count);
         if(value.version<3)
@@ -256,11 +261,26 @@ public static class MahalleProfile
         if(power!=MarblePower.None||!SpecialMarbles.IsSpecial(skin)||!Data.skins[skin]||RemainingLife(skin)<=0)return;
         Data.marbleLife[skin-SpecialMarbles.FirstSkin]--;Save();
     }
+    // Tek atışın sonucu. Sadece rekor kırılınca kaydeder.
+    public static void RecordShot(int knockedThisShot)
+    {
+        if (knockedThisShot <= Data.bestShot) return;
+        Data.bestShot = knockedThisShot; Save();
+    }
+    // En çok bitirilen mahalle; hiç oynanmadıysa -1.
+    public static int FavoriteDistrict()
+    {
+        int best = -1, most = 0;
+        for (int i = 0; i < Data.districtPlays.Length; i++)
+            if (Data.districtPlays[i] > most) { most = Data.districtPlays[i]; best = i; }
+        return best;
+    }
     public static RoundReward Finish(int levelIndex, int stars, int score)
     {
         var reward = new RoundReward();
         if (levelIndex < 0 || levelIndex >= Campaign.Count) return reward;
         Data.knocked += Mathf.Max(0, score);
+        Data.districtPlays[levelIndex / Campaign.PerDistrict]++;
         stars = Mathf.Clamp(stars, 0, 3);
         if (stars > 0)
         {

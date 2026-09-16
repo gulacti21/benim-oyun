@@ -106,20 +106,21 @@ public class MahalleUI : MonoBehaviour
         bg.colorB=new Color(.11f,.18f,.16f);bg.radius=34;bg.shadow=14;bg.highlight=true;
         Bottom(bg.rectTransform,24,18,1032,132);
         // Dördüncü sekme "MENÜ": açılış ekranına (başlık menüsü) döner.
-        string[] names={"MENÜ","MAHALLE","KESEM","GÖREVLER"};
-        var shapes=new[]{MahalleGraphic.Shape.Chevron,MahalleGraphic.Shape.TabMap,MahalleGraphic.Shape.Bag,MahalleGraphic.Shape.TabTask};
+        string[] names={"MENÜ","MAHALLE","KESEM","İSTATİSTİK","GÖREVLER"};
+        int[] ids={-1,0,1,3,2};
+        var shapes=new[]{MahalleGraphic.Shape.Chevron,MahalleGraphic.Shape.TabMap,MahalleGraphic.Shape.Bag,MahalleGraphic.Shape.Star,MahalleGraphic.Shape.TabTask};
         var faded=new Color(1,.97f,.89f,.6f);
-        for(int i=0;i<4;i++)
+        for(int i=0;i<5;i++)
         {
-            int id=i-1;bool on=id==tab;
+            int id=ids[i];bool on=id==tab;
             System.Action act=id<0?(System.Action)(()=>ShowTitle(true)):()=>{tab=id;ShowHome();};
-            var b=Button(bg.transform,names[i],10+i*253,10,247,112,on?new Color(1,1,1,.1f):new Color(1,1,1,0),act);
+            var b=Button(bg.transform,names[i],10+i*202,10,196,112,on?new Color(1,1,1,.1f):new Color(1,1,1,0),act);
             b.GetComponent<MahalleGraphic>().radius=26;
             b.gameObject.AddComponent<MahalleTap>();
-            var icon=id<0?Art(b.transform,"Simge",shapes[i],98,18,52,52,faded):Art(b.transform,"Simge",shapes[i],88,12,70,64,on?Gold:faded);
+            var icon=id<0?Art(b.transform,"Simge",shapes[i],72,18,52,52,faded):id==3?Art(b.transform,"Simge",shapes[i],67,14,62,62,on?Gold:faded):Art(b.transform,"Simge",shapes[i],63,12,70,64,on?Gold:faded);
             icon.accent=on?Gold:faded;
             if(id<0)icon.mirror=true;
-            Text(b.transform,names[i],10,80,227,36,24,on?Gold:faded,TextAlignmentOptions.Center);
+            Text(b.transform,names[i],4,80,188,36,id==3?21:24,on?Gold:faded,TextAlignmentOptions.Center);
         }
     }
     // ---------------------------------------------------------------
@@ -687,8 +688,8 @@ public class MahalleUI : MonoBehaviour
         else
         {
             Background(Paper);
-            Header(tab==1?"HER MİSKETİN BİR HİKÂYESİ VAR":"KÜÇÜK HEDEFLER, YENİ BONCUKLAR");
-            if(tab==1)Collection();else Missions();
+            Header(tab==1?"HER MİSKETİN BİR HİKÂYESİ VAR":tab==3?"MAHALLEDEKİ İZİN":"KÜÇÜK HEDEFLER, YENİ BONCUKLAR");
+            if(tab==1)Collection();else if(tab==3)Stats();else Missions();
         }
         Nav();
     }
@@ -848,6 +849,31 @@ public class MahalleUI : MonoBehaviour
             var repair=LabelButton(card.transform,"TAM YENİLE · "+SpecialMarbles.RepairPrice+" BONCUK",24,350,428,62,new Color(.89f,.85f,.72f),Ink,()=>{if(MahalleProfile.RepairMarble(skin))ShowHome();else Toast("Yenilemek için "+SpecialMarbles.RepairPrice+" boncuk gerekiyor.");},23);
             repair.interactable=owned&&MahalleProfile.RemainingLife(skin)<SpecialMarbles.MaxLife;
             Text(card.transform,"Özel güç atışında özelliği durur, ömrü azalmaz.",24,426,428,62,23,selected?Cream:Muted,TextAlignmentOptions.Center);
+        }
+    }
+    // İSTATİSTİK: üç kart. Rekor ve mahalle sayımı bu sürümle başladı.
+    private void Stats()
+    {
+        var content=HomeScroll(1100);
+        Text(content,"Karnen",48,190,984,66,47,Ink);
+        Text(content,"Bitirdiğin her bölüm buraya yazılır.",48,268,984,70,30,Muted);
+        int fav=MahalleProfile.FavoriteDistrict();
+        string[] labels={"TOPLAM ÇIKARDIĞIN MİSKET","TEK ATIŞTA REKORUN","EN ÇOK OYNADIĞIN MAHALLE"};
+        string[] values={
+            MahalleProfile.Data.knocked.ToString(),
+            MahalleProfile.Data.bestShot>0?MahalleProfile.Data.bestShot+" MİSKET":"HENÜZ YOK",
+            fav>=0?Campaign.Districts[fav]:"HENÜZ YOK"};
+        string[] notes={
+            "Bitirdiğin bölümlerde çizgi dışına attıkların",
+            "Tek bir atışla aynı anda çıkardığın en çok misket",
+            fav>=0?MahalleProfile.Data.districtPlays[fav]+" bölüm bitirdin":"Bir bölüm bitirince burada görünür"};
+        for(int i=0;i<3;i++)
+        {
+            var card=Panel(content,labels[i],48,370+i*250,984,220,Cream);
+            Art(card.transform,"Simge",i==0?MahalleGraphic.Shape.Marble:i==1?MahalleGraphic.Shape.Star:MahalleGraphic.Shape.House,32,62,96,96,Gold);
+            Text(card.transform,labels[i],160,22,790,40,25,Muted);
+            Text(card.transform,values[i],160,64,790,82,56,Ink);
+            Text(card.transform,notes[i],160,150,790,44,25,Muted);
         }
     }
     private void Missions()
