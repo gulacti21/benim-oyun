@@ -42,6 +42,7 @@ public class ShotController : MonoBehaviour
         get => shootingEnabled;
         set { shootingEnabled = value; if (!value) CancelAim(); }
     }
+    public Rigidbody Body => body;
     public bool AtRest => body != null && (body.IsSleeping() || (body.linearVelocity.magnitude <= restSpeedThreshold && body.angularVelocity.magnitude <= restSpeedThreshold * 4f));
     private void Awake()
     {

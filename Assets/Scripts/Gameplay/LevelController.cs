@@ -22,6 +22,13 @@ public class LevelController : MonoBehaviour
     private bool waitingForSettle;
     private float settleTimer;
     private int scoreAtShot;
+    // ÇIKIŞ SÜRESİ: çemberden çıkan misket bu kadar saniye sonra durdurulur.
+    // Atıcı çizgiye döner, çıkan hedefler olduğu yerde donar; haritanın sonuna
+    // kadar yuvarlanmasını beklemek gerekmez.
+    private const float OutsideStopDelay = 1.5f;
+    private float shooterOutsideTime;
+    private readonly System.Collections.Generic.Dictionary<TargetMarble, float> scoredTimes =
+        new System.Collections.Generic.Dictionary<TargetMarble, float>();
     private float shotElapsed;
     public RoundReward LastReward { get; private set; }
     public ShotController Shooter => shooter;
@@ -150,6 +157,8 @@ public class LevelController : MonoBehaviour
         MahalleWorld.Apply(this);
         shotsUsed = 0;
         waitingForSettle = false;
+        scoredTimes.Clear();
+        shooterOutsideTime = 0f;
         settleTimer = 0f;
         State = LevelState.Playing;
         IsPaused = false;
@@ -196,6 +205,8 @@ public class LevelController : MonoBehaviour
         LastReward = new RoundReward();
         shotsUsed = 0;
         waitingForSettle = false;
+        scoredTimes.Clear();
+        shooterOutsideTime = 0f;
         settleTimer = 0f;
         State = LevelState.Playing;
         IsPaused = false;
@@ -210,6 +221,7 @@ public class LevelController : MonoBehaviour
         if (DuelSession.Active) return;
         shotsUsed++;
         scoreAtShot = Score;
+        shooterOutsideTime = 0f;
         shotElapsed = 0f;
         waitingForSettle = true;
         settleTimer = 0f;
@@ -224,6 +236,7 @@ public class LevelController : MonoBehaviour
 
         if (IsPaused) return;
         shotElapsed += Time.deltaTime;
+        StopMarblesOutside();
         if (shotElapsed > 12f)
         {
             foreach (var b in FindObjectsByType<Rigidbody>(FindObjectsSortMode.None)) { b.linearVelocity = Vector3.zero; b.angularVelocity = Vector3.zero; b.Sleep(); }
@@ -246,6 +259,42 @@ public class LevelController : MonoBehaviour
 
         waitingForSettle = false;
         EvaluateTurn();
+    }
+
+    private void StopMarblesOutside()
+    {
+        if (arena == null) return;
+        float dt = Time.deltaTime;
+
+        if (shooter != null && shooter.Body != null && arena.IsOutside(shooter.transform.position))
+        {
+            shooterOutsideTime += dt;
+            if (shooterOutsideTime >= OutsideStopDelay && !shooter.Body.isKinematic)
+            {
+                shooter.Body.linearVelocity = Vector3.zero;
+                shooter.Body.angularVelocity = Vector3.zero;
+                shooter.Body.Sleep();
+            }
+        }
+        else shooterOutsideTime = 0f;
+
+        // Çıkan hedef: hareket ettiği sürece sayaç işler, 1.5 sn dolunca
+        // yerinde durdurulur. Çarpışması açık kalır; atıcı çarparsa misket
+        // yine kayar ve sayaç baştan başlar.
+        var list = arena.SpawnedMarbles;
+        for (int i = 0; i < list.Count; i++)
+        {
+            var m = list[i];
+            if (m == null || !m.IsScored || m.Body == null) continue;
+            if (m.Body.IsSleeping() || m.Body.linearVelocity.magnitude < 0.05f) { scoredTimes.Remove(m); continue; }
+            scoredTimes.TryGetValue(m, out float t);
+            t += dt;
+            if (t < OutsideStopDelay) { scoredTimes[m] = t; continue; }
+            m.Body.linearVelocity = Vector3.zero;
+            m.Body.angularVelocity = Vector3.zero;
+            m.Body.Sleep();
+            scoredTimes.Remove(m);
+        }
     }
 
     private void EvaluateTurn()

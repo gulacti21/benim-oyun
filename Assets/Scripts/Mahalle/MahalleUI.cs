@@ -1047,7 +1047,7 @@ public class MahalleUI : MonoBehaviour
         bool won=controller.State==LevelController.LevelState.Won;
         int need=MahalleProfile.Required(controller.LevelIndex);
         bool passed=won&&controller.Stars>=need;
-        var box=Modal("Bölüm sonucu",1010);
+        var box=Modal("Bölüm sonucu",won&&passed&&controller.HasNextLevel?1110:1010);
         Text(box,won?(controller.LastReward.newBadge||(controller.Level.mastery&&passed)?"MAHALLE USTASI!":"GÜZEL ATIŞLAR!"):"BİR DAHA DENE",30,34,924,77,51,Ink,TextAlignmentOptions.Center);
         Text(box,controller.Level.levelName,30,114,924,47,31,Muted,TextAlignmentOptions.Center);
         for(int i=0;i<3;i++){var star=Art(box,"Sonuç yıldızı "+i,MahalleGraphic.Shape.Star,259+i*163,i==1?184:201,i==1?142:115,i==1?142:115,Line);if(i<controller.Stars&&won)StartCoroutine(RevealStar(star,i));}
@@ -1061,6 +1061,89 @@ public class MahalleUI : MonoBehaviour
         else LabelButton(box,passed?"MAHALLEYE DÖN":"TEKRAR DENE",36,669,912,98,Ink,Cream,()=>{if(passed)controller.OpenLevelSelect();else{CloseModal();controller.RestartLevel();ShowGame();}});
         LabelButton(box,passed?"REKORUNU GELİŞTİR":"MAHALLEYE DÖN",36,791,912,86,new Color(.88f,.83f,.69f),Ink,()=>{if(passed){CloseModal();controller.RestartLevel();ShowGame();}else controller.OpenLevelSelect();},30);
         if(passed&&controller.HasNextLevel)LabelButton(box,"MAHALLE HARİTASI",36,898,912,76,Paper,Muted,()=>controller.OpenLevelSelect(),27);
+        if(won)LabelButton(box,"PAYLAŞ",36,passed&&controller.HasNextLevel?995:898,912,86,Gold,Ink,ShareCard,30);
+    }
+    // ---------------------------------------------------------------
+    // PAYLAŞ KARTI
+    // Instagram story ölçüsünde (1080x1920, 9:16) sonuç kartı. Kart ekranda
+    // önizleme olarak çizilir, PAYLAŞ'a basınca düğmeler gizlenip kartın
+    // bulunduğu bölge ekrandan kesilir ve paylaşım menüsü açılır.
+    // ---------------------------------------------------------------
+    private bool capturing;
+    private void ShareCard()
+    {
+        CloseModal(false);
+        modal=Rect("Paylaş kartı",root);Stretch(modal);
+        var shade=Panel(modal,"Perde",0,0,1080,2600,new Color(.03f,.04f,.03f,.95f),true);shade.radius=0;Stretch(shade.rectTransform);
+        Canvas.ForceUpdateCanvases();
+        float scale=Mathf.Clamp((root.rect.height-190f)/1920f,.3f,1f);
+        var card=Rect("Kart",modal);
+        card.anchorMin=card.anchorMax=new Vector2(.5f,1);card.pivot=new Vector2(.5f,1);
+        card.sizeDelta=new Vector2(1080,1920);card.anchoredPosition=new Vector2(0,-20);card.localScale=Vector3.one*scale;
+        BuildShareCard(card);
+        var bar=Rect("Paylaş düğmeleri",modal);
+        bar.anchorMin=bar.anchorMax=new Vector2(.5f,0);bar.pivot=new Vector2(.5f,0);bar.sizeDelta=new Vector2(984,110);bar.anchoredPosition=new Vector2(0,30);
+        var group=bar.gameObject.AddComponent<CanvasGroup>();
+        LabelButton(bar,"PAYLAŞ",0,0,620,110,Gold,Ink,()=>StartCoroutine(CaptureCard(card,group)),38);
+        LabelButton(bar,"GERİ",640,0,344,110,new Color(.24f,.34f,.30f),Cream,Results,30);
+    }
+    private void BuildShareCard(RectTransform card)
+    {
+        var L=controller.Level;
+        int no=controller.LevelIndex%Campaign.PerDistrict+1;
+        int stars=controller.State==LevelController.LevelState.Won?controller.Stars:0;
+        var chalk=new Color(1,.98f,.92f,.92f);
+        var bg=Panel(card,"Zemin",0,0,1080,1920,new Color(.14f,.12f,.10f));bg.radius=0;
+        Text(card,Campaign.Districts[L.district].ToUpperInvariant()+" · "+no.ToString("00"),0,150,1080,70,46,new Color(1,.97f,.89f,.7f),TextAlignmentOptions.Center);
+        Text(card,L.levelName,40,222,1000,100,68,Cream,TextAlignmentOptions.Center);
+        var ring=Art(card,"Tebeşir çemberi",MahalleGraphic.Shape.ChalkRing,150,400,780,780,chalk);ring.stroke=10f;ring.progress=1f;
+        for(int i=0;i<3;i++)
+        {
+            float size=i==1?170:135;
+            Art(card,"Yıldız "+i,MahalleGraphic.Shape.Star,540-size/2+(i-1)*185,i==1?510:545,size,size,i<stars?Gold:new Color(1,.98f,.92f,.18f));
+        }
+        Text(card,controller.ShotsUsed.ToString(),150,700,780,210,200,Cream,TextAlignmentOptions.Center);
+        Text(card,"ATIŞTA",150,905,780,70,52,new Color(1,.97f,.89f,.75f),TextAlignmentOptions.Center);
+        Text(card,controller.Score+" / "+controller.TotalMarbles+" MİSKET",150,990,780,60,40,Gold,TextAlignmentOptions.Center);
+        // Çemberin dışına savrulmuş birkaç misket.
+        float[,] spots={{110,1250,70},{900,1210,58},{840,320,50},{60,470,44},{960,1330,40}};
+        for(int i=0;i<spots.GetLength(0);i++)
+        {
+            var col=Campaign.SkinColors[i%6];
+            var m=Art(card,"Misket "+i,MahalleGraphic.Shape.Marble,spots[i,0],spots[i,1],spots[i,2],spots[i,2],col);
+            m.accent=Color.Lerp(col,Color.white,.55f);
+        }
+        Text(card,"Sen kaç atışta bitirirsin?",0,1340,1080,70,46,Cream,TextAlignmentOptions.Center);
+        Text(card,"MİSKETR",0,1560,1080,170,140,new Color(1,.98f,.92f),TextAlignmentOptions.Center);
+        Text(card,"mahallenin en iyi nişancısı kim?",0,1730,1080,56,36,new Color(1,.97f,.89f,.62f),TextAlignmentOptions.Center);
+    }
+    private string ShareText()
+    {
+        int no=controller.LevelIndex%Campaign.PerDistrict+1;
+        return "MİSKETR · "+Campaign.Districts[controller.Level.district]+" "+no.ToString("00")+" bölümünü "+controller.ShotsUsed+" atışta "+controller.Stars+" yıldızla bitirdim. Sen kaç atışta bitirirsin?";
+    }
+    private IEnumerator CaptureCard(RectTransform card,CanvasGroup buttons)
+    {
+        if(capturing)yield break;
+        capturing=true;
+        buttons.alpha=0f;
+        yield return new WaitForEndOfFrame();
+        var shot=ScreenCapture.CaptureScreenshotAsTexture();
+        buttons.alpha=1f;
+        // Overlay canvas'ta dünya köşeleri ekran pikselidir.
+        var c=new Vector3[4];card.GetWorldCorners(c);
+        int x=Mathf.Clamp(Mathf.RoundToInt(c[0].x),0,shot.width-1);
+        int y=Mathf.Clamp(Mathf.RoundToInt(c[0].y),0,shot.height-1);
+        int w=Mathf.Clamp(Mathf.RoundToInt(c[2].x)-x,1,shot.width-x);
+        int h=Mathf.Clamp(Mathf.RoundToInt(c[2].y)-y,1,shot.height-y);
+        var tex=new Texture2D(w,h,TextureFormat.RGB24,false);
+        tex.SetPixels(shot.GetPixels(x,y,w,h));tex.Apply();
+        Destroy(shot);
+        string path=System.IO.Path.Combine(Application.temporaryCachePath,"misketr-kart.png");
+        System.IO.File.WriteAllBytes(path,tex.EncodeToPNG());
+        Destroy(tex);
+        capturing=false;
+        MisketrShare.ShareImage(path,ShareText());
     }
     private IEnumerator RevealStar(MahalleGraphic star,int index)
     {
