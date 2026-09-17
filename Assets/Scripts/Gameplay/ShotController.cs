@@ -31,6 +31,19 @@ public class ShotController : MonoBehaviour
     public event Action Repositioned;
     // Öğretici: true iken misket çekilemez, sadece çizgide yer değiştirilir.
     public bool AimLocked { get; set; }
+    // PARMAK ÖLÇEĞİ: kamera uzaklaşınca (büyük sahalar) dünya birimi ekranda
+    // küçülür. Çekme mesafeleri kamerayla birlikte büyütülür ki parmağın ekranda
+    // aynı yolu gidince aynı güç çıksın. Fizik (itki) değişmez.
+    private float baseMinPull = -1f;
+    public float InputScale { get; private set; } = 1f;
+    public void SetInputScale(float scale)
+    {
+        if (body == null) Awake();
+        InputScale = Mathf.Max(.5f, scale);
+        grabRadius = 1.15f * InputScale;
+        maxPullDistance = 2.6f * InputScale;
+        minPullDistance = baseMinPull * InputScale;
+    }
     public event Action AimBlocked;
     public bool IsAiming => isAiming;
     // Bu atıştan sonra misket çizgiye dönmeyecek mi?
@@ -55,6 +68,7 @@ public class ShotController : MonoBehaviour
         if (gameCamera == null) gameCamera = Camera.main;
         special=GetComponent<SpecialMarblePhysics>();if(special==null)special=gameObject.AddComponent<SpecialMarblePhysics>();
         grabRadius = 1.15f; maxPullDistance = 2.6f;
+        if (baseMinPull < 0f) baseMinPull = minPullDistance;
     }
     public void ResetTo(Vector3 position)
     {

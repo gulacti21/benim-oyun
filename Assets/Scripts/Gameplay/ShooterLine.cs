@@ -53,6 +53,14 @@ public class ShooterLine : MonoBehaviour
         Refresh();
     }
 
+    // PARMAK ÖLÇEĞİ: kamera uzaklaşınca dokunma payı da büyür.
+    private float baseTapTolerance = -1f;
+    public void SetInputScale(float scale)
+    {
+        if (baseTapTolerance < 0f) baseTapTolerance = tapTolerance;
+        tapTolerance = baseTapTolerance * Mathf.Max(.5f, scale);
+    }
+
     public bool IsNear(Vector3 worldPoint)
     {
         return Mathf.Abs(worldPoint.z - LineZ) <= tapTolerance

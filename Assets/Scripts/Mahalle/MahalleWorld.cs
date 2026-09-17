@@ -96,6 +96,10 @@ public class MahalleWorld : MonoBehaviour
         if(camera!=null)
         {
             camera.orthographic=true; camera.orthographicSize=DuelSession.Active?Mathf.Max(6.3f,3.65f/camera.aspect):CameraSize(controller.Level.arenaSize,camera.aspect);
+            // Eski kameraya göre ne kadar uzaklaştıysak parmak hareketi de o kadar ölçeklenir.
+            float inputScale=camera.orthographicSize/Mathf.Max(6.3f,3.65f/camera.aspect);
+            controller.Shooter.SetInputScale(inputScale);
+            var scaledLine=FindFirstObjectByType<ShooterLine>();if(scaledLine!=null)scaledLine.SetInputScale(inputScale);
             camera.transform.rotation=Quaternion.Euler(72,0,0);
             camera.transform.position=new Vector3(0,0,-1.1f)-camera.transform.forward*18;
             camera.backgroundColor=new Color(.18f,.16f,.12f);
