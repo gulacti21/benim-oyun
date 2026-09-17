@@ -223,6 +223,7 @@ public class MahalleUI : MonoBehaviour
 
         // 1) Çember çiziliyor. Sona doğru yavaşlar: el kalemi kaldırıyormuş gibi.
         const float draw = 1.15f;
+        if (SfxPlayer.Instance != null) SfxPlayer.Instance.PlayChalk(false);
         for (float t = 0f; t < draw; t += Time.unscaledDeltaTime)
         {
             float k = Mathf.SmoothStep(0f, 1f, t / draw);
@@ -232,7 +233,6 @@ public class MahalleUI : MonoBehaviour
             yield return null;
         }
         ring.SetProgress(1f);
-        if (SfxPlayer.Instance != null) SfxPlayer.Instance.PlayUiTap();
 
         yield return new WaitForSecondsRealtime(.1f);
 
@@ -247,6 +247,7 @@ public class MahalleUI : MonoBehaviour
             triCentre + new Vector2(-tw2 * .40f, -th2 * .28f)
         };
         const float triDraw = .7f;
+        if (SfxPlayer.Instance != null) SfxPlayer.Instance.PlayChalk(true);
         for (float t = 0f; t < triDraw; t += Time.unscaledDeltaTime)
         {
             float k = t / triDraw;
@@ -258,7 +259,6 @@ public class MahalleUI : MonoBehaviour
         }
         tri.SetProgress(1f);
         tip.color = new Color(1, 1, .96f, 0);
-        if (SfxPlayer.Instance != null) SfxPlayer.Instance.PlayUiTap();
 
         yield return new WaitForSecondsRealtime(.12f);
 
@@ -266,6 +266,7 @@ public class MahalleUI : MonoBehaviour
         for (int i = 0; i < marbles.Length; i++)
         {
             StartCoroutine(PopMarble(marbles[i].transform));
+            if (SfxPlayer.Instance != null) SfxPlayer.Instance.PlayMarbleTick(i);
             yield return new WaitForSecondsRealtime(.07f);
         }
 
