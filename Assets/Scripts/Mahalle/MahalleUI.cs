@@ -822,7 +822,7 @@ public class MahalleUI : MonoBehaviour
         for(int i=0;i<SpecialMarbles.FirstSkin;i++) CollectionCard(content,i,363+(i/2)*302);
 
         Text(content,"ÖZELLİKLİ MİSKETLER",48,1300,984,58,38,Ink);
-        Text(content,"400 boncuk · 150 atış ömür · Tam yenileme 100 boncuk.",48,1368,984,82,29,Muted);
+        Text(content,SpecialMarbles.PurchasePrice+" boncuk · "+SpecialMarbles.MaxLife+" atış ömür · Tam yenileme "+SpecialMarbles.RepairPrice+" boncuk.",48,1368,984,82,29,Muted);
         for(int i=SpecialMarbles.FirstSkin;i<Campaign.SkinCount;i++)
             CollectionCard(content,i,1478+((i-SpecialMarbles.FirstSkin)/2)*532);
 
@@ -840,7 +840,7 @@ public class MahalleUI : MonoBehaviour
         Text(card.transform,Campaign.SkinNames[skin],193,32,265,90,33,selected?Cream:Ink);
         if(special)
         {
-            Text(card.transform,owned?MahalleProfile.RemainingLife(skin)+" / 150 ATIŞ":"400 BONCUK",193,126,265,48,26,selected?Gold:Muted);
+            Text(card.transform,owned?MahalleProfile.RemainingLife(skin)+" / "+SpecialMarbles.MaxLife+" ATIŞ":SpecialMarbles.PurchasePrice+" BONCUK",193,126,265,48,26,selected?Gold:Muted);
             Text(card.transform,SpecialMarbles.Descriptions[skin-SpecialMarbles.FirstSkin],24,184,428,70,26,selected?Cream:Muted);
         }
         string label=worn?"AŞINDI":selected?"KUŞANILDI":owned?"KUŞAN":Campaign.SkinPrices[skin]+" BONCUK · AL";
@@ -985,7 +985,7 @@ public class MahalleUI : MonoBehaviour
         if(shooter!=null)
         {
             powerFill.rectTransform.sizeDelta=new Vector2(Mathf.Max(1,610*shooter.Power),16);
-            powerLabel.SetText(shooter.SelectedPower==MarblePower.None?(SpecialMarbles.IsSpecial(shooter.ActiveSkin)?Campaign.SkinNames[shooter.ActiveSkin]+" · "+MahalleProfile.RemainingLife(shooter.ActiveSkin)+"/150":"NORMAL MİSKET"):Campaign.PowerNames[(int)shooter.SelectedPower].ToUpper(new System.Globalization.CultureInfo("tr-TR")));
+            powerLabel.SetText(shooter.SelectedPower==MarblePower.None?(SpecialMarbles.IsSpecial(shooter.ActiveSkin)?Campaign.SkinNames[shooter.ActiveSkin]+" · "+MahalleProfile.RemainingLife(shooter.ActiveSkin)+"/"+SpecialMarbles.MaxLife:"NORMAL MİSKET"):Campaign.PowerNames[(int)shooter.SelectedPower].ToUpper(new System.Globalization.CultureInfo("tr-TR")));
             hintLabel.SetText(controller.WaitingForSettle?"Misketler duruluyor…":shooter.IsAiming?"Gücü ayarla ve bırak":shooter.PositionLocked?"Misketin durduğu yerden atıyorsun.":"Çizgiye dokunarak atıcının yerini değiştirebilirsin.");
             if(hand!=null)
             {
