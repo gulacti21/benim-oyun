@@ -20,6 +20,8 @@ public class MahalleSave
     public int[] districtPlays = new int[5];
     public bool[] claimed = new bool[3];
     public bool tutorialDone;
+    // ÖĞRETİCİ: ısınma sahası bitirildi ya da geçildi.
+    public bool howToPlayDone;
     public bool sound = true;
     public bool haptics = true;
 }

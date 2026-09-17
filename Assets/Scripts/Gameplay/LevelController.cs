@@ -183,6 +183,12 @@ public class LevelController : MonoBehaviour
             }
         }
 
+        if (GameSession.TutorialMode)
+        {
+            level = TutorialLevel.Get();
+            LevelIndex = 0;
+        }
+
         if (level == null)
         {
             Debug.LogError("[LevelController] Level data is not assigned.");
@@ -299,6 +305,7 @@ public class LevelController : MonoBehaviour
 
     private void EvaluateTurn()
     {
+        if (GameSession.TutorialMode) { EvaluateTutorialTurn(); return; }
         MahalleProfile.RecordShot(Score - scoreAtShot);
         bool allMarblesOut = arena != null && arena.RemainingMarbles == 0;
         bool outOfShots = ShotsLeft <= 0;
@@ -335,6 +342,26 @@ public class LevelController : MonoBehaviour
             return;
         }
 
+        if (shooter != null)
+        {
+            SettleShooter();
+            shooter.ShootingEnabled = true;
+        }
+        StateChanged?.Invoke();
+    }
+
+    // Öğretici: kaybetmek yok, kayıt yok. Üç misket çıkınca biter.
+    private void EvaluateTutorialTurn()
+    {
+        if (arena != null && arena.RemainingMarbles == 0)
+        {
+            State = LevelState.Won;
+            if (SfxPlayer.Instance != null) SfxPlayer.Instance.PlayWin();
+            if (shooter != null) shooter.ShootingEnabled = false;
+            StateChanged?.Invoke();
+            return;
+        }
+        if (ShotsLeft <= 0) shotsUsed = 0;
         if (shooter != null)
         {
             SettleShooter();

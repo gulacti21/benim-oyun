@@ -27,6 +27,11 @@ public class ShotController : MonoBehaviour
     private readonly List<RaycastResult> uiHits = new List<RaycastResult>();
     private bool keepsPosition, positionLocked, anchorUsedStock;
     public event Action ShotFired;
+    // Öğretici: atıcı çizgide yer değiştirdi.
+    public event Action Repositioned;
+    // Öğretici: true iken misket çekilemez, sadece çizgide yer değiştirilir.
+    public bool AimLocked { get; set; }
+    public event Action AimBlocked;
     public bool IsAiming => isAiming;
     // Bu atıştan sonra misket çizgiye dönmeyecek mi?
     public bool KeepsPosition => keepsPosition;
@@ -121,9 +126,11 @@ public class ShotController : MonoBehaviour
             {
                 var position = shooterLine.ClampToLine(world, transform.position.y);
                 body.position = position; transform.position = position;
+                Repositioned?.Invoke();
             }
             return;
         }
+        if (AimLocked) { AimBlocked?.Invoke(); return; }
         isAiming = true; pullPoint = world;
     }
     private void UpdateAim(Vector2 screen)
