@@ -103,12 +103,12 @@ public class MahalleUI : MonoBehaviour
     {CloseModal(false);SetBleed(Color.clear,Color.clear);if(page!=null){page.gameObject.SetActive(false);Destroy(page.gameObject);}page=Rect("Ekran",root);Stretch(page);}
     private void Background(Color color)
     {var g=Panel(page,"Zemin",0,0,1080,2500,color);g.radius=0;Stretch(g.rectTransform);SetBleed(color,color);}
-    private void Header(string subtitle)
+    private void Header(string title,string subtitle)
     {
 #if UNITY_EDITOR
         if(MahalleProfile.PreviewMode)subtitle="ÖNİZLEME · TÜM BÖLÜMLER AÇIK · KAYIT YAPILMAZ";
 #endif
-        Text(page,"MİSKETR",48,24,630,76,64,Ink);
+        Text(page,title,48,24,630,76,64,Ink);
         Text(page,subtitle,50,104,740,42,27,Muted);
         var wallet=Panel(page,"Boncuk",805,35,225,76,Ink);
         Art(wallet.transform,"Boncuk simgesi",MahalleGraphic.Shape.Marble,18,16,44,44,Gold);
@@ -178,7 +178,7 @@ public class MahalleUI : MonoBehaviour
         // Başlık ve menü: çember kapanana kadar görünmezler.
         var head = Rect("Başlık", page); Stretch(head);
         var headFade = head.gameObject.AddComponent<CanvasGroup>(); headFade.alpha = 0f;
-        Text(head, "MİSKETR", 0, 150, 1080, 150, 116, new Color(1, .98f, .92f), TextAlignmentOptions.Center);
+        Text(head, "MİSKO", 0, 150, 1080, 150, 116, new Color(1, .98f, .92f), TextAlignmentOptions.Center);
         Text(head, "mahallenin en iyi nişancısı kim?", 0, 292, 1080, 50, 31, new Color(1, .97f, .89f, .62f), TextAlignmentOptions.Center);
 
         var menu = Rect("Menü", page); Stretch(menu);
@@ -702,7 +702,7 @@ public class MahalleUI : MonoBehaviour
         else
         {
             Background(Paper);
-            Header(tab==1?"HER MİSKETİN BİR HİKÂYESİ VAR":tab==3?"MAHALLEDEKİ İZİN":"KÜÇÜK HEDEFLER, YENİ BONCUKLAR");
+            Header(tab==1?"Kesem":tab==3?"İstatistik":"Görevler",tab==1?"HER MİSKETİN BİR HİKÂYESİ VAR":tab==3?"MAHALLEDEKİ İZİN":"KÜÇÜK HEDEFLER, YENİ BONCUKLAR");
             if(tab==1)Collection();else if(tab==3)Stats();else Missions();
         }
         Nav();
@@ -1137,13 +1137,13 @@ public class MahalleUI : MonoBehaviour
             m.accent=Color.Lerp(col,Color.white,.55f);
         }
         Text(card,"Sen kaç atışta bitirirsin?",0,1340,1080,70,46,Cream,TextAlignmentOptions.Center);
-        Text(card,"MİSKETR",0,1560,1080,170,140,new Color(1,.98f,.92f),TextAlignmentOptions.Center);
+        Text(card,"MİSKO",0,1560,1080,170,140,new Color(1,.98f,.92f),TextAlignmentOptions.Center);
         Text(card,"mahallenin en iyi nişancısı kim?",0,1730,1080,56,36,new Color(1,.97f,.89f,.62f),TextAlignmentOptions.Center);
     }
     private string ShareText()
     {
         int no=controller.LevelIndex%Campaign.PerDistrict+1;
-        return L.F("MİSKETR · {0} {1} bölümünü {2} atışta {3} yıldızla bitirdim. Sen kaç atışta bitirirsin?",L.T(Campaign.Districts[controller.Level.district]),no.ToString("00"),controller.ShotsUsed,controller.Stars);
+        return L.F("MİSKO · {0} {1} bölümünü {2} atışta {3} yıldızla bitirdim. Sen kaç atışta bitirirsin?",L.T(Campaign.Districts[controller.Level.district]),no.ToString("00"),controller.ShotsUsed,controller.Stars);
     }
     private IEnumerator CaptureCard(RectTransform card,CanvasGroup buttons)
     {

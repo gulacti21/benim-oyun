@@ -186,8 +186,8 @@ public static class L
 
         // ---- Paylaş kartı ----
         {"ATIŞTA", "SHOTS"}, {"{0} / {1} MİSKET", "{0} / {1} MARBLES"}, {"Sen kaç atışta bitirirsin?", "How many shots will you need?"},
-        {"MİSKETR · {0} {1} bölümünü {2} atışta {3} yıldızla bitirdim. Sen kaç atışta bitirirsin?",
-         "MİSKETR · I finished {0} {1} in {2} shots with {3} stars. How many shots will you need?"},
+        {"MİSKO · {0} {1} bölümünü {2} atışta {3} yıldızla bitirdim. Sen kaç atışta bitirirsin?",
+         "MISKO · I finished {0} {1} in {2} shots with {3} stars. How many shots will you need?"},
 
         // ---- Öğretici ----
         {"1/5 · YERİNİ SEÇ (SAĞ)", "1/5 · PICK YOUR SPOT (RIGHT)"}, {"1/5 · YERİNİ SEÇ (SOL)", "1/5 · PICK YOUR SPOT (LEFT)"},
@@ -289,6 +289,7 @@ public static class L
         {"Üçgenin içine koy", "Place it inside the triangle"}, {"Çizginin içine koy", "Place it on the line"},
         {"Burası dolu, boş bir yer seç", "This spot is taken, pick an empty one"},
         {"DİL: {0}", "LANGUAGE: {0}"},
+        {"MİSKO", "MISKO"}, {"Kesem", "Pouch"}, {"İstatistik", "Stats"}, {"Görevler", "Tasks"},
         {"tur", "rounds"}, {"ÇIK", "EXIT"}, {"SIRA ATIŞI", "LAG SHOT"}, {"DÜELLO", "DUEL"},
     };
 }

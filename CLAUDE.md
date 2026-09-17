@@ -219,6 +219,9 @@ bayraklar kapanınca ikisi de kaybolur.
 ## YAPILACAKLAR
 
 **Kullanıcıda:**
+- **Mağaza adı:** App Store Connect'te uygulama oluşturulurken ad "Misko: Misket Oyunu"
+  (İngilizce "Misko: Marble Game") girilecek. İkon altındaki ad sadece "Misko"
+  (Player Settings → Product Name). Oyun içi marka: MİSKO / MISKO.
 - `git push` (biriken commit'ler)
 - Unity Cloud bağlantısı → online oda kurma bunun arkasında
 - Uygulama ikonu yok (1024×1024 PNG, **alpha kanalsız** — Apple `ITMS-90717`
