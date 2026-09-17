@@ -289,7 +289,7 @@ public static class L
         {"Üçgenin içine koy", "Place it inside the triangle"}, {"Çizginin içine koy", "Place it on the line"},
         {"Burası dolu, boş bir yer seç", "This spot is taken, pick an empty one"},
         {"DİL: {0}", "LANGUAGE: {0}"},
-        {"MİSKO", "MISKO"}, {"Kesem", "Pouch"}, {"İstatistik", "Stats"}, {"Görevler", "Tasks"},
+        {"MİSKO", "MISKO"}, {"Kesem", "Pouch"}, {"MÜZİK: {0}", "MUSIC: {0}"}, {"ÇOK YAKINDA", "COMING SOON"}, {"Online oyun çok yakında!", "Online play is coming soon!"}, {"İstatistik", "Stats"}, {"Görevler", "Tasks"},
         {"tur", "rounds"}, {"ÇIK", "EXIT"}, {"SIRA ATIŞI", "LAG SHOT"}, {"DÜELLO", "DUEL"},
     };
 }

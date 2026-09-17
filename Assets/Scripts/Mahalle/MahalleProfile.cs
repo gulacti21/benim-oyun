@@ -25,6 +25,7 @@ public class MahalleSave
     // DİL: "" = telefona göre, "tr", "en"
     public string language = "";
     public bool sound = true;
+    public bool music = true;
     public bool haptics = true;
 }
 

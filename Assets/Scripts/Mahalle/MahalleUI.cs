@@ -45,6 +45,7 @@ public class MahalleUI : MonoBehaviour
         bleedBottom=Bleed("Alt taşma",Vector2.zero,new Vector2(1,.5f));
         root=Rect("SafeArea",transform);Stretch(root);root.gameObject.AddComponent<SafeAreaFit>();
         Canvas.ForceUpdateCanvases();
+        MusicPlayer.Ensure();
         controller=FindFirstObjectByType<LevelController>();
         if(controller!=null)controller.AnchorRefunded+=()=>Toast("Misketin işe yarar bir yerde kalmadı. Hakkın iade edildi.");
         district=MahalleProfile.NextLevel/Campaign.PerDistrict;
@@ -354,10 +355,13 @@ public class MahalleUI : MonoBehaviour
 
         // Ag katmani henuz yok; akis burada duruyor ki yeri belli olsun.
         var oda = LabelButton(page, "ODA KUR", 90, 1116, 435, 104, new Color(.22f, .26f, .24f), new Color(1, .97f, .89f, .35f),
-                              () => Toast("Oda kurma henüz hazır değil."), 30);
+                              () => Toast("Online oyun çok yakında!"), 30);
         var katil = LabelButton(page, "ODAYA KATIL", 555, 1116, 435, 104, new Color(.22f, .26f, .24f), new Color(1, .97f, .89f, .35f),
-                                () => Toast("Odaya katılma henüz hazır değil."), 30);
+                                () => Toast("Online oyun çok yakında!"), 30);
         oda.interactable = katil.interactable = true;
+        // Online bir sonraki sürümde: butonlarda "ÇOK YAKINDA" rozeti.
+        Text(oda.transform, "ÇOK YAKINDA", 12, 70, 411, 30, 20, Gold, TextAlignmentOptions.Center);
+        Text(katil.transform, "ÇOK YAKINDA", 12, 70, 411, 30, 20, Gold, TextAlignmentOptions.Center);
 
         LabelButton(page, "ANA MENÜ", 90, 1248, 900, 96, new Color(.20f, .25f, .23f), new Color(1, .97f, .89f, .82f),
                     () => ShowTitle(true), 29);
@@ -1056,13 +1060,12 @@ public class MahalleUI : MonoBehaviour
     }
     private void Pause()
     {
-        controller.SetPaused(true);var box=Modal("Mola",806);
+        controller.SetPaused(true);var box=Modal("Mola",680);
         Text(box,"Bir nefes al",36,34,912,81,57,Ink,TextAlignmentOptions.Center);
         LabelButton(box,"DEVAM ET",36,164,912,100,Ink,Cream,()=>CloseModal());
         LabelButton(box,"TEKRAR DENE",36,290,912,100,new Color(.88f,.83f,.69f),Ink,()=>{CloseModal();controller.RestartLevel();ShowGame();});
         LabelButton(box,"MAHALLEYE DÖN",36,416,912,100,new Color(.88f,.83f,.69f),Ink,()=>controller.OpenLevelSelect());
-        LabelButton(box,"ANA MENÜ",36,542,912,100,new Color(.88f,.83f,.69f),Ink,()=>{returnToTitle=true;controller.OpenLevelSelect();});
-        LabelButton(box,"SES VE TİTREŞİM",36,680,912,78,Paper,Muted,Settings,27);
+        LabelButton(box,"AYARLAR",36,554,912,78,Paper,Muted,Settings,27);
     }
     private void Results()
     {
@@ -1379,14 +1382,15 @@ public class MahalleUI : MonoBehaviour
     }
     private void Settings()
     {
-        var box=Modal("Ayarlar",974);Text(box,"Ayarlar",36,30,912,77,52,Ink);
+        var box=Modal("Ayarlar",1086);Text(box,"Ayarlar",36,30,912,77,52,Ink);
         LabelButton(box,L.F("SES: {0}",L.T(MahalleProfile.Data.sound?"AÇIK":"KAPALI")),36,158,912,100,Ink,Cream,()=>{MahalleProfile.Data.sound=!MahalleProfile.Data.sound;MahalleProfile.Save();Settings();});
+        LabelButton(box,L.F("MÜZİK: {0}",L.T(MahalleProfile.Data.music?"AÇIK":"KAPALI")),36,406,912,100,Ink,Cream,()=>{MahalleProfile.Data.music=!MahalleProfile.Data.music;MahalleProfile.Save();MusicPlayer.Refresh();Settings();});
         LabelButton(box,L.F("TİTREŞİM: {0}",L.T(MahalleProfile.Data.haptics?"AÇIK":"KAPALI")),36,282,912,100,Ink,Cream,()=>{MahalleProfile.Data.haptics=!MahalleProfile.Data.haptics;MahalleProfile.Save();Settings();});
-        LabelButton(box,L.F("DİL: {0}",L.English?"ENGLISH":"TÜRKÇE"),36,415,912,89,new Color(.88f,.83f,.69f),Ink,ToggleLanguage,29);
-        LabelButton(box,"NASIL OYNANIR",36,527,912,89,new Color(.88f,.83f,.69f),Ink,()=>StartTutorial(true),29);
-        LabelButton(box,"İLERLEMEYİ SIFIRLA",36,639,912,89,new Color(.88f,.83f,.69f),Ink,ResetPrompt,29);
-        Text(box,"Boncuklar oyun içinden kazanılır. Gerçek para işlemi yoktur.",36,751,912,64,25,Muted,TextAlignmentOptions.Center);
-        LabelButton(box,"GERİ",36,849,912,87,Ink,Cream,()=>{if(controller!=null)Pause();else CloseModal();},29);
+        LabelButton(box,L.F("DİL: {0}",L.English?"ENGLISH":"TÜRKÇE"),36,527,912,89,new Color(.88f,.83f,.69f),Ink,ToggleLanguage,29);
+        LabelButton(box,"NASIL OYNANIR",36,639,912,89,new Color(.88f,.83f,.69f),Ink,()=>StartTutorial(true),29);
+        LabelButton(box,"İLERLEMEYİ SIFIRLA",36,751,912,89,new Color(.88f,.83f,.69f),Ink,ResetPrompt,29);
+        Text(box,"Boncuklar oyun içinden kazanılır. Gerçek para işlemi yoktur.",36,863,912,64,25,Muted,TextAlignmentOptions.Center);
+        LabelButton(box,"GERİ",36,961,912,87,Ink,Cream,()=>{if(controller!=null)Pause();else CloseModal();},29);
     }
     // Dil değişince ekran yeni dille baştan kurulur. Oyundaysa bölüm yeniden başlar.
     private void ToggleLanguage()
