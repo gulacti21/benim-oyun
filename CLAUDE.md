@@ -218,10 +218,11 @@ bayraklar kapanınca ikisi de kaybolur.
 **Kodda:**
 - Relay taşıyıcısı + oda kur/katıl ekranları (Cloud bağlanınca)
 - Müzik yok, sadece ses efektleri var
-- **Kamera kırpması**: görünen yatay alan 7.3 birim sabit
-  (`orthographicSize = Max(6.3, 3.65/aspect)`), ama 13 bölümün saha yarıçapı
-  3.65'ten büyük (en büyüğü MEYDAN 12, 4.0). O bölümlerde çemberin kenarları
-  ekran dışında kalıyor. Karar bekliyor.
+- ~~Kamera kırpması~~ DÜZELTİLDİ: `MahalleWorld.CameraSize` çember + çizgi dışı
+  payını (yan 0.4, üst 0.35) hem yatayda hem üst başlığın altında gösterecek
+  kadar açar, eskisinden asla yakın değil. 40 bölüm etkilendi (MEYDAN 12 %20).
+  `CameraFitVerify` her `MahalleVerify.Run`'da 60 bölüm × 3 ekran oranını ölçer.
+  Düello kamerası değişmedi.
 - IAP: para mağazası yok. Boncuk mağazası (KESEM) çalışıyor.
 
 ---

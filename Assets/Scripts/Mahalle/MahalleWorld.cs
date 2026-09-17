@@ -37,6 +37,28 @@ public class MahalleWorld : MonoBehaviour
     }
     private GameObject decor;
     private static readonly Color[] GroundColors={new Color(.57f,.42f,.28f),new Color(.53f,.52f,.44f),new Color(.47f,.49f,.30f),new Color(.64f,.43f,.28f),new Color(.57f,.51f,.40f)};
+    // KAMERA KIRPMASI DÜZELTMESİ
+    // Eskiden görünen yatay alan sabitti (yarı genişlik 3.65), saha yarıçapı
+    // 3.65'i geçen bölümlerde çemberin kenarı ekran dışında kalıyordu.
+    // Artık kamera, çemberin + çizgi dışı payının hem yatayda hem de üst
+    // başlığın altında dikeyde görünmesine yetecek kadar açılır. Eski değerden
+    // asla daha yakın olmaz, küçük sahalı bölümler aynen kalır.
+    public const float CamPitch=72f, CamFocusZ=-1.1f;
+    public const float SideMargin=.4f;      // çemberin yanında görünecek çizgi dışı alan (dünya birimi)
+    public const float TopMargin=.35f;      // çemberin üstünde görünecek alan
+    public const float HudTopRef=258f;      // üst oyun başlığının alt kenarı (1080 genişlik referansı)
+    public const float SafeTopFraction=.07f;// çentik/Dynamic Island payı (ekran yüksekliğinin oranı)
+    public static float CameraSize(float arenaSize,float aspect)
+    {
+        aspect=Mathf.Max(.3f,aspect);
+        float legacy=Mathf.Max(6.3f,3.65f/aspect);
+        float horizontal=(arenaSize+SideMargin)/aspect;
+        float canvasHeight=1080f/aspect;
+        float topCover=HudTopRef/canvasHeight+SafeTopFraction;          // ekranın üstten örtülen oranı
+        float farEdge=(arenaSize+TopMargin-CamFocusZ)*Mathf.Sin(CamPitch*Mathf.Deg2Rad);
+        float vertical=farEdge/Mathf.Max(.2f,1f-2f*topCover);
+        return Mathf.Max(legacy,horizontal,vertical);
+    }
     public static void Apply(LevelController controller)
     {
         var world=FindFirstObjectByType<MahalleWorld>();
@@ -73,7 +95,7 @@ public class MahalleWorld : MonoBehaviour
         var camera=Camera.main;
         if(camera!=null)
         {
-            camera.orthographic=true; camera.orthographicSize=Mathf.Max(6.3f,3.65f/camera.aspect);
+            camera.orthographic=true; camera.orthographicSize=DuelSession.Active?Mathf.Max(6.3f,3.65f/camera.aspect):CameraSize(controller.Level.arenaSize,camera.aspect);
             camera.transform.rotation=Quaternion.Euler(72,0,0);
             camera.transform.position=new Vector3(0,0,-1.1f)-camera.transform.forward*18;
             camera.backgroundColor=new Color(.18f,.16f,.12f);

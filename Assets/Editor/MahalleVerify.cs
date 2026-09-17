@@ -55,6 +55,7 @@ public static class MahalleVerify
             checks += DuelVerify.RunChecks();
             checks += DuelNetVerify.RunChecks();
             checks += DistrictRewardVerify.RunChecks();
+            checks += CameraFitVerify.RunChecks();
             Check(Resources.Load<TMPro.TMP_FontAsset>("Mahalle/Nunito SDF")!=null,"Turkish font included");
             Check(Resources.Load<Shader>("Mahalle/Marble")!=null,"Marble shader included");
             foreach(var scene in new[]{"Assets/Scenes/LevelSelect.unity","Assets/Scenes/Game.unity"})Check(File.Exists(scene),"Scene exists "+scene);
