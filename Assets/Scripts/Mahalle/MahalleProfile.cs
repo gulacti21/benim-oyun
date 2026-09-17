@@ -22,6 +22,8 @@ public class MahalleSave
     public bool tutorialDone;
     // ÖĞRETİCİ: ısınma sahası bitirildi ya da geçildi.
     public bool howToPlayDone;
+    // DİL: "" = telefona göre, "tr", "en"
+    public string language = "";
     public bool sound = true;
     public bool haptics = true;
 }

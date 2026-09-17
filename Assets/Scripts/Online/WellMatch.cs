@@ -209,22 +209,22 @@ public class WellMatch
         return next;
     }
 
-    public string RoundText => "TUR " + Mathf.Min(Round, TotalRounds) + " / " + TotalRounds;
+    public string RoundText => L.F("TUR {0} / {1}", Mathf.Min(Round, TotalRounds), TotalRounds);
     public string ScoreText => rounds[0] + " - " + rounds[1];
 
-    public string StateText(int player) => Cooked(player) ? "PİŞTİ" : "ÇİĞ";
+    public string StateText(int player) => L.T(Cooked(player) ? "PİŞTİ" : "ÇİĞ");
 
     // Atistan sonra oyuncuya gosterilecek kisa mesaj.
     public string OutcomeText(int shooter)
     {
         switch (LastOutcome)
         {
-            case Outcome.Cooked: return DuelSession.PlayerName(shooter) + " PİŞTİ";
-            case Outcome.AlreadyCooked: return "Çukura tekrar girdi";
-            case Outcome.RivalReset: return "Pişmeden çıkardı · rakip çizgiye döndü";
-            case Outcome.RoundWon: return DuelSession.PlayerName(shooter) + " TURU ALDI";
-            case Outcome.SelfOut: return "Sahadan çıktı";
-            case Outcome.Nudge: return "Vurdu ama çıkaramadı";
+            case Outcome.Cooked: return L.F("{0} PİŞTİ", DuelSession.PlayerName(shooter));
+            case Outcome.AlreadyCooked: return L.T("Çukura tekrar girdi");
+            case Outcome.RivalReset: return L.T("Pişmeden çıkardı · rakip çizgiye döndü");
+            case Outcome.RoundWon: return L.F("{0} TURU ALDI", DuelSession.PlayerName(shooter));
+            case Outcome.SelfOut: return L.T("Sahadan çıktı");
+            case Outcome.Nudge: return L.T("Vurdu ama çıkaramadı");
             default: return "";
         }
     }

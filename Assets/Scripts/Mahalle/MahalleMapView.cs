@@ -95,7 +95,7 @@ public static class MahalleMapView
             int need = MahalleProfile.Required(index);
             int needBefore = index > 0 ? MahalleProfile.Required(index - 1) : 1;
             string blocked = needBefore > 1
-                ? "Bu bölüm için önceki bölümde " + needBefore + " yıldız almalısın."
+                ? L.F("Bu bölüm için önceki bölümde {0} yıldız almalısın.", needBefore)
                 : "Önce bir önceki bölümü tamamla.";
             button.onClick.AddListener(() =>
             {
@@ -196,9 +196,9 @@ public static class MahalleMapView
         // Baraj bölümlerinde oyuncu daha girmeden ne gerektiğini bilir.
         if (need > 1)
         {
-            Text(node, font, need + " YILDIZ GEREKLİ", new Vector2(3f, -72f * Scale - 3f), new Vector2(480f, 44f),
+            Text(node, font, L.F("{0} YILDIZ GEREKLİ", need), new Vector2(3f, -72f * Scale - 3f), new Vector2(480f, 44f),
                  10f * Scale, new Color(.13f, .09f, .04f, .5f), TextAlignmentOptions.Center);
-            Text(node, font, need + " YILDIZ GEREKLİ", new Vector2(0f, -72f * Scale), new Vector2(480f, 44f),
+            Text(node, font, L.F("{0} YILDIZ GEREKLİ", need), new Vector2(0f, -72f * Scale), new Vector2(480f, 44f),
                  10f * Scale, Gold, TextAlignmentOptions.Center);
         }
 
@@ -274,7 +274,7 @@ public static class MahalleMapView
     {
         var r = Rect(value, parent, pos, size);
         var t = r.gameObject.AddComponent<TextMeshProUGUI>();
-        t.text = value; t.font = font; t.fontSize = fontSize; t.color = color;
+        t.text = L.T(value); t.font = font; t.fontSize = fontSize; t.color = color;
         t.alignment = align; t.raycastTarget = false;
         t.textWrappingMode = TextWrappingModes.NoWrap;
         t.overflowMode = TextOverflowModes.Overflow;

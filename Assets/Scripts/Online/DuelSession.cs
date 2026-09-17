@@ -22,9 +22,9 @@ public static class DuelSession
     public static bool Triangle => Type == GameType.Ucgen;
     public static bool Row => Type == GameType.Dizi;
     public static bool Well => Type == GameType.Kuyu;
-    public static string TypeName => Type == GameType.Ucgen ? "ÜÇGEN"
+    public static string TypeName => L.T(Type == GameType.Ucgen ? "ÜÇGEN"
                                   : Type == GameType.Dizi ? "DİZİ"
-                                  : Type == GameType.Kuyu ? "KUYU" : "ÇEMBER";
+                                  : Type == GameType.Kuyu ? "KUYU" : "ÇEMBER");
     // Ilk dizen oyuncu. Atisa DIGERI baslar; rovansta el degisir.
     public static int FirstPlacer { get; set; }
     public static int MatchNumber { get; set; }
@@ -155,8 +155,8 @@ public static class DuelSession
 
     public static string PlayerName(int player)
     {
-        if (Kind == Mode.HotSeat) return player == 0 ? "1. OYUNCU" : "2. OYUNCU";
-        return player == 0 ? "SEN" : "RAKİP";
+        if (Kind == Mode.HotSeat) return L.T(player == 0 ? "1. OYUNCU" : "2. OYUNCU");
+        return L.T(player == 0 ? "SEN" : "RAKİP");
     }
 
     public static Color PlayerColor(int player)

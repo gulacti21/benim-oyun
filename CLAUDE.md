@@ -89,6 +89,17 @@ Bölüm verisi **koddan** geliyor: `Campaign.Database` çalışma anında üreti
 
 ---
 
+## DİL (TR / EN)
+
+`Assets/Scripts/Mahalle/L.cs`: koddaki Türkçe metin anahtardır, İngilizce
+karşılığı aynı dosyadaki tablodadır. `Text()`/`LabelButton()`/`Toast()` ve
+`SetTextL()` metni otomatik çevirir. Değişken içeren metin `L.F("... {0} ...", x)`
+ile yazılır (Türkçe şablon = anahtar). Yeni bir yazı eklersen tabloya İngilizcesini
+de ekle; eksikse Türkçe görünür. Dil Ayarlar'dan, yoksa telefon diline göre.
+Büyük harf için `L.Up()` kullan (ToUpperInvariant "İ"yi bozar).
+
+---
+
 ## ÖLÇÜLEN DEĞERLER (tahminle değiştirme)
 
 Bu projede her denge kararı ölçülerek verildi. Bir sabiti değiştirmeden önce

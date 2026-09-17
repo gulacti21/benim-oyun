@@ -92,7 +92,7 @@ public class DuelToss
     {
         int p = Clamp(player);
         if (score[p] < 0f) return "—";
-        if (foul[p]) return "YANDI";
+        if (foul[p]) return L.T("YANDI");
         return score[p].ToString("0.00") + " br";
     }
 

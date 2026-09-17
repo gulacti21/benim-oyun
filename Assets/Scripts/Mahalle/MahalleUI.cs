@@ -39,6 +39,10 @@ public class MahalleUI : MonoBehaviour
         var canvas=gameObject.AddComponent<Canvas>();canvas.renderMode=RenderMode.ScreenSpaceOverlay;canvas.sortingOrder=20;
         var scaler=gameObject.AddComponent<CanvasScaler>();scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize;scaler.referenceResolution=new Vector2(1080,1920);scaler.matchWidthOrHeight=0;
         gameObject.AddComponent<GraphicRaycaster>();
+        // TAM EKRAN ZEMİN: güvenli alanın dışı (çentik/Dynamic Island ve ev çubuğu
+        // şeritleri) ekranın zemin rengiyle boyanır. İçerik güvenli alanda kalır.
+        bleedTop=Bleed("Üst taşma",new Vector2(0,.5f),Vector2.one);
+        bleedBottom=Bleed("Alt taşma",Vector2.zero,new Vector2(1,.5f));
         root=Rect("SafeArea",transform);Stretch(root);root.gameObject.AddComponent<SafeAreaFit>();
         Canvas.ForceUpdateCanvases();
         controller=FindFirstObjectByType<LevelController>();
@@ -77,7 +81,7 @@ public class MahalleUI : MonoBehaviour
     {return Art(parent,name,MahalleGraphic.Shape.Panel,x,y,w,h,color,hit);}
     private TextMeshProUGUI Text(Transform parent,string value,float x,float y,float w,float h,float size,Color color,TextAlignmentOptions align=TextAlignmentOptions.MidlineLeft)
     {
-        var r=Rect(value,parent);Place(r,x,y,w,h);var t=r.gameObject.AddComponent<TextMeshProUGUI>();t.text=value;t.font=font;t.fontSize=size;t.color=color;t.alignment=align;t.raycastTarget=false;t.textWrappingMode=TextWrappingModes.Normal;return t;
+        var r=Rect(value,parent);Place(r,x,y,w,h);var t=r.gameObject.AddComponent<TextMeshProUGUI>();t.text=L.T(value);t.font=font;t.fontSize=size;t.color=color;t.alignment=align;t.raycastTarget=false;t.textWrappingMode=TextWrappingModes.Normal;return t;
     }
     private Button Button(Transform parent,string name,float x,float y,float w,float h,Color bg,Action action)
     {
@@ -87,10 +91,18 @@ public class MahalleUI : MonoBehaviour
     }
     private Button LabelButton(Transform parent,string title,float x,float y,float w,float h,Color bg,Color fg,Action action,float size=34)
     {var b=Button(parent,title,x,y,w,h,bg,action);Text(b.transform,title,12,0,w-24,h,size,fg,TextAlignmentOptions.Center);return b;}
+    private Image bleedTop,bleedBottom;
+    private Image Bleed(string name,Vector2 min,Vector2 max)
+    {
+        var r=Rect(name,transform);r.anchorMin=min;r.anchorMax=max;r.offsetMin=r.offsetMax=Vector2.zero;
+        var img=r.gameObject.AddComponent<Image>();img.color=Color.clear;img.raycastTarget=false;return img;
+    }
+    private void SetBleed(Color top,Color bottom)
+    {if(bleedTop!=null)bleedTop.color=top;if(bleedBottom!=null)bleedBottom.color=bottom;}
     private void ClearPage()
-    {CloseModal(false);if(page!=null){page.gameObject.SetActive(false);Destroy(page.gameObject);}page=Rect("Ekran",root);Stretch(page);}
+    {CloseModal(false);SetBleed(Color.clear,Color.clear);if(page!=null){page.gameObject.SetActive(false);Destroy(page.gameObject);}page=Rect("Ekran",root);Stretch(page);}
     private void Background(Color color)
-    {var g=Panel(page,"Zemin",0,0,1080,2500,color);g.radius=0;Stretch(g.rectTransform);}
+    {var g=Panel(page,"Zemin",0,0,1080,2500,color);g.radius=0;Stretch(g.rectTransform);SetBleed(color,color);}
     private void Header(string subtitle)
     {
 #if UNITY_EDITOR
@@ -175,7 +187,7 @@ public class MahalleUI : MonoBehaviour
         int next = MahalleProfile.NextLevel;
         bool resume = next > 0 && MahalleProfile.Data.stars[0] > 0;
         string playText = resume
-            ? "DEVAM ET · " + Campaign.Districts[next / Campaign.PerDistrict].ToUpperInvariant() + " " + (next % Campaign.PerDistrict + 1).ToString("00")
+            ? L.T("DEVAM ET") + " · " + L.Up(L.T(Campaign.Districts[next / Campaign.PerDistrict])) + " " + (next % Campaign.PerDistrict + 1).ToString("00")
             : "OYNA";
         LabelButton(menu, playText, 90, 1245, 900, 132, Gold, new Color(.16f, .20f, .16f), () => { tab = 0; district = next / Campaign.PerDistrict; ShowHome(); }, resume ? 38 : 46);
         LabelButton(menu, "KESEM", 90, 1398, 435, 104, new Color(.24f, .34f, .30f), Cream, () => { tab = 1; ShowHome(); }, 32);
@@ -303,9 +315,9 @@ public class MahalleUI : MonoBehaviour
         kart.radius = 28;
         string[] satir =
         {
-            "Kese " + DuelMatch.StartingPouch + " misket · her el " + DuelMatch.AntePerRound + "'er ortaya",
+            L.F("Kese {0} misket · her el {1}'er ortaya", DuelMatch.StartingPouch, DuelMatch.AntePerRound),
             "Çıkardığın misket kesene girer",
-            "Çıkardıysan tekrar atarsın, turda en fazla " + DuelMatch.MaxShotsPerTurn,
+            L.F("Çıkardıysan tekrar atarsın, turda en fazla {0}", DuelMatch.MaxShotsPerTurn),
             "Atıcın çemberin ortasında kalırsa onu kaybedersin",
             "Maç başı sıra atışı: kenara yakın duran önce atar",
             "Herkes aynı misketi kullanır, güç yok"
@@ -396,8 +408,8 @@ public class MahalleUI : MonoBehaviour
     {
         if (duel == null || tossWho == null) return;
         var toss = duel.Online ? duel.Net.Toss : DuelToss.Current;
-        if (tossScoreA != null) tossScoreA.SetText(toss.TextFor(0));
-        if (tossScoreB != null) tossScoreB.SetText(toss.TextFor(1));
+        if (tossScoreA != null) tossScoreA.SetTextL(toss.TextFor(0));
+        if (tossScoreB != null) tossScoreB.SetTextL(toss.TextFor(1));
 
         bool bitti = toss.Finished;
         if (tossGo != null) tossGo.SetActive(bitti);
@@ -405,17 +417,17 @@ public class MahalleUI : MonoBehaviour
         if (bitti)
         {
             int k = toss.WinnerOf;
-            tossWho.SetText(DuelSession.PlayerName(k) + " ÖNCE ATIYOR");
+            tossWho.SetTextL(L.F("{0} ÖNCE ATIYOR", DuelSession.PlayerName(k)));
             tossWho.color = DuelSession.PlayerColor(k);
-            tossHint.SetText(DuelSession.PlayerName(toss.FirstPlacerOf) + " misketlerini önce dizer");
+            tossHint.SetTextL(L.F("{0} misketlerini önce dizer", DuelSession.PlayerName(toss.FirstPlacerOf)));
             return;
         }
 
         int atan = duel.Online ? duel.Net.Toss.TurnOf : DuelToss.Shooter;
-        tossWho.SetText(duel.Watching ? "RAKİP ATIYOR"
+        tossWho.SetTextL(duel.Watching ? "RAKİP ATIYOR"
                                       : DuelSession.PlayerName(atan) + " ATIYOR");
         tossWho.color = DuelSession.PlayerColor(atan);
-        tossHint.SetText(toss.Threw(1 - atan) ? "Rakibinden daha yakın durdurmaya çalış"
+        tossHint.SetTextL(toss.Threw(1 - atan) ? "Rakibinden daha yakın durdurmaya çalış"
                                               : "Uzak kenara olabildiğince yakın durdur");
     }
 
@@ -425,7 +437,7 @@ public class MahalleUI : MonoBehaviour
         ClearPage();
         Background(new Color(.14f, .12f, .10f));
         int me = duel.ActivePlayer;
-        Text(page, "EL " + duel.Match.Round, 0, 200, 1080, 80, 48, new Color(1, .97f, .89f, .6f), TextAlignmentOptions.Center);
+        Text(page, L.F("EL {0}", duel.Match.Round), 0, 200, 1080, 80, 48, new Color(1, .97f, .89f, .6f), TextAlignmentOptions.Center);
         Art(page, "Renk", MahalleGraphic.Shape.Marble, 480, 320, 120, 120, DuelSession.PlayerColor(me));
         Text(page, DuelSession.PlayerName(me), 0, 470, 1080, 70, 44, new Color(1, .98f, .92f), TextAlignmentOptions.Center);
         Text(page, "Misketlerini kendi elinle dizmek ister misin?", 80, 570, 920, 70, 31,
@@ -446,7 +458,7 @@ public class MahalleUI : MonoBehaviour
         int me = duel.ActivePlayer;
         var top = Panel(page, "Dizme başlığı", 24, 12, 1032, 200, Ink); top.radius = 30;
         Art(top.transform, "Renk", MahalleGraphic.Shape.Marble, 28, 26, 58, 58, DuelSession.PlayerColor(me));
-        Text(top.transform, DuelSession.PlayerName(me) + " · EL " + duel.Match.Round, 100, 20, 900, 60, 34, Cream);
+        Text(top.transform, DuelSession.PlayerName(me) + " · " + L.F("EL {0}", duel.Match.Round), 100, 20, 900, 60, 34, Cream);
         Text(top.transform, "Sahanın içine dokunarak misketlerini diz. Rakibin dizilişini görmüyorsun.",
              28, 88, 976, 70, 25, new Color(.81f, .84f, .75f));
         placeCount = Text(top.transform, "", 28, 148, 976, 44, 29, Gold);
@@ -468,13 +480,13 @@ public class MahalleUI : MonoBehaviour
     {
         if (duel == null || placeCount == null) return;
         int n = duel.PlacedCount, toplam = duel.NeedCount;
-        placeCount.SetText(n + " / " + toplam + " misket dizildi");
+        placeCount.SetTextL(L.F("{0} / {1} misket dizildi", n, toplam));
         if (placeHint != null)
         {
             string uyari = duel.Hint;
-            placeHint.SetText(uyari.Length > 0 ? uyari
+            placeHint.SetTextL(uyari.Length > 0 ? uyari
                               : n >= toplam ? "Hazırsan HAZIRIM'a bas"
-                              : (toplam - n) + " misket daha koy");
+                              : L.F("{0} misket daha koy", toplam - n));
         }
     }
 
@@ -484,7 +496,7 @@ public class MahalleUI : MonoBehaviour
         Background(new Color(.14f, .12f, .10f));
         int next = duel.ActivePlayer;
         Text(page, "TELEFONU VER", 0, 520, 1080, 100, 66, new Color(1, .98f, .92f), TextAlignmentOptions.Center);
-        Text(page, DuelSession.PlayerName(next) + " şimdi kendi misketlerini dizecek",
+        Text(page, L.F("{0} şimdi kendi misketlerini dizecek", DuelSession.PlayerName(next)),
              80, 650, 920, 90, 32, new Color(1, .97f, .89f, .7f), TextAlignmentOptions.Center);
         Text(page, "Diziliş gizli: kimse diğerinin nereye koyduğunu görmeyecek",
              80, 760, 920, 80, 25, new Color(1, .97f, .89f, .45f), TextAlignmentOptions.Center);
@@ -528,22 +540,22 @@ public class MahalleUI : MonoBehaviour
         if (duel == null || duel.Well == null) return;
         var w = duel.Well;
 
-        if (wellRoundLabel != null) wellRoundLabel.SetText("KUYU · " + w.RoundText);
-        if (duelCountA != null) duelCountA.SetText(w.RoundsWon(0) + " tur");
-        if (duelCountB != null) duelCountB.SetText(w.RoundsWon(1) + " tur");
+        if (wellRoundLabel != null) wellRoundLabel.SetTextL(L.T("KUYU") + " · " + w.RoundText);
+        if (duelCountA != null) duelCountA.SetTextL(L.F("{0} tur", w.RoundsWon(0)));
+        if (duelCountB != null) duelCountB.SetTextL(L.F("{0} tur", w.RoundsWon(1)));
 
         for (int p = 0; p < 2; p++)
         {
             var alan = p == 0 ? wellCookA : wellCookB;
             if (alan == null) continue;
             bool pismis = w.Cooked(p);
-            alan.SetText(pismis ? "PİŞTİ" : "ÇİĞ");
+            alan.SetTextL(pismis ? "PİŞTİ" : "ÇİĞ");
             alan.color = pismis ? Gold : new Color(.62f, .66f, .70f);
         }
 
         if (duelTurnLabel != null)
         {
-            duelTurnLabel.SetText(duel.Watching ? "RAKİP ATIYOR"
+            duelTurnLabel.SetTextL(duel.Watching ? "RAKİP ATIYOR"
                                                 : DuelSession.PlayerName(w.Turn) + " ATIYOR");
             duelTurnLabel.color = DuelSession.PlayerColor(w.Turn);
         }
@@ -552,11 +564,11 @@ public class MahalleUI : MonoBehaviour
             // Once son atisin sonucu, sonra siradaki oyuncunun hedefi.
             string olan = w.OutcomeText(1 - w.Turn);
             if (w.ShotsThisTurn > 0)
-                duelTurnsLabel.SetText("Bu turda " + (WellMatch.MaxShotsPerTurn - w.ShotsThisTurn) + " atış hakkın daha var");
+                duelTurnsLabel.SetTextL(L.F("Bu turda {0} atış hakkın daha var", WellMatch.MaxShotsPerTurn - w.ShotsThisTurn));
             else if (olan.Length > 0)
-                duelTurnsLabel.SetText(olan);
+                duelTurnsLabel.SetTextL(olan);
             else
-                duelTurnsLabel.SetText(w.Cooked(w.Turn) ? "Piştin: rakibi sahadan çıkar, tur senin"
+                duelTurnsLabel.SetTextL(w.Cooked(w.Turn) ? "Piştin: rakibi sahadan çıkar, tur senin"
                                                         : "Önce çukura gir");
         }
     }
@@ -568,7 +580,7 @@ public class MahalleUI : MonoBehaviour
         var box = Modal("Tur sonucu", 600);
         bool iptal = w.LastRoundWinner < 0;
 
-        Text(box, iptal ? "TUR İPTAL" : DuelSession.PlayerName(w.LastRoundWinner) + " TURU ALDI",
+        Text(box, iptal ? "TUR İPTAL" : L.F("{0} TURU ALDI", DuelSession.PlayerName(w.LastRoundWinner)),
              30, 40, 924, 80, 46, Ink, TextAlignmentOptions.Center);
         Text(box, w.ScoreText, 30, 140, 924, 90, 62, Muted, TextAlignmentOptions.Center);
         Text(box, "tur", 30, 236, 924, 44, 26, Muted, TextAlignmentOptions.Center);
@@ -585,7 +597,7 @@ public class MahalleUI : MonoBehaviour
     {
         var w = duel.Well;
         var box = Modal("Kuyu sonucu", 660);
-        Text(box, DuelSession.PlayerName(w.Winner) + " KAZANDI", 30, 40, 924, 80, 50, Ink, TextAlignmentOptions.Center);
+        Text(box, L.F("{0} KAZANDI", DuelSession.PlayerName(w.Winner)), 30, 40, 924, 80, 50, Ink, TextAlignmentOptions.Center);
         Text(box, w.ScoreText, 30, 140, 924, 90, 64, Muted, TextAlignmentOptions.Center);
         Text(box, "tur", 30, 236, 924, 44, 26, Muted, TextAlignmentOptions.Center);
         LabelButton(box, "RÖVANŞ", 36, 320, 912, 116, Ink, Cream,
@@ -598,7 +610,7 @@ public class MahalleUI : MonoBehaviour
     {
         ClearPage();
         var top = Panel(page, "Düello başlığı", 24, 12, 1032, 250, Ink); top.radius = 30;
-        Text(top.transform, DuelSession.TypeName + " · EL " + duel.Match.Round + " / " + DuelMatch.RoundsPerMatch, 28, 14, 600, 56, 34, Cream);
+        Text(top.transform, DuelSession.TypeName + " · " + L.F("EL {0} / {1}", duel.Match.Round, DuelMatch.RoundsPerMatch), 28, 14, 600, 56, 34, Cream);
         LabelButton(top.transform, "ÇIK", 872, 16, 134, 88, new Color(.28f, .38f, .31f), Cream, LeaveDuel, 30);
 
         // Kazanani KESE belirliyor: cikardigin misket senin olur.
@@ -625,21 +637,21 @@ public class MahalleUI : MonoBehaviour
     {
         if (duel == null || duel.Match == null) return;
         var m = duel.Match;
-        if (duelCountA != null) duelCountA.SetText(m.Pouch(0).ToString());
-        if (duelCountB != null) duelCountB.SetText(m.Pouch(1).ToString());
+        if (duelCountA != null) duelCountA.SetTextL(m.Pouch(0).ToString());
+        if (duelCountB != null) duelCountB.SetTextL(m.Pouch(1).ToString());
         if (duelTurnLabel != null)
         {
             bool izliyor = duel.Watching;
-            duelTurnLabel.SetText(izliyor ? "RAKİP ATIYOR"
+            duelTurnLabel.SetTextL(izliyor ? "RAKİP ATIYOR"
                                           : DuelSession.PlayerName(m.Turn) + " ATIYOR");
             duelTurnLabel.color = DuelSession.PlayerColor(m.Turn);
         }
         if (duelTurnsLabel != null)
         {
             int kalan = DuelMatch.MaxShotsPerTurn - m.ShotsThisTurn;
-            duelTurnsLabel.SetText(duel.Watching ? "Sıranı bekle · çemberde " + m.RemainingInRing + " misket"
-                : m.ShotsThisTurn > 0 ? "Bu turda " + kalan + " atış hakkın daha var"
-                : "Çemberde " + m.RemainingInRing + " misket");
+            duelTurnsLabel.SetTextL(duel.Watching ? L.F("Sıranı bekle · çemberde {0} misket", m.RemainingInRing)
+                : m.ShotsThisTurn > 0 ? L.F("Bu turda {0} atış hakkın daha var", kalan)
+                : L.F("Çemberde {0} misket", m.RemainingInRing));
         }
     }
 
@@ -648,11 +660,11 @@ public class MahalleUI : MonoBehaviour
     {
         var m = duel.Match;
         var box = Modal("El sonucu", 620);
-        Text(box, "EL " + m.Round + " BİTTİ", 30, 40, 924, 80, 48, Ink, TextAlignmentOptions.Center);
+        Text(box, L.F("EL {0} BİTTİ", m.Round), 30, 40, 924, 80, 48, Ink, TextAlignmentOptions.Center);
         Text(box, m.Pouch(0) + "  ·  " + m.Pouch(1), 30, 140, 924, 90, 62, Muted, TextAlignmentOptions.Center);
         Text(box, "kesedeki misket", 30, 236, 924, 44, 26, Muted, TextAlignmentOptions.Center);
         if (m.RemainingInRing > 0)
-            Text(box, "Çemberde kalan " + m.RemainingInRing + " misket sonraki ele devrediyor",
+            Text(box, L.F("Çemberde kalan {0} misket sonraki ele devrediyor", m.RemainingInRing),
                  30, 290, 924, 44, 24, new Color(.72f, .32f, .24f), TextAlignmentOptions.Center);
         LabelButton(box, "SONRAKİ EL", 36, 360, 912, 116, Ink, Cream,
                     () => { CloseModal(false); duelScreenShown = -1; duel.NextRound(); }, 38);
@@ -664,7 +676,7 @@ public class MahalleUI : MonoBehaviour
         var m = duel.Match;
         var box = Modal("Düello sonucu", 720);
         string baslik = m.Result == DuelMatch.Outcome.Draw ? "BERABERE"
-                      : DuelSession.PlayerName(m.Result == DuelMatch.Outcome.PlayerOne ? 0 : 1) + " KAZANDI";
+                      : L.F("{0} KAZANDI", DuelSession.PlayerName(m.Result == DuelMatch.Outcome.PlayerOne ? 0 : 1));
         Text(box, baslik, 30, 40, 924, 80, 50, Ink, TextAlignmentOptions.Center);
         Text(box, m.Pouch(0) + "  ·  " + m.Pouch(1), 30, 140, 924, 90, 64, Muted, TextAlignmentOptions.Center);
         Text(box, "kesedeki misket", 30, 236, 924, 44, 26, Muted, TextAlignmentOptions.Center);
@@ -742,6 +754,7 @@ public class MahalleUI : MonoBehaviour
 
     private void MapHeader(MahalleTheme theme)
     {
+        SetBleed(Paper,bleedBottom!=null?bleedBottom.color:Color.clear);
         var head=Panel(page,"Başlık",0,0,1080,300,Paper);head.radius=0;head.shadow=18;head.raycastTarget=true;
 
         // Sol üstte kuşandığın misket durur; dokununca koleksiyona gider.
@@ -810,7 +823,7 @@ public class MahalleUI : MonoBehaviour
         Bottom((RectTransform)resume.transform,48,166,984,120);
         resume.gameObject.AddComponent<MahalleTap>();
         Text(resume.transform,"DEVAM ET",34,16,700,36,23,new Color(.15f,.2f,.17f,.72f));
-        Text(resume.transform,(next%Campaign.PerDistrict+1).ToString("00")+" · "+level.levelName,34,48,700,54,36,new Color(.13f,.18f,.15f));
+        Text(resume.transform,(next%Campaign.PerDistrict+1).ToString("00")+" · "+L.T(level.levelName),34,48,700,54,36,new Color(.13f,.18f,.15f));
         Art(resume.transform,"Ok",MahalleGraphic.Shape.Chevron,878,36,48,48,new Color(.13f,.18f,.15f));
     }
 
@@ -822,7 +835,7 @@ public class MahalleUI : MonoBehaviour
         for(int i=0;i<SpecialMarbles.FirstSkin;i++) CollectionCard(content,i,363+(i/2)*302);
 
         Text(content,"ÖZELLİKLİ MİSKETLER",48,1300,984,58,38,Ink);
-        Text(content,SpecialMarbles.PurchasePrice+" boncuk · "+SpecialMarbles.MaxLife+" atış ömür · Tam yenileme "+SpecialMarbles.RepairPrice+" boncuk.",48,1368,984,82,29,Muted);
+        Text(content,L.F("{0} boncuk · {1} atış ömür · Tam yenileme {2} boncuk.",SpecialMarbles.PurchasePrice,SpecialMarbles.MaxLife,SpecialMarbles.RepairPrice),48,1368,984,82,29,Muted);
         for(int i=SpecialMarbles.FirstSkin;i<Campaign.SkinCount;i++)
             CollectionCard(content,i,1478+((i-SpecialMarbles.FirstSkin)/2)*532);
 
@@ -840,15 +853,15 @@ public class MahalleUI : MonoBehaviour
         Text(card.transform,Campaign.SkinNames[skin],193,32,265,90,33,selected?Cream:Ink);
         if(special)
         {
-            Text(card.transform,owned?MahalleProfile.RemainingLife(skin)+" / "+SpecialMarbles.MaxLife+" ATIŞ":SpecialMarbles.PurchasePrice+" BONCUK",193,126,265,48,26,selected?Gold:Muted);
+            Text(card.transform,owned?L.F("{0} / {1} ATIŞ",MahalleProfile.RemainingLife(skin),SpecialMarbles.MaxLife):L.F("{0} BONCUK",SpecialMarbles.PurchasePrice),193,126,265,48,26,selected?Gold:Muted);
             Text(card.transform,SpecialMarbles.Descriptions[skin-SpecialMarbles.FirstSkin],24,184,428,70,26,selected?Cream:Muted);
         }
-        string label=worn?"AŞINDI":selected?"KUŞANILDI":owned?"KUŞAN":Campaign.SkinPrices[skin]+" BONCUK · AL";
+        string label=worn?"AŞINDI":selected?"KUŞANILDI":owned?"KUŞAN":L.F("{0} BONCUK · AL",Campaign.SkinPrices[skin]);
         var buy=LabelButton(card.transform,label,24,special?270:194,428,62,selected?new Color(.27f,.39f,.31f):new Color(.89f,.85f,.72f),selected?Gold:Ink,()=>{if(MahalleProfile.EquipOrBuy(skin))ShowHome();else Toast("Yeterli boncuk yok veya misket yenilenmeli.");},25);
         buy.interactable=!selected&&!worn;
         if(special)
         {
-            var repair=LabelButton(card.transform,"TAM YENİLE · "+SpecialMarbles.RepairPrice+" BONCUK",24,350,428,62,new Color(.89f,.85f,.72f),Ink,()=>{if(MahalleProfile.RepairMarble(skin))ShowHome();else Toast("Yenilemek için "+SpecialMarbles.RepairPrice+" boncuk gerekiyor.");},23);
+            var repair=LabelButton(card.transform,L.F("TAM YENİLE · {0} BONCUK",SpecialMarbles.RepairPrice),24,350,428,62,new Color(.89f,.85f,.72f),Ink,()=>{if(MahalleProfile.RepairMarble(skin))ShowHome();else Toast(L.F("Yenilemek için {0} boncuk gerekiyor.",SpecialMarbles.RepairPrice));},23);
             repair.interactable=owned&&MahalleProfile.RemainingLife(skin)<SpecialMarbles.MaxLife;
             Text(card.transform,"Özel güç atışında özelliği durur, ömrü azalmaz.",24,426,428,62,23,selected?Cream:Muted,TextAlignmentOptions.Center);
         }
@@ -863,12 +876,12 @@ public class MahalleUI : MonoBehaviour
         string[] labels={"TOPLAM ÇIKARDIĞIN MİSKET","TEK ATIŞTA REKORUN","EN ÇOK OYNADIĞIN MAHALLE"};
         string[] values={
             MahalleProfile.Data.knocked.ToString(),
-            MahalleProfile.Data.bestShot>0?MahalleProfile.Data.bestShot+" MİSKET":"HENÜZ YOK",
-            fav>=0?Campaign.Districts[fav]:"HENÜZ YOK"};
+            MahalleProfile.Data.bestShot>0?L.F("{0} MİSKET",MahalleProfile.Data.bestShot):"HENÜZ YOK",
+            fav>=0?L.T(Campaign.Districts[fav]):"HENÜZ YOK"};
         string[] notes={
-            "Bitirdiğin bölümlerde çizgi dışına attıkların",
+            "Bitirdiğin bölümlerde çemberden çıkardıkların",
             "Tek bir atışla aynı anda çıkardığın en çok misket",
-            fav>=0?MahalleProfile.Data.districtPlays[fav]+" bölüm bitirdin":"Bir bölüm bitirince burada görünür"};
+            fav>=0?L.F("{0} bölüm bitirdin",MahalleProfile.Data.districtPlays[fav]):"Bir bölüm bitirince burada görünür"};
         for(int i=0;i<3;i++)
         {
             var card=Panel(content,labels[i],48,370+i*250,984,220,Cream);
@@ -888,7 +901,7 @@ public class MahalleUI : MonoBehaviour
             int id=i;int value=Mathf.Min(MahalleProfile.MissionProgress(i),MahalleProfile.MissionTargets[i]);bool claimed=MahalleProfile.Data.claimed[i];
             var card=Panel(content,"Görev "+i,48,370+i*260,984,228,Cream);
             Text(card.transform,MahalleProfile.MissionNames[i],28,23,660,58,35,Ink);
-            Text(card.transform,value+" / "+MahalleProfile.MissionTargets[i]+"    +"+MahalleProfile.MissionRewards[i]+" BONCUK",28,89,655,45,29,Muted);
+            Text(card.transform,L.F("{0} / {1}    +{2} BONCUK",value,MahalleProfile.MissionTargets[i],MahalleProfile.MissionRewards[i]),28,89,655,45,29,Muted);
             Panel(card.transform,"İlerleme",28,161,612,13,Line);
             Panel(card.transform,"Dolgu",28,161,612*(value/(float)MahalleProfile.MissionTargets[i]),13,Gold);
             var b=LabelButton(card.transform,claimed?"ALINDI":value>=MahalleProfile.MissionTargets[i]?"ÖDÜLÜ AL":"SÜRÜYOR",683,64,266,100,claimed?Line:Ink,claimed?Muted:Cream,()=>{if(MahalleProfile.Claim(id))ShowHome();},28);
@@ -904,9 +917,9 @@ public class MahalleUI : MonoBehaviour
     {
         ClearPage();lastScore=lastShots=-1;resultShown=false;
         var top=Panel(page,"Oyun başlığı",24,12,1032,246,Ink);top.radius=30;
-        string title=Campaign.Districts[controller.Level.district]+"  /  "+(controller.LevelIndex%12+1).ToString("00");
-        if(controller.Level.district==2 && controller.LevelIndex%12<3)title+=" · "+controller.Level.levelName;
-        if(GameSession.TutorialMode)title+="  ·  NASIL OYNANIR";
+        string title=L.T(Campaign.Districts[controller.Level.district])+"  /  "+(controller.LevelIndex%12+1).ToString("00");
+        if(controller.Level.district==2 && controller.LevelIndex%12<3)title+=" · "+L.T(controller.Level.levelName);
+        if(GameSession.TutorialMode)title+="  ·  "+L.T("NASIL OYNANIR");
         Text(top.transform,title,28,14,830,59,36,Cream);
         if(GameSession.TutorialMode)LabelButton(top.transform,"GEÇ",872,16,134,92,new Color(.28f,.38f,.31f),Cream,SkipTutorial,30);
         else LabelButton(top.transform,"II",902,16,104,92,new Color(.28f,.38f,.31f),Cream,Pause,42);
@@ -916,7 +929,7 @@ public class MahalleUI : MonoBehaviour
         Text(shots.transform,"KALAN ATIŞ",18,10,219,29,23,new Color(.76f,.8f,.7f));shotsLabel=Text(shots.transform,"5",18,39,219,51,39,Gold);
         var wallet=Panel(top.transform,"Boncuk",649,117,250,75,new Color(.24f,.34f,.29f));
         Art(wallet.transform,"Boncuk",MahalleGraphic.Shape.Marble,18,16,43,43,Gold);beadsLabel=Text(wallet.transform,MahalleProfile.Beads.ToString(),79,4,156,67,34,Cream);
-        Text(top.transform,GameSession.TutorialMode?"HEDEF: BÜTÜN MİSKETLERİ ÇEMBERİN DIŞINA ÇIKAR":"HEDEF: "+controller.Level.oneStarTarget+" MİSKETİ ÇİZGİ DIŞINA ÇIKAR",26,202,960,32,25,new Color(.81f,.84f,.75f));
+        Text(top.transform,GameSession.TutorialMode?"HEDEF: BÜTÜN MİSKETLERİ ÇEMBERİN DIŞINA ÇIKAR":L.F("HEDEF: ÇEMBERDEN EN AZ {0} MİSKET ÇIKAR",controller.Level.oneStarTarget),26,202,960,32,25,new Color(.81f,.84f,.75f));
 
         // BOLUM IMZASI (sadece test yapisi acikken).
         // "Editorde baska, telefonda baska bolum cikiyor" supheleri icin.
@@ -925,11 +938,11 @@ public class MahalleUI : MonoBehaviour
         // bolumler ayni demektir; farkliysa calisan iki binary farklidir.
         if(MahalleProfile.TestUnlockAllLevels||MahalleProfile.TestInfiniteBeads)
         {
-            var L=controller.Level;
-            int mn=L.marbles!=null?L.marbles.Length:0;
-            int en=L.obstacles!=null?L.obstacles.Length:0;
-            string imza="#"+controller.LevelIndex+" · "+mn+"m "+en+"e · saha "+L.arenaSize.ToString("0.00");
-            if(mn>0)imza+=" · ilk "+L.marbles[0].x.ToString("0.00")+","+L.marbles[0].z.ToString("0.00");
+            var lv=controller.Level;
+            int mn=lv.marbles!=null?lv.marbles.Length:0;
+            int en=lv.obstacles!=null?lv.obstacles.Length:0;
+            string imza="#"+controller.LevelIndex+" · "+mn+"m "+en+"e · saha "+lv.arenaSize.ToString("0.00");
+            if(mn>0)imza+=" · ilk "+lv.marbles[0].x.ToString("0.00")+","+lv.marbles[0].z.ToString("0.00");
             Text(top.transform,imza,26,236,960,30,21,new Color(1f,.55f,.30f,.85f));
             // Cizim tanisi: mor/eksik nesne varsa adiyla yazar.
             Text(top.transform,MahalleWorld.Diagnose(),26,264,960,30,21,new Color(1f,.45f,.35f,.9f));
@@ -978,15 +991,15 @@ public class MahalleUI : MonoBehaviour
             return;
         }
         if(controller==null || scoreLabel==null)return;
-        if(lastScore!=controller.Score){lastScore=controller.Score;scoreLabel.SetText(controller.Score+" / "+controller.TotalMarbles);}
-        if(lastShots!=controller.ShotsLeft){lastShots=controller.ShotsLeft;shotsLabel.SetText(controller.ShotsLeft.ToString());}
-        beadsLabel.SetText(MahalleProfile.Beads.ToString());
+        if(lastScore!=controller.Score){lastScore=controller.Score;scoreLabel.SetTextL(controller.Score+" / "+controller.TotalMarbles);}
+        if(lastShots!=controller.ShotsLeft){lastShots=controller.ShotsLeft;shotsLabel.SetTextL(controller.ShotsLeft.ToString());}
+        beadsLabel.SetTextL(MahalleProfile.Beads.ToString());
         var shooter=controller.Shooter;
         if(shooter!=null)
         {
             powerFill.rectTransform.sizeDelta=new Vector2(Mathf.Max(1,610*shooter.Power),16);
-            powerLabel.SetText(shooter.SelectedPower==MarblePower.None?(SpecialMarbles.IsSpecial(shooter.ActiveSkin)?Campaign.SkinNames[shooter.ActiveSkin]+" · "+MahalleProfile.RemainingLife(shooter.ActiveSkin)+"/"+SpecialMarbles.MaxLife:"NORMAL MİSKET"):Campaign.PowerNames[(int)shooter.SelectedPower].ToUpper(new System.Globalization.CultureInfo("tr-TR")));
-            hintLabel.SetText(controller.WaitingForSettle?"Misketler duruluyor…":shooter.IsAiming?"Gücü ayarla ve bırak":shooter.PositionLocked?"Misketin durduğu yerden atıyorsun.":"Çizgiye dokunarak atıcının yerini değiştirebilirsin.");
+            powerLabel.SetTextL(shooter.SelectedPower==MarblePower.None?(SpecialMarbles.IsSpecial(shooter.ActiveSkin)?L.T(Campaign.SkinNames[shooter.ActiveSkin])+" · "+MahalleProfile.RemainingLife(shooter.ActiveSkin)+"/"+SpecialMarbles.MaxLife:"NORMAL MİSKET"):L.Up(L.T(Campaign.PowerNames[(int)shooter.SelectedPower])));
+            hintLabel.SetTextL(controller.WaitingForSettle?"Misketler duruluyor…":shooter.IsAiming?"Gücü ayarla ve bırak":shooter.PositionLocked?"Misketin durduğu yerden atıyorsun.":"Çizgiye dokunarak atıcının yerini değiştirebilirsin.");
             if(hand!=null)
             {
                 hand.gameObject.SetActive(!MahalleProfile.Data.tutorialDone && !controller.IsPaused);
@@ -1023,7 +1036,7 @@ public class MahalleUI : MonoBehaviour
         if(GameSession.TutorialMode&&tutStep!=4){if(tutStep==5)TutorialKesemInfo(()=>SetTutStep(6));return;}
         if(controller.WaitingForSettle||controller.State!=LevelController.LevelState.Playing){Toast("Atışın tamamlanmasını bekle.");return;}
         controller.SetPaused(true);var box=Modal("Misket kesen",1130);
-        Text(box,"Misket kesen",36,28,810,65,49,Ink);
+        Text(box,"Kesen",36,28,810,65,49,Ink);
         Text(box,"Seçim ücretsiz. Bir kullanım yalnızca atışta harcanır.",36,108,912,74,28,Muted);
         var powerColors=new[]{Gold,Campaign.SkinColors[5],Campaign.SkinColors[1],Campaign.SkinColors[3]};
         for(int i=0;i<Campaign.PowerNames.Length;i++)
@@ -1036,7 +1049,7 @@ public class MahalleUI : MonoBehaviour
             var m=Art(b.transform,"Özel misket",MahalleGraphic.Shape.Marble,22,30,i==0?100:82,i==0?100:82,powerColors[i]);
             Text(b.transform,Campaign.PowerNames[i],145,17,730,47,36,selected?Cream:Ink);
             Text(b.transform,Campaign.PowerDescriptions[i],145,64,740,52,25,selected?Cream:Muted);
-            string cost=MahalleProfile.Data.stock[i]>0?"ÜCRETSİZ HAK: "+MahalleProfile.Data.stock[i]:Campaign.PowerPrices[i]+" BONCUK / ATIŞ";
+            string cost=MahalleProfile.Data.stock[i]>0?L.F("ÜCRETSİZ HAK: {0}",MahalleProfile.Data.stock[i]):L.F("{0} BONCUK / ATIŞ",Campaign.PowerPrices[i]);
             Text(b.transform,selected?"SEÇİLİ · DOKUNARAK VAZGEÇ":cost,145,119,740,33,24,selected?Gold:usable?Ink:Muted);
         }
         LabelButton(box,"OYUNA DÖN",30,1009,924,87,Ink,Cream,()=>CloseModal(),30);
@@ -1061,11 +1074,11 @@ public class MahalleUI : MonoBehaviour
         Text(box,won?(controller.LastReward.newBadge||(controller.Level.mastery&&passed)?"MAHALLE USTASI!":"GÜZEL ATIŞLAR!"):"BİR DAHA DENE",30,34,924,77,51,Ink,TextAlignmentOptions.Center);
         Text(box,controller.Level.levelName,30,114,924,47,31,Muted,TextAlignmentOptions.Center);
         for(int i=0;i<3;i++){var star=Art(box,"Sonuç yıldızı "+i,MahalleGraphic.Shape.Star,259+i*163,i==1?184:201,i==1?142:115,i==1?142:115,Line);if(i<controller.Stars&&won)StartCoroutine(RevealStar(star,i));}
-        Text(box,controller.Score+" / "+controller.TotalMarbles+" misket çıkardın",30,366,924,64,40,Ink,TextAlignmentOptions.Center);
-        string reward=!won?"Kesendeki güçler yardımcı olabilir. Normal misketle de geçebilirsin.":controller.LastReward.beads>0?"+"+controller.LastReward.beads+" BONCUK":"Bu bölümden boncuk aldın. Yeni yıldız daha fazla kazandırır.";
+        Text(box,L.F("{0} / {1} misket çıkardın",controller.Score,controller.TotalMarbles),30,366,924,64,40,Ink,TextAlignmentOptions.Center);
+        string reward=!won?"Kesendeki güçler yardımcı olabilir. Normal misketle de geçebilirsin.":controller.LastReward.beads>0?L.F("+{0} BONCUK",controller.LastReward.beads):"Bu bölümden boncuk aldın. Yeni yıldız daha fazla kazandırır.";
         Text(box,reward,60,448,864,82,won?38:28,won?Ink:Muted,TextAlignmentOptions.Center);
-        if(controller.LastReward.newBadge)Text(box,"MAHALLE TAMAMLANDI · "+controller.LastReward.districtBonus+" BONCUK BONUS\n"+(controller.LastReward.newSkin??"Mahalle misketi zaten kesende")+" · KOLEKSİYON ÖDÜLÜ",30,538,924,100,28,Muted,TextAlignmentOptions.Center);
-        else if(won&&!passed)Text(box,"Sonraki bölümü açmak için "+need+" yıldız gerekiyor.",60,552,864,72,29,new Color(.72f,.32f,.24f),TextAlignmentOptions.Center);
+        if(controller.LastReward.newBadge)Text(box,L.F("MAHALLE TAMAMLANDI · {0} BONCUK BONUS",controller.LastReward.districtBonus)+"\n"+L.T(controller.LastReward.newSkin??"Mahalle misketi zaten kesende")+" · "+L.T("KOLEKSİYON ÖDÜLÜ"),30,538,924,100,28,Muted,TextAlignmentOptions.Center);
+        else if(won&&!passed)Text(box,L.F("Sonraki bölümü açmak için {0} yıldız gerekiyor.",need),60,552,864,72,29,new Color(.72f,.32f,.24f),TextAlignmentOptions.Center);
         else Text(box,won?"Yeni rekorlar ve görevler daha fazla boncuk kazandırır.":"İpucu: Alt çizgide yer değiştirip kümeye yandan vur.",60,556,864,68,27,Muted,TextAlignmentOptions.Center);
         if(passed&&controller.HasNextLevel)LabelButton(box,"SONRAKİ BÖLÜM",36,669,912,98,Ink,Cream,()=>controller.LoadNextLevel());
         else LabelButton(box,passed?"MAHALLEYE DÖN":"TEKRAR DENE",36,669,912,98,Ink,Cream,()=>{if(passed)controller.OpenLevelSelect();else{CloseModal();controller.RestartLevel();ShowGame();}});
@@ -1099,13 +1112,13 @@ public class MahalleUI : MonoBehaviour
     }
     private void BuildShareCard(RectTransform card)
     {
-        var L=controller.Level;
+        var lv=controller.Level;
         int no=controller.LevelIndex%Campaign.PerDistrict+1;
         int stars=controller.State==LevelController.LevelState.Won?controller.Stars:0;
         var chalk=new Color(1,.98f,.92f,.92f);
         var bg=Panel(card,"Zemin",0,0,1080,1920,new Color(.14f,.12f,.10f));bg.radius=0;
-        Text(card,Campaign.Districts[L.district].ToUpperInvariant()+" · "+no.ToString("00"),0,150,1080,70,46,new Color(1,.97f,.89f,.7f),TextAlignmentOptions.Center);
-        Text(card,L.levelName,40,222,1000,100,68,Cream,TextAlignmentOptions.Center);
+        Text(card,L.Up(L.T(Campaign.Districts[lv.district]))+" · "+no.ToString("00"),0,150,1080,70,46,new Color(1,.97f,.89f,.7f),TextAlignmentOptions.Center);
+        Text(card,lv.levelName,40,222,1000,100,68,Cream,TextAlignmentOptions.Center);
         var ring=Art(card,"Tebeşir çemberi",MahalleGraphic.Shape.ChalkRing,150,400,780,780,chalk);ring.stroke=10f;ring.progress=1f;
         for(int i=0;i<3;i++)
         {
@@ -1114,7 +1127,7 @@ public class MahalleUI : MonoBehaviour
         }
         Text(card,controller.ShotsUsed.ToString(),150,700,780,210,200,Cream,TextAlignmentOptions.Center);
         Text(card,"ATIŞTA",150,905,780,70,52,new Color(1,.97f,.89f,.75f),TextAlignmentOptions.Center);
-        Text(card,controller.Score+" / "+controller.TotalMarbles+" MİSKET",150,990,780,60,40,Gold,TextAlignmentOptions.Center);
+        Text(card,L.F("{0} / {1} MİSKET",controller.Score,controller.TotalMarbles),150,990,780,60,40,Gold,TextAlignmentOptions.Center);
         // Çemberin dışına savrulmuş birkaç misket.
         float[,] spots={{110,1250,70},{900,1210,58},{840,320,50},{60,470,44},{960,1330,40}};
         for(int i=0;i<spots.GetLength(0);i++)
@@ -1130,7 +1143,7 @@ public class MahalleUI : MonoBehaviour
     private string ShareText()
     {
         int no=controller.LevelIndex%Campaign.PerDistrict+1;
-        return "MİSKETR · "+Campaign.Districts[controller.Level.district]+" "+no.ToString("00")+" bölümünü "+controller.ShotsUsed+" atışta "+controller.Stars+" yıldızla bitirdim. Sen kaç atışta bitirirsin?";
+        return L.F("MİSKETR · {0} {1} bölümünü {2} atışta {3} yıldızla bitirdim. Sen kaç atışta bitirirsin?",L.T(Campaign.Districts[controller.Level.district]),no.ToString("00"),controller.ShotsUsed,controller.Stars);
     }
     private IEnumerator CaptureCard(RectTransform card,CanvasGroup buttons)
     {
@@ -1227,12 +1240,12 @@ public class MahalleUI : MonoBehaviour
                 "Nişan alırken misketin İLK nereye değeceği gösterilir. Çek, işarete bak, tam isabetle bırak.",
                 "Bu güç farklı: misketin atıştan sonra ÇİZGİYE DÖNMEZ, durduğu yerde kalır. Çembere yakın durması için hafif at.",
                 "Misketin durduğu yerde kaldı. Bu atışı oradan yapıyorsun: yakından nişan al ve at. Sonra yine çizgiye döner."};
-            tutTitle.SetText(retry?"YERİNDE KAL · TEKRAR DENE":pt[step-6]);
-            tutBody.SetText(retry?"Misketin çemberden uzakta kaldı, çizgiye döndü (normal oyunda hakkın iade edilir). Daha HAFİF at, çembere yakın dursun.":pb[step-6]);
+            tutTitle.SetTextL(retry?"YERİNDE KAL · TEKRAR DENE":pt[step-6]);
+            tutBody.SetTextL(retry?"Misketin çemberden uzakta kaldı, çizgiye döndü (normal oyunda hakkın iade edilir). Daha HAFİF at, çembere yakın dursun.":pb[step-6]);
             return;
         }
-        tutTitle.SetText(retry?"TEKRAR DENE":titles[step]);
-        tutBody.SetText(retry?"Misketi çemberin DIŞINA kadar itmelisin. Biraz daha geri çek, daha güçlü atar.":bodies[step]);
+        tutTitle.SetTextL(retry?"TEKRAR DENE":titles[step]);
+        tutBody.SetTextL(retry?"Misketi çemberin DIŞINA kadar itmelisin. Biraz daha geri çek, daha güçlü atar.":bodies[step]);
     }
     private void TutorialTick(ShotController shooter)
     {
@@ -1269,8 +1282,8 @@ public class MahalleUI : MonoBehaviour
                 if(tutNudge>0)
                 {
                     tutNudge-=Time.unscaledDeltaTime;
-                    tutTitle.SetText("ÖNCE YERİNİ SEÇ");
-                    tutBody.SetText("Misketini çekmeden önce "+(tutSide==0?"sağdaki":"soldaki")+" parlayan noktaya dokun.");
+                    tutTitle.SetTextL("ÖNCE YERİNİ SEÇ");
+                    tutBody.SetTextL(L.F("Misketini çekmeden önce {0} parlayan noktaya dokun.",L.T(tutSide==0?"sağdaki":"soldaki")));
                     if(tutNudge<=0)SetTutStep(0);
                 }
                 break;
@@ -1321,7 +1334,7 @@ public class MahalleUI : MonoBehaviour
         controller.SetPaused(true);
         tutHand.gameObject.SetActive(false);
         var box=Modal("Kese anlatımı",1180);
-        Text(box,"Misket kesen",36,28,912,70,50,Ink);
+        Text(box,"Kesen",36,28,912,70,50,Ink);
         Text(box,"Zorlandığın bölümlerde atıştan önce bir güç seçebilirsin. Her güçten 1 ÜCRETSİZ hakkın var, sonrası boncukla.",36,104,912,110,28,Muted);
         var colors=new[]{Gold,Campaign.SkinColors[5],Campaign.SkinColors[1],Campaign.SkinColors[3]};
         for(int i=0;i<Campaign.PowerNames.Length;i++)
@@ -1345,7 +1358,7 @@ public class MahalleUI : MonoBehaviour
         var box=Modal("Öğretici bitti",880);
         Text(box,"HAZIRSIN!",36,34,912,90,60,Ink,TextAlignmentOptions.Center);
         int beads=controller.LastReward.beads;
-        Text(box,"1. bölüm tamam · "+controller.Stars+" yıldız"+(beads>0?" · +"+beads+" boncuk":""),36,690,912,50,30,Muted,TextAlignmentOptions.Center);
+        Text(box,L.F("1. bölüm tamam · {0} yıldız",controller.Stars)+(beads>0?L.F(" · +{0} boncuk",beads):""),36,690,912,50,30,Muted,TextAlignmentOptions.Center);
         string[] lines={
             "Ne kadar çok misket çıkarırsan o kadar çok yıldız kazanırsın.",
             "Her bölümde atış hakkın sınırlı. Hedefe ulaşırsan sonraki bölüm açılır.",
@@ -1366,13 +1379,22 @@ public class MahalleUI : MonoBehaviour
     }
     private void Settings()
     {
-        var box=Modal("Ayarlar",862);Text(box,"Ayarlar",36,30,912,77,52,Ink);
-        LabelButton(box,"SES: "+(MahalleProfile.Data.sound?"AÇIK":"KAPALI"),36,158,912,100,Ink,Cream,()=>{MahalleProfile.Data.sound=!MahalleProfile.Data.sound;MahalleProfile.Save();Settings();});
-        LabelButton(box,"TİTREŞİM: "+(MahalleProfile.Data.haptics?"AÇIK":"KAPALI"),36,282,912,100,Ink,Cream,()=>{MahalleProfile.Data.haptics=!MahalleProfile.Data.haptics;MahalleProfile.Save();Settings();});
-        LabelButton(box,"NASIL OYNANIR",36,415,912,89,new Color(.88f,.83f,.69f),Ink,()=>StartTutorial(true),29);
-        LabelButton(box,"İLERLEMEYİ SIFIRLA",36,527,912,89,new Color(.88f,.83f,.69f),Ink,ResetPrompt,29);
-        Text(box,"Boncuklar oyun içinden kazanılır. Gerçek para işlemi yoktur.",36,639,912,64,25,Muted,TextAlignmentOptions.Center);
-        LabelButton(box,"GERİ",36,737,912,87,Ink,Cream,()=>{if(controller!=null)Pause();else CloseModal();},29);
+        var box=Modal("Ayarlar",974);Text(box,"Ayarlar",36,30,912,77,52,Ink);
+        LabelButton(box,L.F("SES: {0}",L.T(MahalleProfile.Data.sound?"AÇIK":"KAPALI")),36,158,912,100,Ink,Cream,()=>{MahalleProfile.Data.sound=!MahalleProfile.Data.sound;MahalleProfile.Save();Settings();});
+        LabelButton(box,L.F("TİTREŞİM: {0}",L.T(MahalleProfile.Data.haptics?"AÇIK":"KAPALI")),36,282,912,100,Ink,Cream,()=>{MahalleProfile.Data.haptics=!MahalleProfile.Data.haptics;MahalleProfile.Save();Settings();});
+        LabelButton(box,L.F("DİL: {0}",L.English?"ENGLISH":"TÜRKÇE"),36,415,912,89,new Color(.88f,.83f,.69f),Ink,ToggleLanguage,29);
+        LabelButton(box,"NASIL OYNANIR",36,527,912,89,new Color(.88f,.83f,.69f),Ink,()=>StartTutorial(true),29);
+        LabelButton(box,"İLERLEMEYİ SIFIRLA",36,639,912,89,new Color(.88f,.83f,.69f),Ink,ResetPrompt,29);
+        Text(box,"Boncuklar oyun içinden kazanılır. Gerçek para işlemi yoktur.",36,751,912,64,25,Muted,TextAlignmentOptions.Center);
+        LabelButton(box,"GERİ",36,849,912,87,Ink,Cream,()=>{if(controller!=null)Pause();else CloseModal();},29);
+    }
+    // Dil değişince ekran yeni dille baştan kurulur. Oyundaysa bölüm yeniden başlar.
+    private void ToggleLanguage()
+    {
+        L.SetEnglish(!L.English);
+        Time.timeScale=1;
+        if(controller==null)returnToTitle=true;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
     private void ResetPrompt()
     {
