@@ -186,7 +186,7 @@ public class LevelController : MonoBehaviour
         if (GameSession.TutorialMode)
         {
             level = TutorialLevel.Get();
-            LevelIndex = 0;
+            LevelIndex = TutorialLevel.LevelIndex;
         }
 
         if (level == null)
@@ -350,12 +350,38 @@ public class LevelController : MonoBehaviour
         StateChanged?.Invoke();
     }
 
-    // Öğretici: kaybetmek yok, kayıt yok. Üç misket çıkınca biter.
+    // Öğretici (1. bölüm üstünde): kaybetmek yok. Bütün misketler çıkınca
+    // 1. bölüm normal şekilde kaydedilir, oyuncu 2. bölüme geçer.
+    // Öğreticinin güç denemeleri sırasında misketler biterse saha yeniden
+    // dizilir; bölüm sadece son aşamada (TutorialFinalPhase) biter.
+    public bool TutorialFinalPhase { get; private set; }
+    public int TutorialKnocked { get; private set; }
+    public void StartTutorialFinal()
+    {
+        TutorialFinalPhase = true;
+        ResetTutorialBoard();
+    }
+    private void ResetTutorialBoard()
+    {
+        if (arena != null) arena.Rebuild();
+        shotsUsed = 0;
+        scoredTimes.Clear();
+        if (shooter != null) { shooter.ResetTo(level.shooterStartPosition); shooter.ShootingEnabled = true; }
+        StateChanged?.Invoke();
+    }
     private void EvaluateTutorialTurn()
     {
+        MahalleProfile.RecordShot(Score - scoreAtShot);
+        TutorialKnocked += Mathf.Max(0, Score - scoreAtShot);
+        if (arena != null && arena.RemainingMarbles == 0 && !TutorialFinalPhase)
+        {
+            ResetTutorialBoard();
+            return;
+        }
         if (arena != null && arena.RemainingMarbles == 0)
         {
             State = LevelState.Won;
+            LastReward = MahalleProfile.Finish(LevelIndex, Stars, Score);
             if (SfxPlayer.Instance != null) SfxPlayer.Instance.PlayWin();
             if (shooter != null) shooter.ShootingEnabled = false;
             StateChanged?.Invoke();

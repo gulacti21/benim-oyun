@@ -198,7 +198,8 @@ public static class MahalleProfile
     }
     public static int TotalStars { get { int n = 0; foreach (int s in Data.stars) n += s; return n; } }
     public static int NextLevel { get { for (int i = 0; i < Campaign.Count; i++) if (Unlocked(i) && Data.stars[i] < Required(i)) return i; return Campaign.Count - 1; } }
-    public static bool CanUse(MarblePower power) => power != MarblePower.None && (Data.stock[(int)power] > 0 || Beads >= Campaign.PowerPrices[(int)power]);
+    // Öğreticide güçler bedava: hak da boncuk da harcanmaz.
+    public static bool CanUse(MarblePower power) => power != MarblePower.None && (GameSession.TutorialMode || Data.stock[(int)power] > 0 || Beads >= Campaign.PowerPrices[(int)power]);
     // Spend only when a real shot is released. Previewing, cancelling, pausing or leaving never charges.
     public static bool Consume(MarblePower power)
     {
@@ -210,7 +211,7 @@ public static class MahalleProfile
     public static bool Consume(MarblePower power, out bool usedStock)
     {
         usedStock = false;
-        if (power == MarblePower.None) return true;
+        if (power == MarblePower.None || GameSession.TutorialMode) return true;
         int p = (int)power;
         if (p < 0 || p >= Data.stock.Length || p >= Campaign.PowerPrices.Length) return false;
         if (Data.stock[p] > 0) { Data.stock[p]--; usedStock = true; }
@@ -221,6 +222,7 @@ public static class MahalleProfile
     // Güç hak ettiği faydayı sağlayamadıysa ödemeyi geri veririz.
     public static void Refund(MarblePower power, bool usedStock)
     {
+        if (GameSession.TutorialMode) return;
         int p = (int)power;
         if (p < 0 || p >= Data.stock.Length || p >= Campaign.PowerPrices.Length) return;
         if (usedStock) Data.stock[p]++;

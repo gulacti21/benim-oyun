@@ -906,7 +906,7 @@ public class MahalleUI : MonoBehaviour
         var top=Panel(page,"Oyun başlığı",24,12,1032,246,Ink);top.radius=30;
         string title=Campaign.Districts[controller.Level.district]+"  /  "+(controller.LevelIndex%12+1).ToString("00");
         if(controller.Level.district==2 && controller.LevelIndex%12<3)title+=" · "+controller.Level.levelName;
-        if(GameSession.TutorialMode)title="ISINMA · NASIL OYNANIR";
+        if(GameSession.TutorialMode)title+="  ·  NASIL OYNANIR";
         Text(top.transform,title,28,14,830,59,36,Cream);
         if(GameSession.TutorialMode)LabelButton(top.transform,"GEÇ",872,16,134,92,new Color(.28f,.38f,.31f),Cream,SkipTutorial,30);
         else LabelButton(top.transform,"II",902,16,104,92,new Color(.28f,.38f,.31f),Cream,Pause,42);
@@ -916,7 +916,7 @@ public class MahalleUI : MonoBehaviour
         Text(shots.transform,"KALAN ATIŞ",18,10,219,29,23,new Color(.76f,.8f,.7f));shotsLabel=Text(shots.transform,"5",18,39,219,51,39,Gold);
         var wallet=Panel(top.transform,"Boncuk",649,117,250,75,new Color(.24f,.34f,.29f));
         Art(wallet.transform,"Boncuk",MahalleGraphic.Shape.Marble,18,16,43,43,Gold);beadsLabel=Text(wallet.transform,MahalleProfile.Beads.ToString(),79,4,156,67,34,Cream);
-        Text(top.transform,GameSession.TutorialMode?"HEDEF: ÜÇ MİSKETİ DE ÇEMBERİN DIŞINA ÇIKAR":"HEDEF: "+controller.Level.oneStarTarget+" MİSKETİ ÇİZGİ DIŞINA ÇIKAR",26,202,960,32,25,new Color(.81f,.84f,.75f));
+        Text(top.transform,GameSession.TutorialMode?"HEDEF: BÜTÜN MİSKETLERİ ÇEMBERİN DIŞINA ÇIKAR":"HEDEF: "+controller.Level.oneStarTarget+" MİSKETİ ÇİZGİ DIŞINA ÇIKAR",26,202,960,32,25,new Color(.81f,.84f,.75f));
 
         // BOLUM IMZASI (sadece test yapisi acikken).
         // "Editorde baska, telefonda baska bolum cikiyor" supheleri icin.
@@ -938,7 +938,7 @@ public class MahalleUI : MonoBehaviour
         var bag=Button(dock.transform,"Misket kesesi",16,18,330,140,new Color(.3f,.4f,.3f),OpenBag);
         var icon=Art(bag.transform,"Kese",MahalleGraphic.Shape.Bag,21,36,65,70,Gold);icon.accent=Cream;
         Text(bag.transform,"KESEM",105,24,197,53,34,Cream);Text(bag.transform,"Özel misket seç",105,78,206,40,23,new Color(.8f,.83f,.73f));
-        if(GameSession.TutorialMode)bag.gameObject.SetActive(false);
+        if(GameSession.TutorialMode){tutBag=(RectTransform)bag.transform;bag.gameObject.SetActive(false);}
         powerLabel=Text(dock.transform,"NORMAL MİSKET",378,22,610,53,29,Cream);
         Text(dock.transform,"ATIŞ GÜCÜ",378,79,610,34,21,new Color(.8f,.83f,.73f));
         Panel(dock.transform,"Güç boş",378,126,610,16,new Color(.33f,.42f,.35f));powerFill=Panel(dock.transform,"Güç dolu",378,126,1,16,Gold);
@@ -1019,6 +1019,8 @@ public class MahalleUI : MonoBehaviour
     }
     private void OpenBag()
     {
+        // Öğreticide 4. adımda kese anlatılır; 5. adımdan sonra gerçek kese açılır.
+        if(GameSession.TutorialMode&&tutStep!=4){if(tutStep==5)TutorialKesemInfo(()=>SetTutStep(6));return;}
         if(controller.WaitingForSettle||controller.State!=LevelController.LevelState.Playing){Toast("Atışın tamamlanmasını bekle.");return;}
         controller.SetPaused(true);var box=Modal("Misket kesen",1130);
         Text(box,"Misket kesen",36,28,810,65,49,Ink);
@@ -1164,6 +1166,9 @@ public class MahalleUI : MonoBehaviour
     private int tutSide;
     private float tutNudge;
     private MahalleGraphic tutSpot;
+    private RectTransform tutBag;
+    private bool tutKesemDone,tutFired;
+    private int tutRetry;
     private const float TutSpotOffset=1.4f,TutSpotReach=.6f;
     private TextMeshProUGUI tutTitle,tutBody;
     private RectTransform tutHand;
@@ -1175,18 +1180,18 @@ public class MahalleUI : MonoBehaviour
         Time.timeScale=1;
         SceneManager.LoadScene(GameSession.GameSceneName);
     }
-    private void EndTutorial()
+    private void EndTutorial(int nextLevel)
     {
         GameSession.TutorialMode=false;
         Time.timeScale=1;
         if(tutorialFromSettings){tutorialFromSettings=false;SceneManager.LoadScene(GameSession.LevelSelectSceneName);return;}
-        GameSession.SelectedLevelIndex=0;
+        GameSession.SelectedLevelIndex=MahalleProfile.Unlocked(nextLevel)?nextLevel:0;
         SceneManager.LoadScene(GameSession.GameSceneName);
     }
     private void SkipTutorial()
     {
         MahalleProfile.Data.howToPlayDone=true;MahalleProfile.Save();
-        EndTutorial();
+        EndTutorial(TutorialLevel.LevelIndex);
     }
     private void TutorialPanel()
     {
@@ -1195,28 +1200,65 @@ public class MahalleUI : MonoBehaviour
         tutBody=Text(panel.transform,"",28,70,904,106,29,Cream,TextAlignmentOptions.Center);
         tutSpot=Art(page,"Öğretici noktası",MahalleGraphic.Shape.ChalkRing,0,0,120,120,Gold);tutSpot.stroke=7f;
         tutHand=Art(page,"Öğretici eli",MahalleGraphic.Shape.Hand,0,0,65,88,Cream).rectTransform;
-        tutSide=0;tutNudge=0;
+        tutSide=0;tutNudge=0;tutKesemDone=false;tutRetry=0;
         controller.Shooter.AimBlocked+=()=>tutNudge=2.2f;
         SetTutStep(0);
     }
     private void SetTutStep(int step,bool retry=false)
     {
-        tutStep=step;
-        controller.Shooter.AimLocked=step==0;
-        string[] titles={tutSide==0?"1/4 · YERİNİ SEÇ (SAĞ)":"1/4 · YERİNİ SEÇ (SOL)","2/4 · GERİ ÇEK","3/4 · NİŞAN AL VE BIRAK","BAKALIM…","4/4 · HEPSİNİ ÇIKAR"};
+        tutStep=step;tutFired=false;
+        if(step==4&&!controller.TutorialFinalPhase)controller.StartTutorialFinal();
+        controller.Shooter.AimLocked=step==0||step==5;
+        if(tutBag!=null){tutBag.gameObject.SetActive(step>=4);tutBag.localScale=Vector3.one;}
+        string[] titles={tutSide==0?"1/5 · YERİNİ SEÇ (SAĞ)":"1/5 · YERİNİ SEÇ (SOL)","2/5 · GERİ ÇEK","3/5 · NİŞAN AL VE BIRAK","BAKALIM…","5/5 · HEPSİNİ ÇIKAR","4/5 · KESEM"};
         string[] bodies={
             tutSide==0?"Atmadan önce yerini ayarlarsın. Misketin çizgi boyunca kayar. Sağdaki parlayan noktaya dokun.":"Güzel! Şimdi soldaki parlayan noktaya dokun. Her atıştan önce en iyi açıyı böyle bulursun.",
             "Misketine dokun ve parmağını GERİ çek. Ne kadar çekersen o kadar güçlü atar.",
             "Kesik çizgi misketin gideceği yönü gösterir. Kümeye çevir ve parmağını bırak.",
             "Misketler duruluyor.",
-            "Harika! Çemberin dışına çıkan misket senin. Kalanları da çıkar. Üstte kalan atış hakkın yazıyor."};
+            "Güçleri öğrendin, saha yeniden dizildi. Şimdi bölümü bitir: bütün misketleri çıkar. İstersen kesendeki güçleri kullanabilirsin, öğreticide bedava.",
+            "Harika, çemberden çıkan misket senin! Zor anlar için bir kesen var. Soldaki KESEM'e dokun."};
+        if(step>=6)
+        {
+            string[] pt={"KESEM 1/4 · BAŞ MİSKET","KESEM 2/4 · DEMİR MİSKET","KESEM 3/4 · USTA GÖZÜ","KESEM 4/4 · YERİNDE KAL","YERİNDE KAL · ŞİMDİ ORADAN AT"};
+            string[] pb={
+                "Misketin büyüdü! Büyük misket sık kümeleri dağıtır. Kümeye at ve farkı gör.",
+                "Misketin küçük ve ağır oldu. Dar aralıktan geçip sert vurur. Bir misketi hedefle ve at.",
+                "Nişan alırken misketin İLK nereye değeceği gösterilir. Çek, işarete bak, tam isabetle bırak.",
+                "Bu güç farklı: misketin atıştan sonra ÇİZGİYE DÖNMEZ, durduğu yerde kalır. Çembere yakın durması için hafif at.",
+                "Misketin durduğu yerde kaldı. Bu atışı oradan yapıyorsun: yakından nişan al ve at. Sonra yine çizgiye döner."};
+            tutTitle.SetText(retry?"YERİNDE KAL · TEKRAR DENE":pt[step-6]);
+            tutBody.SetText(retry?"Misketin çemberden uzakta kaldı, çizgiye döndü (normal oyunda hakkın iade edilir). Daha HAFİF at, çembere yakın dursun.":pb[step-6]);
+            return;
+        }
         tutTitle.SetText(retry?"TEKRAR DENE":titles[step]);
         tutBody.SetText(retry?"Misketi çemberin DIŞINA kadar itmelisin. Biraz daha geri çek, daha güçlü atar.":bodies[step]);
     }
     private void TutorialTick(ShotController shooter)
     {
         if(shooter==null)return;
-        bool knocked=controller.Score>0;
+        bool knocked=controller.TutorialKnocked>0;
+        if(tutStep>=6&&tutStep<=10)
+        {
+            tutHand.gameObject.SetActive(false);tutSpot.gameObject.SetActive(false);
+            if(controller.WaitingForSettle){tutFired=true;return;}
+            if(!tutFired)
+            {
+                // Sıradaki gücü kendiliğinden seç (Yerinde Kal ikinci atışı normal misketle).
+                var want=tutStep==10?MarblePower.None:(MarblePower)(tutStep-6);
+                if(shooter.SelectedPower!=want&&!shooter.IsAiming&&modal==null)shooter.SelectPower(want);
+                return;
+            }
+            if(tutStep==9)
+            {
+                if(shooter.PositionLocked)SetTutStep(10);
+                else if(tutRetry<1){tutRetry++;SetTutStep(9,true);}
+                else SetTutStep(4);
+                return;
+            }
+            SetTutStep(tutStep==10?4:tutStep+1);
+            return;
+        }
         switch(tutStep)
         {
             case 0:
@@ -1236,9 +1278,22 @@ public class MahalleUI : MonoBehaviour
             case 1: if(shooter.IsAiming)SetTutStep(2); break;
             case 2:
                 if(controller.WaitingForSettle)SetTutStep(3);
-                else if(!shooter.IsAiming)SetTutStep(knocked?4:1);
+                else if(!shooter.IsAiming)SetTutStep(knocked?(tutKesemDone?4:5):1);
                 break;
-            case 3: if(!controller.WaitingForSettle){if(knocked)SetTutStep(4);else SetTutStep(1,true);} break;
+            case 3: if(!controller.WaitingForSettle){if(knocked)SetTutStep(tutKesemDone?4:5);else SetTutStep(1,true);} break;
+        }
+        if(tutStep==5&&tutBag!=null)
+        {
+            // KESEM düğmesi nabız gibi atar, el onu gösterir.
+            tutBag.localScale=Vector3.one*(1f+Mathf.Abs(Mathf.Sin(Time.unscaledTime*4f))*.06f);
+            tutSpot.gameObject.SetActive(false);
+            bool free=modal==null;
+            tutHand.gameObject.SetActive(free);
+            if(!free)return;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(root,tutBag.TransformPoint(tutBag.rect.center),null,out var bagLocal);
+            tutHand.anchorMin=tutHand.anchorMax=root.pivot;tutHand.pivot=new Vector2(.2f,.9f);
+            tutHand.anchoredPosition=bagLocal+new Vector2(10,-10-Mathf.Abs(Mathf.Sin(Time.unscaledTime*4f))*18f);
+            return;
         }
         bool show=(tutStep==0||tutStep==1)&&!controller.IsPaused&&!controller.WaitingForSettle&&Camera.main!=null;
         tutHand.gameObject.SetActive(show);
@@ -1260,15 +1315,37 @@ public class MahalleUI : MonoBehaviour
         float anim=tutStep==0?Mathf.Abs(Mathf.Sin(Time.unscaledTime*4f))*18f:Mathf.PingPong(Time.unscaledTime*55,100);
         tutHand.anchoredPosition=local+new Vector2(24,-25-anim);
     }
+    // KESEM'i gerçek keseyi açmadan anlatır; ücretsiz haklar harcanmaz.
+    private void TutorialKesemInfo(Action after)
+    {
+        controller.SetPaused(true);
+        tutHand.gameObject.SetActive(false);
+        var box=Modal("Kese anlatımı",1180);
+        Text(box,"Misket kesen",36,28,912,70,50,Ink);
+        Text(box,"Zorlandığın bölümlerde atıştan önce bir güç seçebilirsin. Her güçten 1 ÜCRETSİZ hakkın var, sonrası boncukla.",36,104,912,110,28,Muted);
+        var colors=new[]{Gold,Campaign.SkinColors[5],Campaign.SkinColors[1],Campaign.SkinColors[3]};
+        for(int i=0;i<Campaign.PowerNames.Length;i++)
+        {
+            var row=Panel(box,Campaign.PowerNames[i],30,236+i*160,924,140,Cream);
+            Art(row.transform,"Güç",MahalleGraphic.Shape.Marble,22,28,84,84,colors[i]);
+            Text(row.transform,Campaign.PowerNames[i],130,16,770,48,34,Ink);
+            Text(row.transform,Campaign.PowerDescriptions[i],130,64,770,64,26,Muted);
+        }
+        Text(box,"Boncukları bölüm bitirerek ve görevlerle kazanırsın. Her bölüm normal misketle de geçilebilir.",36,892,912,100,27,Muted,TextAlignmentOptions.Center);
+        LabelButton(box,"ANLADIM",36,1030,912,110,Ink,Cream,()=>{tutKesemDone=true;CloseModal();after?.Invoke();},38);
+    }
     private void TutorialDone()
     {
+        if(!tutKesemDone){TutorialKesemInfo(TutorialDone);return;}
         tutStep=-1;
         if(tutHand!=null)tutHand.gameObject.SetActive(false);
         if(tutSpot!=null)tutSpot.gameObject.SetActive(false);
         controller.Shooter.AimLocked=false;
         MahalleProfile.Data.howToPlayDone=true;MahalleProfile.Data.tutorialDone=true;MahalleProfile.Save();
-        var box=Modal("Öğretici bitti",800);
+        var box=Modal("Öğretici bitti",880);
         Text(box,"HAZIRSIN!",36,34,912,90,60,Ink,TextAlignmentOptions.Center);
+        int beads=controller.LastReward.beads;
+        Text(box,"1. bölüm tamam · "+controller.Stars+" yıldız"+(beads>0?" · +"+beads+" boncuk":""),36,690,912,50,30,Muted,TextAlignmentOptions.Center);
         string[] lines={
             "Ne kadar çok misket çıkarırsan o kadar çok yıldız kazanırsın.",
             "Her bölümde atış hakkın sınırlı. Hedefe ulaşırsan sonraki bölüm açılır.",
@@ -1279,7 +1356,7 @@ public class MahalleUI : MonoBehaviour
             Art(box,"Simge "+i,shapes[i],56,170+i*130,70,70,Gold);
             Text(box,lines[i],150,160+i*130,780,100,30,Ink);
         }
-        LabelButton(box,tutorialFromSettings?"TAMAM":"İLK BÖLÜME BAŞLA",36,590,912,110,Ink,Cream,EndTutorial,38);
+        LabelButton(box,tutorialFromSettings?"TAMAM":"2. BÖLÜME GEÇ",36,750,912,110,Ink,Cream,()=>EndTutorial(TutorialLevel.LevelIndex+1),38);
     }
     private IEnumerator RevealStar(MahalleGraphic star,int index)
     {
