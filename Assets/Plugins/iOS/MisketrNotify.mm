@@ -27,7 +27,7 @@ extern "C" void MisketrScheduleDaily(int hour, int minute, const char* title, co
     UNCalendarNotificationTrigger* trigger = [UNCalendarNotificationTrigger triggerWithDateMatchingComponents:when repeats:YES];
 
     UNNotificationRequest* request = [UNNotificationRequest requestWithIdentifier:kMisketrDailyId content:content trigger:trigger];
-    [center addNotificationRequestWithCompletionHandler:request withCompletionHandler:^(NSError* error) { (void)error; }];
+    [center addNotificationRequest:request withCompletionHandler:^(NSError* error) { (void)error; }];
 }
 
 extern "C" void MisketrCancelDaily()
