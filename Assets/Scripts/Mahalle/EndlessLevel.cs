@@ -15,6 +15,9 @@ public static class EndlessLevel
     public const float ArenaSize = 3.2f;
     public const int BoardCount = 10;        // sahada hedeflenen misket sayısı
     public const int RefillBelow = 3;        // bu sayının altına düşünce dolum yapılır
+    public const int District = 3;           // zemin sabit: Toprak Saha (kademede değişmez)
+    public const float SettleDelay = .15f;   // atış sonrası bekleme (kampanyada .4)
+    public const float SettleCutoff = 2.5f;  // bu kadar saniye sonra yavaş misketler durdurulur
 
     public static int StageAt(float elapsed) => Mathf.Clamp(1 + (int)(elapsed / StageEvery), 1, MaxStage);
 
@@ -28,7 +31,7 @@ public static class EndlessLevel
         l.hideFlags = HideFlags.HideAndDontSave;
         l.name = "Sonsuz";
         l.levelName = "Sonsuz Çember";
-        l.district = (stage - 1) % 5;             // kademe değişince zemin de değişir
+        l.district = District;                     // zemin hep aynı: renk atlaması olmaz
         l.shape = ArenaShape.Circle;
         l.arenaSize = ArenaSize;
         l.shotCount = 9999;                        // süre sınırlı, atış sınırsız
