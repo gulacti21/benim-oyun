@@ -109,6 +109,11 @@ public class MahalleWorld : MonoBehaviour
             decor.AddComponent<ParkCorners>().Build(corner);
             if(light!=null)light.color=corner==1?new Color(1,.84f,.65f):corner==2?new Color(.89f,.95f,.85f):new Color(1,.97f,.88f);
         }
+        else
+        {
+            // Mahallenin kendi eşyaları (çarpışmasız, çemberin dışında).
+            decor.AddComponent<MahalleDecorSets>().Build(district,controller.Level.arenaSize);
+        }
         if(controller.Shooter.GetComponent<MarbleVisual>()==null) controller.Shooter.gameObject.AddComponent<MarbleVisual>();
         controller.Shooter.GetComponent<MarbleVisual>().SetSkin(MahalleProfile.EffectiveSkin);
         var line=FindFirstObjectByType<ShooterLine>();
