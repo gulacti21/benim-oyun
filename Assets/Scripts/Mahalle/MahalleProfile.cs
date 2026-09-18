@@ -32,6 +32,11 @@ public class MahalleSave
     // Günün bölümü deneme hakkı: hangi gün ve o gün kaç kez oynandı.
     public int dailyTriesDay = -9999;
     public int dailyTries;
+    public int dailyBestStreak;
+    // Günlük hatırlatma bildirimi ve mağaza puanlama isteği (bir kez).
+    public bool notify = true;
+    public bool notifyAsked;
+    public bool reviewAsked;
     public bool haptics = true;
 }
 
@@ -238,6 +243,39 @@ public static class MahalleProfile
         else RefundBeads(Campaign.PowerPrices[p]);
         Save();
     }
+    // USTA SEVİYESİ: yıldız, çıkardığın misket ve günlük seriler puana dönüşür.
+    public static int MasteryPoints
+    {
+        get
+        {
+            int stars = 0; for (int i = 0; i < Data.stars.Length; i++) stars += Data.stars[i];
+            return stars * 10 + Data.knocked + Data.dailyBestStreak * 15;
+        }
+    }
+    public static int MasteryLevel => 1 + MasteryPoints / 250;
+    public static int MasteryIntoLevel => MasteryPoints % 250;
+    public const int MasteryPerLevel = 250;
+
+    // BAŞARIMLAR: ödül vermez, ilerleme gösterir (ödüller görevlerde).
+    public static readonly string[] AchievementNames =
+        { "İlk Atış", "Mahalle Ustası", "Keskin Nişancı", "Koleksiyoncu", "Sadık Oyuncu", "Yıldız Avcısı" };
+    public static readonly string[] AchievementNotes =
+        { "Bir bölüm kazan", "Bir mahalleyi tamamla", "Tek atışta 4 misket çıkar",
+          "5 misket kaplaması topla", "5 gün üst üste günün bölümünü bitir", "60 yıldız topla" };
+    public static readonly int[] AchievementTargets = { 1, 1, 4, 5, 5, 60 };
+    public static int AchievementProgress(int index)
+    {
+        switch (index)
+        {
+            case 0: { int n = 0; foreach (int s in Data.stars) if (s > 0) n++; return n; }
+            case 1: { int n = 0; for (int d = 0; d < Campaign.Districts.Length; d++) if (DistrictCompleted(d)) n++; return n; }
+            case 2: return Data.bestShot;
+            case 3: { int n = 0; foreach (bool o in Data.skins) if (o) n++; return n; }
+            case 4: return Data.dailyBestStreak;
+            default: { int n = 0; foreach (int s in Data.stars) n += s; return n; }
+        }
+    }
+    public static bool AchievementDone(int index) => AchievementProgress(index) >= AchievementTargets[index];
     public const int DistrictCompletionBonus = 35;
     public static bool DistrictCompleted(int district)
     {
@@ -320,6 +358,7 @@ public static class MahalleProfile
         if (stars > 0 && Data.dailyDay != today)
         {
             Data.dailyStreak = Data.dailyDay == today - 1 ? Data.dailyStreak + 1 : 1;
+            if (Data.dailyStreak > Data.dailyBestStreak) Data.dailyBestStreak = Data.dailyStreak;
             Data.dailyDay = today;
             reward.firstWin = true;
             reward.beads = DailyLevel.RewardFor(Data.dailyStreak);

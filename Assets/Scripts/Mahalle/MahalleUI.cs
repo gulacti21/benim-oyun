@@ -49,6 +49,7 @@ public class MahalleUI : MonoBehaviour
         if(FindFirstObjectByType<AudioListener>()==null)
         {var cam=Camera.main!=null?Camera.main.gameObject:gameObject;cam.AddComponent<AudioListener>();}
         MusicPlayer.Ensure();
+        MisketrNotify.Refresh();
         controller=FindFirstObjectByType<LevelController>();
         if(controller!=null)controller.AnchorRefunded+=()=>Toast("Misketin işe yarar bir yerde kalmadı. Hakkın iade edildi.");
         district=MahalleProfile.NextLevel/Campaign.PerDistrict;
@@ -94,7 +95,13 @@ public class MahalleUI : MonoBehaviour
         b.onClick.AddListener(()=>{if(SfxPlayer.Instance!=null)SfxPlayer.Instance.PlayUiTap();action();});return b;
     }
     private Button LabelButton(Transform parent,string title,float x,float y,float w,float h,Color bg,Color fg,Action action,float size=34)
-    {var b=Button(parent,title,x,y,w,h,bg,action);Text(b.transform,title,12,0,w-24,h,size,fg,TextAlignmentOptions.Center);return b;}
+    {
+        var b=Button(parent,title,x,y,w,h,bg,action);
+        var t=Text(b.transform,title,12,0,w-24,h,size,fg,TextAlignmentOptions.Center);
+        // İngilizce metinler Türkçeden uzun olabiliyor: sığmıyorsa taşmak yerine küçülsün.
+        t.enableAutoSizing=true;t.fontSizeMin=size*.62f;t.fontSizeMax=size;
+        return b;
+    }
     private Image bleedTop,bleedBottom;
     private Image Bleed(string name,Vector2 min,Vector2 max)
     {
@@ -892,7 +899,7 @@ public class MahalleUI : MonoBehaviour
     // İSTATİSTİK: üç kart. Rekor ve mahalle sayımı bu sürümle başladı.
     private void Stats()
     {
-        var content=HomeScroll(1100);
+        var content=HomeScroll(2180);
         Text(content,"Karnen",48,190,984,66,47,Ink);
         Text(content,"Bitirdiğin her bölüm buraya yazılır.",48,268,984,70,30,Muted);
         int fav=MahalleProfile.FavoriteDistrict();
@@ -912,6 +919,32 @@ public class MahalleUI : MonoBehaviour
             Text(card.transform,labels[i],160,22,790,40,25,Muted);
             Text(card.transform,values[i],160,64,790,82,56,Ink);
             Text(card.transform,notes[i],160,150,790,44,25,Muted);
+        }
+
+        // USTA SEVİYESİ: yıldız, çıkardığın misket ve günlük seriler puana dönüşür.
+        var seviye=Panel(content,"Usta seviyesi",48,1140,984,190,Ink);seviye.radius=28;seviye.highlight=true;
+        Text(seviye.transform,L.F("USTA SEVİYESİ {0}",MahalleProfile.MasteryLevel),36,24,700,46,30,Gold);
+        Text(seviye.transform,L.F("{0} / {1} puan",MahalleProfile.MasteryIntoLevel,MahalleProfile.MasteryPerLevel),36,74,700,44,26,new Color(1,.97f,.89f,.7f));
+        Panel(seviye.transform,"Yol",36,134,912,16,new Color(1,1,1,.14f)).radius=8;
+        var dolu=Panel(seviye.transform,"Dolu",36,134,Mathf.Max(16f,912f*MahalleProfile.MasteryIntoLevel/MahalleProfile.MasteryPerLevel),16,Gold);
+        dolu.radius=8;dolu.colorB=new Color(.85f,.53f,.15f);
+        Art(seviye.transform,"Rozet",MahalleGraphic.Shape.Star,846,28,90,90,new Color(1,.84f,.42f,.9f));
+
+        // BAŞARIMLAR
+        Text(content,"BAŞARIMLAR",48,1372,984,48,28,Muted);
+        for(int i=0;i<MahalleProfile.AchievementNames.Length;i++)
+        {
+            int hedef=MahalleProfile.AchievementTargets[i];
+            int ilerleme=Mathf.Min(MahalleProfile.AchievementProgress(i),hedef);
+            bool tamam=ilerleme>=hedef;
+            var kart=Panel(content,"Başarım "+i,48,1430+i*118,984,102,tamam?new Color(.93f,.88f,.74f):Cream);
+            kart.radius=22;
+            Art(kart.transform,"Simge",MahalleGraphic.Shape.Star,24,22,58,58,tamam?Gold:Line);
+            Text(kart.transform,L.T(MahalleProfile.AchievementNames[i]),100,14,600,40,27,Ink);
+            Text(kart.transform,L.T(MahalleProfile.AchievementNotes[i]),100,52,600,36,22,Muted);
+            Text(kart.transform,ilerleme+" / "+hedef,712,14,240,40,26,tamam?Ink:Muted,TextAlignmentOptions.Right);
+            Panel(kart.transform,"Yol",712,64,240,10,Line).radius=5;
+            var d2=Panel(kart.transform,"Dolu",712,64,Mathf.Max(10f,240f*ilerleme/hedef),10,tamam?Gold:Ink);d2.radius=5;
         }
     }
     private void Missions()
@@ -1111,6 +1144,13 @@ public class MahalleUI : MonoBehaviour
         else LabelButton(box,passed?"MAHALLEYE DÖN":"TEKRAR DENE",36,669,912,98,Ink,Cream,()=>{if(passed)controller.OpenLevelSelect();else{CloseModal();controller.RestartLevel();ShowGame();}});
         LabelButton(box,passed?"REKORUNU GELİŞTİR":"MAHALLEYE DÖN",36,791,912,86,new Color(.88f,.83f,.69f),Ink,()=>{if(passed){CloseModal();controller.RestartLevel();ShowGame();}else controller.OpenLevelSelect();},30);
         if(passed&&controller.HasNextLevel)LabelButton(box,"MAHALLE HARİTASI",36,898,912,76,Paper,Muted,()=>controller.OpenLevelSelect(),27);
+        // Oyuncu iyi bir anda: ilk kez 3 yıldızla geçtiyse ve yeterince oynadıysa
+        // iOS'un kendi puanlama penceresi bir kez açılır.
+        if(passed&&controller.Stars==3&&!MahalleProfile.Data.reviewAsked&&MahalleProfile.MasteryPoints>=200)
+        {
+            MahalleProfile.Data.reviewAsked=true;MahalleProfile.Save();
+            StartCoroutine(AskReview());
+        }
         if(won)LabelButton(box,"PAYLAŞ",36,passed&&controller.HasNextLevel?995:898,912,86,Gold,Ink,ShareCard,30);
     }
     // ---------------------------------------------------------------
@@ -1408,6 +1448,11 @@ public class MahalleUI : MonoBehaviour
         if(MahalleProfile.Data.stars[0]==0){Toast("Günün bölümü 1. bölümü bitirince açılır.");return;}
         if(MahalleProfile.DailyDoneToday){Toast("Bugünün bölümünü geçtin. Yarın yenisi gelir.");return;}
         if(!MahalleProfile.DailyUseTry()){Toast("Bugünlük hakkın bitti. Yarın yeni bölüm gelir.");return;}
+        if(!MahalleProfile.Data.notifyAsked)
+        {
+            MahalleProfile.Data.notifyAsked=true;MahalleProfile.Save();
+            MisketrNotify.RequestPermission();MisketrNotify.Refresh();
+        }
         GameSession.TutorialMode=false;GameSession.DailyMode=true;
         Time.timeScale=1;
         SceneManager.LoadScene(GameSession.GameSceneName);
@@ -1442,6 +1487,15 @@ public class MahalleUI : MonoBehaviour
         else y+=80;
         LabelButton(box,"ANA MENÜ",36,y,912,86,new Color(.88f,.83f,.69f),Ink,LeaveDaily,30);
     }
+    private IEnumerator AskReview()
+    {
+        yield return new WaitForSecondsRealtime(1.6f);   // yıldızlar açıldıktan sonra
+#if UNITY_IOS && !UNITY_EDITOR
+        UnityEngine.iOS.Device.RequestStoreReview();
+#else
+        Debug.Log("PUANLAMA: magaza puanlama penceresi acilirdi (sadece iPhone'da).");
+#endif
+    }
     private IEnumerator RevealStar(MahalleGraphic star,int index)
     {
         yield return new WaitForSecondsRealtime(.25f+index*.24f);
@@ -1450,15 +1504,19 @@ public class MahalleUI : MonoBehaviour
     }
     private void Settings()
     {
-        var box=Modal("Ayarlar",1086);Text(box,"Ayarlar",36,30,912,77,52,Ink);
+        var box=Modal("Ayarlar",1208);Text(box,"Ayarlar",36,30,912,77,52,Ink);
         LabelButton(box,L.F("SES: {0}",L.T(MahalleProfile.Data.sound?"AÇIK":"KAPALI")),36,158,912,100,Ink,Cream,()=>{MahalleProfile.Data.sound=!MahalleProfile.Data.sound;MahalleProfile.Save();Settings();});
         LabelButton(box,L.F("MÜZİK: {0}",L.T(MahalleProfile.Data.music?"AÇIK":"KAPALI")),36,406,912,100,Ink,Cream,()=>{MahalleProfile.Data.music=!MahalleProfile.Data.music;MahalleProfile.Save();MusicPlayer.Refresh();Settings();});
         LabelButton(box,L.F("TİTREŞİM: {0}",L.T(MahalleProfile.Data.haptics?"AÇIK":"KAPALI")),36,282,912,100,Ink,Cream,()=>{MahalleProfile.Data.haptics=!MahalleProfile.Data.haptics;MahalleProfile.Save();Settings();});
-        LabelButton(box,L.F("DİL: {0}",L.English?"ENGLISH":"TÜRKÇE"),36,527,912,89,new Color(.88f,.83f,.69f),Ink,ToggleLanguage,29);
-        LabelButton(box,"NASIL OYNANIR",36,639,912,89,new Color(.88f,.83f,.69f),Ink,()=>StartTutorial(true),29);
-        LabelButton(box,"İLERLEMEYİ SIFIRLA",36,751,912,89,new Color(.88f,.83f,.69f),Ink,ResetPrompt,29);
-        Text(box,"Boncuklar oyun içinden kazanılır. Gerçek para işlemi yoktur.",36,863,912,64,25,Muted,TextAlignmentOptions.Center);
-        LabelButton(box,"GERİ",36,961,912,87,Ink,Cream,()=>{if(controller!=null)Pause();else CloseModal();},29);
+        LabelButton(box,L.F("BİLDİRİM: {0}",L.T(MahalleProfile.Data.notify?"AÇIK":"KAPALI")),36,527,912,100,Ink,Cream,()=>{
+            MahalleProfile.Data.notify=!MahalleProfile.Data.notify;
+            if(MahalleProfile.Data.notify&&!MahalleProfile.Data.notifyAsked){MahalleProfile.Data.notifyAsked=true;MisketrNotify.RequestPermission();}
+            MahalleProfile.Save();MisketrNotify.Refresh();Settings();});
+        LabelButton(box,L.F("DİL: {0}",L.English?"ENGLISH":"TÜRKÇE"),36,649,912,89,new Color(.88f,.83f,.69f),Ink,ToggleLanguage,29);
+        LabelButton(box,"NASIL OYNANIR",36,761,912,89,new Color(.88f,.83f,.69f),Ink,()=>StartTutorial(true),29);
+        LabelButton(box,"İLERLEMEYİ SIFIRLA",36,873,912,89,new Color(.88f,.83f,.69f),Ink,ResetPrompt,29);
+        Text(box,"Boncuklar oyun içinden kazanılır. Gerçek para işlemi yoktur.",36,985,912,64,25,Muted,TextAlignmentOptions.Center);
+        LabelButton(box,"GERİ",36,1083,912,87,Ink,Cream,()=>{if(controller!=null)Pause();else CloseModal();},29);
     }
     // Dil değişince ekran yeni dille baştan kurulur. Oyundaysa bölüm yeniden başlar.
     private void ToggleLanguage()

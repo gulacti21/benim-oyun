@@ -56,6 +56,22 @@ public static class MahalleVerify
             checks += DuelNetVerify.RunChecks();
             checks += DistrictRewardVerify.RunChecks();
             checks += CameraFitVerify.RunChecks();
+            // USTA SEVİYESİ ve BAŞARIMLAR: puan artışı seviyeye dönüşüyor mu, ilerleme hedefi aşıyor mu.
+            {
+                var fresh=new MahalleSave();MahalleProfile.SetTestData(fresh);
+                Check(MahalleProfile.MasteryLevel==1&&MahalleProfile.MasteryIntoLevel==0,"Mastery starts at level 1");
+                fresh.knocked=MahalleProfile.MasteryPerLevel;
+                Check(MahalleProfile.MasteryLevel==2&&MahalleProfile.MasteryIntoLevel==0,"Mastery level rises with points");
+                for(int i=0;i<MahalleProfile.AchievementNames.Length;i++)
+                {
+                    Check(MahalleProfile.AchievementTargets[i]>0,"Achievement target positive "+i);
+                    Check(MahalleProfile.AchievementProgress(i)>=0,"Achievement progress never negative "+i);
+                    Check(MahalleProfile.AchievementNotes[i].Length>0,"Achievement has a description "+i);
+                }
+                fresh.bestShot=MahalleProfile.AchievementTargets[2];
+                Check(MahalleProfile.AchievementDone(2),"Achievement completes at its target");
+                MahalleProfile.SetTestData(data);
+            }
             // GÜNÜN BÖLÜMÜ havuzu: varsa her girdi oynanabilir ve hedefleri tutarlı olmalı.
             if(DailyLevel.Available)
             {
