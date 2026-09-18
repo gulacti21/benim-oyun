@@ -197,17 +197,19 @@ public class MahalleUI : MonoBehaviour
         LabelButton(menu, "KESEM", 90, 1398, 435, 104, new Color(.24f, .34f, .30f), Cream, () => { tab = 1; ShowHome(); }, 32);
         LabelButton(menu, "GÖREVLER", 555, 1398, 435, 104, new Color(.24f, .34f, .30f), Cream, () => { tab = 2; ShowHome(); }, 32);
         // GÜNÜN BÖLÜMÜ
-        var daily = LabelButton(menu, "GÜNÜN BÖLÜMÜ", 90, 1523, 900, 104, new Color(.78f, .42f, .24f), Cream, StartDaily, 32);
+        var daily = LabelButton(menu, "GÜNÜN BÖLÜMÜ", 90, 1523, 900, 110, new Color(.78f, .42f, .24f), Cream, StartDaily, 32);
         {
             var tl = daily.GetComponentInChildren<TextMeshProUGUI>();
-            tl.alignment = TextAlignmentOptions.Top; tl.margin = new Vector4(0, 12, 0, 0);
+            tl.alignment = TextAlignmentOptions.Top; tl.margin = new Vector4(0, 16, 0, 0); tl.characterSpacing = 2f;
             int seri = MahalleProfile.DailyStreakShown;
             string alt = !DailyLevel.Available ? L.T("ÇOK YAKINDA")
                        : MahalleProfile.Data.stars[0] == 0 ? L.T("1. bölümü bitirince açılır")
                        : MahalleProfile.DailyDoneToday ? L.F("BUGÜN TAMAM · SERİ {0} GÜN", seri)
-                       : seri > 0 ? L.F("SERİ {0} GÜN · +{1} BONCUK", seri, MahalleProfile.DailyNextReward)
-                       : L.F("+{0} BONCUK", MahalleProfile.DailyNextReward);
-            Text(daily.transform, alt, 12, 60, 876, 34, 21, new Color(1, .93f, .78f, .9f), TextAlignmentOptions.Center);
+                       : MahalleProfile.DailyTriesLeft == 0 ? L.T("HAKLARIN BİTTİ · YARIN YENİ BÖLÜM")
+                       : L.F("{0} HAK · +{1} BONCUK", MahalleProfile.DailyTriesLeft, MahalleProfile.DailyNextReward);
+            var altYazi = Text(daily.transform, L.Up(alt), 12, 62, 876, 32, 19, new Color(1, .92f, .76f, .85f), TextAlignmentOptions.Center);
+            altYazi.characterSpacing = 8f;            // seyrek harf: rozet gibi durur, cümle gibi değil
+            altYazi.fontStyle = FontStyles.Bold;
         }
         LabelButton(menu, "ONLİNE", 90, 1648, 900, 104, new Color(.30f, .42f, .36f), Cream, ShowOnlineMenu, 32);
         LabelButton(menu, "AYARLAR", 90, 1773, 900, 92, new Color(.20f, .25f, .23f), new Color(1, .97f, .89f, .82f), Settings, 29);
@@ -1081,7 +1083,10 @@ public class MahalleUI : MonoBehaviour
         controller.SetPaused(true);var box=Modal("Mola",680);
         Text(box,"Bir nefes al",36,34,912,81,57,Ink,TextAlignmentOptions.Center);
         LabelButton(box,"DEVAM ET",36,164,912,100,Ink,Cream,()=>CloseModal());
-        LabelButton(box,"TEKRAR DENE",36,290,912,100,new Color(.88f,.83f,.69f),Ink,()=>{CloseModal();controller.RestartLevel();ShowGame();});
+        if(GameSession.DailyMode)
+            LabelButton(box,L.F("TEKRAR DENE · {0} HAK",MahalleProfile.DailyTriesLeft),36,290,912,100,new Color(.88f,.83f,.69f),Ink,
+                        ()=>{if(!MahalleProfile.DailyUseTry()){Toast("Bugünlük hakkın bitti. Yarın yeni bölüm gelir.");return;}CloseModal();controller.RestartLevel();ShowGame();},30);
+        else LabelButton(box,"TEKRAR DENE",36,290,912,100,new Color(.88f,.83f,.69f),Ink,()=>{CloseModal();controller.RestartLevel();ShowGame();});
         LabelButton(box,"MAHALLEYE DÖN",36,416,912,100,new Color(.88f,.83f,.69f),Ink,()=>controller.OpenLevelSelect());
         LabelButton(box,"AYARLAR",36,554,912,78,Paper,Muted,Settings,27);
     }
@@ -1401,6 +1406,8 @@ public class MahalleUI : MonoBehaviour
     {
         if(!DailyLevel.Available){Toast("Günün bölümü çok yakında!");return;}
         if(MahalleProfile.Data.stars[0]==0){Toast("Günün bölümü 1. bölümü bitirince açılır.");return;}
+        if(MahalleProfile.DailyDoneToday){Toast("Bugünün bölümünü geçtin. Yarın yenisi gelir.");return;}
+        if(!MahalleProfile.DailyUseTry()){Toast("Bugünlük hakkın bitti. Yarın yeni bölüm gelir.");return;}
         GameSession.TutorialMode=false;GameSession.DailyMode=true;
         Time.timeScale=1;
         SceneManager.LoadScene(GameSession.GameSceneName);
@@ -1414,7 +1421,7 @@ public class MahalleUI : MonoBehaviour
     {
         bool won=controller.State==LevelController.LevelState.Won;
         int beads=controller.LastReward.beads;
-        var box=Modal("Günün bölümü sonucu",won?1010:900);
+        var box=Modal("Günün bölümü sonucu",won?1010:860);
         Text(box,won?"GÜNÜN BÖLÜMÜ TAMAM!":"BİR DAHA DENE",30,34,924,77,won?48:51,Ink,TextAlignmentOptions.Center);
         Text(box,DailyLevel.DateLabel,30,114,924,47,31,Muted,TextAlignmentOptions.Center);
         for(int i=0;i<3;i++){var star=Art(box,"Sonuç yıldızı "+i,MahalleGraphic.Shape.Star,259+i*163,i==1?184:201,i==1?142:115,i==1?142:115,Line);if(i<controller.Stars&&won)StartCoroutine(RevealStar(star,i));}
@@ -1423,9 +1430,16 @@ public class MahalleUI : MonoBehaviour
                    :won?L.T("Bugünün ödülünü aldın. Yarın yeni bölüm!")
                    :L.T("Bugün istediğin kadar deneyebilirsin. Yarın yeni bölüm gelir.");
         Text(box,line,60,448,864,82,beads>0?38:28,beads>0?Ink:Muted,TextAlignmentOptions.Center);
-        LabelButton(box,"TEKRAR DENE",36,560,912,98,Ink,Cream,()=>{CloseModal();controller.RestartLevel();ShowGame();});
-        float y=682;
+        float y=560;
+        if(!won&&MahalleProfile.DailyOpen)
+        {
+            LabelButton(box,L.F("TEKRAR DENE · {0} HAK",MahalleProfile.DailyTriesLeft),36,y,912,98,Ink,Cream,
+                        ()=>{if(!MahalleProfile.DailyUseTry()){Toast("Bugünlük hakkın bitti. Yarın yeni bölüm gelir.");return;}CloseModal();controller.RestartLevel();ShowGame();},34);
+            y+=122;
+        }
+        else if(!won)Text(box,L.T("Bugünlük hakkın bitti. Yarın yeni bölüm gelir."),60,y+18,864,60,28,Muted,TextAlignmentOptions.Center);
         if(won){LabelButton(box,"PAYLAŞ",36,y,912,98,Gold,Ink,ShareCard,34);y+=122;}
+        else y+=80;
         LabelButton(box,"ANA MENÜ",36,y,912,86,new Color(.88f,.83f,.69f),Ink,LeaveDaily,30);
     }
     private IEnumerator RevealStar(MahalleGraphic star,int index)

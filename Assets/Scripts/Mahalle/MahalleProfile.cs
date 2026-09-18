@@ -29,6 +29,9 @@ public class MahalleSave
     // GÜNÜN BÖLÜMÜ: ödül alınan son gün (DailyLevel.DayIndex) ve üst üste gün sayısı.
     public int dailyDay = -9999;
     public int dailyStreak;
+    // Günün bölümü deneme hakkı: hangi gün ve o gün kaç kez oynandı.
+    public int dailyTriesDay = -9999;
+    public int dailyTries;
     public bool haptics = true;
 }
 
@@ -286,6 +289,18 @@ public static class MahalleProfile
         return best;
     }
     public static bool DailyDoneToday => Data.dailyDay == DailyLevel.DayIndex;
+    public static int DailyTriesLeft => Mathf.Max(0, DailyLevel.MaxTries -
+        (Data.dailyTriesDay == DailyLevel.DayIndex ? Data.dailyTries : 0));
+    // Gün açık mı: geçilmediyse ve hak kaldıysa.
+    public static bool DailyOpen => !DailyDoneToday && DailyTriesLeft > 0;
+    public static bool DailyUseTry()
+    {
+        if (!DailyOpen) return false;
+        int today = DailyLevel.DayIndex;
+        if (Data.dailyTriesDay != today) { Data.dailyTriesDay = today; Data.dailyTries = 0; }
+        Data.dailyTries++;
+        Save(); return true;
+    }
     // Bugün oynanırsa geçerli olacak seri (dün bitirildiyse devam eder).
     public static int DailyStreakShown
     {

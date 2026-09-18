@@ -83,6 +83,9 @@ public static class DailyLevel
         return l;
     }
 
+    // Günde en fazla bu kadar deneme; yıldız alınca gün zaten kapanır.
+    public const int MaxTries = 3;
+
     // Seri bonusu: 15 boncuk, üst üste her gün +5, en fazla +30.
     public static int RewardFor(int streak) => 15 + Mathf.Min(30, Mathf.Max(0, streak - 1) * 5);
 }

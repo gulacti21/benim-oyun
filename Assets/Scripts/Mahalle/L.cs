@@ -297,7 +297,12 @@ public static class L
         {"Bugünün ödülünü aldın. Yarın yeni bölüm!", "You got today's reward. New level tomorrow!"},
         {"Bugün istediğin kadar deneyebilirsin. Yarın yeni bölüm gelir.", "Try as often as you like today. A new level comes tomorrow."},
         {"MİSKO · Günün bölümünü ({0}) {1} atışta {2} yıldızla bitirdim. Sen kaç atışta bitirirsin?", "MISKO · I beat the daily level ({0}) in {1} shots with {2} stars. How many shots will you need?"},
-        {"Günün Bölümü", "Daily Level"}, {"MÜZİK: {0}", "MUSIC: {0}"}, {"ÇOK YAKINDA", "COMING SOON"}, {"Online oyun çok yakında!", "Online play is coming soon!"}, {"İstatistik", "Stats"}, {"Görevler", "Tasks"},
+        {"Günün Bölümü", "Daily Level"},
+        {"HAKLARIN BİTTİ · YARIN YENİ BÖLÜM", "NO TRIES LEFT · NEW LEVEL TOMORROW"},
+        {"SERİ {0} GÜN", "{0}-DAY STREAK"},
+        {"{0} HAK · +{1} BONCUK", "{0} TRIES · +{1} BEADS"}, {"TEKRAR DENE · {0} HAK", "TRY AGAIN · {0} LEFT"},
+        {"Bugünlük hakkın bitti. Yarın yeni bölüm gelir.", "You're out of tries for today. A new level comes tomorrow."},
+        {"Bugünün bölümünü geçtin. Yarın yenisi gelir.", "You already beat today's level. A new one comes tomorrow."}, {"MÜZİK: {0}", "MUSIC: {0}"}, {"ÇOK YAKINDA", "COMING SOON"}, {"Online oyun çok yakında!", "Online play is coming soon!"}, {"İstatistik", "Stats"}, {"Görevler", "Tasks"},
         {"tur", "rounds"}, {"ÇIK", "EXIT"}, {"SIRA ATIŞI", "LAG SHOT"}, {"DÜELLO", "DUEL"},
     };
 }

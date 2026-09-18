@@ -72,6 +72,14 @@ public static class MahalleVerify
                 var dr=MahalleProfile.FinishDaily(1,3);
                 Check(dr.beads==DailyLevel.RewardFor(4)&&data.dailyStreak==4&&data.beads==before+dr.beads,"Daily streak reward");
                 Check(MahalleProfile.FinishDaily(3,5).beads==0,"Daily reward once per day");
+                Check(!MahalleProfile.DailyOpen,"Daily closes after a win");
+                data.dailyDay=-9999;data.dailyTriesDay=DailyLevel.DayIndex;data.dailyTries=0;
+                for(int t=0;t<DailyLevel.MaxTries;t++)
+                {
+                    Check(MahalleProfile.DailyTriesLeft==DailyLevel.MaxTries-t,"Daily tries counted down");
+                    Check(MahalleProfile.DailyUseTry(),"Daily try allowed while open");
+                }
+                Check(MahalleProfile.DailyTriesLeft==0&&!MahalleProfile.DailyOpen&&!MahalleProfile.DailyUseTry(),"Daily closes after three tries");
                 data.dailyDay=DailyLevel.DayIndex-3;var gap=MahalleProfile.FinishDaily(1,2);
                 Check(gap.beads==DailyLevel.RewardFor(1)&&data.dailyStreak==1,"Daily streak resets after a missed day");
             }
