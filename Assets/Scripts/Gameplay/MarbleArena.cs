@@ -42,6 +42,8 @@ public class MarbleArena : MonoBehaviour
     // bu olaya abone olmaz.
     public event Action<TargetMarble> MarbleLeft;
 
+    // Kaç hızdan sonra "durdu" sayılır. Bekleme süresini kısaltmak için dışarıdan ayarlanır.
+    public float RestThreshold { get => restSpeedThreshold; set => restSpeedThreshold = Mathf.Max(.05f, value); }
     public int Score => score;
     public int TotalMarbles => totalMarbles;
     public int RemainingMarbles => activeMarbles.Count;

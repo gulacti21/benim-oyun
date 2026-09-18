@@ -26,6 +26,19 @@ public class LevelController : MonoBehaviour
     // Atıcı çizgiye döner, çıkan hedefler olduğu yerde donar; haritanın sonuna
     // kadar yuvarlanmasını beklemek gerekmez.
     private const float OutsideStopDelay = 1.5f;
+    // BEKLEMEYİ KISALTMA. Kural: sonucu değiştirebilecek hiçbir misketi durdurma.
+    // Sert dondurma denendi (CrawlSpeed .5) ve kaldırıldı: gözle görülür hızda
+    // yuvarlanan misketler yolun ortasında çakılıyor, bug gibi duruyordu ve
+    // bir başkasına çarpıp çıkarma ihtimalini de yok ederek dengeyi bozuyordu.
+    // Artık: önce yumuşak frenleme, sonra sadece gerçekten sürünenler durdurulur.
+    // (Otomatik hızlandırma da denendi ve kaldırıldı: kötü görünüyordu.)
+    private const float DampAfter = 1.2f;         // bu andan sonra yavaşları nazikçe frenle
+    private const float DampSpeed = .6f;          // sadece bu hızın altındakiler frenlenir
+    private const float DampFactor = .9f;         // 60 fps referanslı kare başına hız çarpanı
+    private const float CrawlStopAfter = 1.8f;    // gerçekten sürünenleri durdurma anı
+    private const float CrawlSpeed = .25f;        // bu hızın altı "sürünüyor" sayılır
+    private const float RestThreshold = .22f;     // arenanın "durdu" eşiği (varsayılan .15)
+    private const float QuickSettleDelay = .25f;  // atış sonrası bekleme payı (varsayılan .4)
     private float shooterOutsideTime;
     private readonly System.Collections.Generic.Dictionary<TargetMarble, float> scoredTimes =
         new System.Collections.Generic.Dictionary<TargetMarble, float>();
@@ -176,6 +189,7 @@ public class LevelController : MonoBehaviour
 
         if (arena != null)
         {
+            arena.RestThreshold = RestThreshold;
             arena.Configure(level.shape, level.arenaSize, level.rings, level.triangleRows, level.marbles);
             arena.Rebuild();
         }
@@ -223,6 +237,27 @@ public class LevelController : MonoBehaviour
         {
             foreach (var b in FindObjectsByType<Rigidbody>(FindObjectsSortMode.None)) { b.linearVelocity = Vector3.zero; b.angularVelocity = Vector3.zero; b.Sleep(); }
         }
+        // Bekleme kısaltma: önce yumuşak frenleme, sonra tam durdurma.
+        // Hızlı misketlere dokunulmaz, sonuç değişmez.
+        if (shotElapsed > DampAfter)
+        {
+            float k = Mathf.Pow(DampFactor, Time.deltaTime * 60f);
+            foreach (var b in FindObjectsByType<Rigidbody>(FindObjectsSortMode.None))
+            {
+                if (b.isKinematic) continue;
+                float hiz = b.linearVelocity.magnitude;
+                if (hiz >= DampSpeed) continue;
+                if (shotElapsed > CrawlStopAfter && hiz < CrawlSpeed)
+                {
+                    b.linearVelocity = Vector3.zero;
+                    b.angularVelocity = Vector3.zero;
+                    b.Sleep();
+                    continue;
+                }
+                b.linearVelocity *= k;
+                b.angularVelocity *= k;
+            }
+        }
         bool shooterResting = shooter == null || shooter.AtRest;
         // SONSUZ ÇEMBER: hedeflerin durmasını bekleme. Atıcı durunca sıra biter,
         // diğer misketler yuvarlanmaya devam ederken yeni atış yapılabilir.
@@ -236,7 +271,7 @@ public class LevelController : MonoBehaviour
 
         settleTimer += Time.deltaTime;
 
-        if (settleTimer < (GameSession.EndlessMode ? EndlessLevel.SettleDelay : settleDelay))
+        if (settleTimer < (GameSession.EndlessMode ? EndlessLevel.SettleDelay : QuickSettleDelay))
         {
             return;
         }
