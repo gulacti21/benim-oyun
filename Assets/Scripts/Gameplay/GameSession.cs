@@ -8,4 +8,6 @@ public static class GameSession
     public static bool TutorialMode { get; set; }
     // GÜNÜN BÖLÜMÜ: true iken Game sahnesi tarihe göre günlük bölümü kurar.
     public static bool DailyMode { get; set; }
+    // SONSUZ ÇEMBER: kampanya dışı, bitmeyen mod.
+    public static bool EndlessMode { get; set; }
 }

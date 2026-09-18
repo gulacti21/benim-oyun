@@ -52,10 +52,42 @@ public static class MahalleVerify
             var roundTrip=JsonUtility.FromJson<MahalleSave>(JsonUtility.ToJson(data));
             Check(roundTrip.beads==data.beads&&roundTrip.stars[11]==1&&roundTrip.selectedSkin==1&&roundTrip.claimed[0],"Save round trip retains economy, progression and collection");
             checks += SpecialMarblesVerify.RunChecks();
-            checks += DuelVerify.RunChecks();
-            checks += DuelNetVerify.RunChecks();
             checks += DistrictRewardVerify.RunChecks();
             checks += CameraFitVerify.RunChecks();
+            // KAYIT GÜVENLİĞİ: bozuk kayıt yedekten dönmeli.
+            {
+                MahalleProfile.TestMode=false;
+                var once=new MahalleSave{beads=123};
+                MahalleProfile.SetTestData(once);MahalleProfile.Save();          // 1. kayıt
+                MahalleProfile.Data.beads=456;MahalleProfile.Save();             // 2. kayıt, 1. yedeğe gitti
+                Check(MahalleProfile.SlotValid(MahalleProfile.SaveKey,MahalleProfile.SumKey),"Save slot valid after write");
+                Check(MahalleProfile.SlotValid(MahalleProfile.BackupKey,MahalleProfile.BackupSumKey),"Backup slot written");
+                PlayerPrefs.SetString(MahalleProfile.SaveKey,"{bozuk");            // kayıt bozuldu
+                Check(!MahalleProfile.SlotValid(MahalleProfile.SaveKey,MahalleProfile.SumKey),"Corrupt save detected");
+                MahalleProfile.Reload();
+                Check(MahalleProfile.Data.beads==123,"Corrupt save falls back to backup");
+                PlayerPrefs.DeleteKey(MahalleProfile.SaveKey);PlayerPrefs.DeleteKey(MahalleProfile.SumKey);
+                PlayerPrefs.DeleteKey(MahalleProfile.BackupKey);PlayerPrefs.DeleteKey(MahalleProfile.BackupSumKey);
+                MahalleProfile.Reload();MahalleProfile.TestMode=true;MahalleProfile.SetTestData(data);
+            }
+            // SONSUZ ÇEMBER: tur ilerledikçe saha küçülüp engel kazanmalı, dizilim oynanabilir kalmalı.
+            {
+                var ilk=EndlessLevel.Build(1);
+                Check(ilk.shotCount==EndlessLevel.StartShots&&ilk.TotalMarbles()>=8,"Endless first wave playable");
+                var sonra=EndlessLevel.Build(12);
+                Check(sonra.arenaSize<=ilk.arenaSize&&sonra.arenaSize>=2.7f,"Endless arena shrinks within limits");
+                Check((sonra.obstacles==null?0:sonra.obstacles.Length)>=(ilk.obstacles==null?0:ilk.obstacles.Length),"Endless adds obstacles over time");
+                for(int w=1;w<=20;w++)
+                {
+                    var lv=EndlessLevel.Build(w);
+                    Check(lv.marbles!=null&&lv.marbles.Length>=8,"Endless wave has marbles "+w);
+                    foreach(var m in lv.marbles)
+                        Check(new Vector2(m.x,m.z).magnitude<=lv.arenaSize-.2f,"Endless marbles inside ring "+w);
+                    Check(lv.TotalMarbles()<=14,"Endless marble count capped "+w);
+                }
+                var a1=EndlessLevel.Build(5);var a2=EndlessLevel.Build(5);
+                Check(Mathf.Approximately(a1.arenaSize,a2.arenaSize)&&a1.marbles.Length==a2.marbles.Length,"Endless wave is the same for everyone");
+            }
             // USTA SEVİYESİ ve BAŞARIMLAR: puan artışı seviyeye dönüşüyor mu, ilerleme hedefi aşıyor mu.
             {
                 var fresh=new MahalleSave();MahalleProfile.SetTestData(fresh);

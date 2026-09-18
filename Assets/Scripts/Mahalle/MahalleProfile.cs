@@ -33,6 +33,8 @@ public class MahalleSave
     public int dailyTriesDay = -9999;
     public int dailyTries;
     public int dailyBestStreak;
+    // SONSUZ ÇEMBER rekoru.
+    public int endlessBest;
     // Günlük hatırlatma bildirimi ve mağaza puanlama isteği (bir kez).
     public bool notify = true;
     public bool notifyAsked;
@@ -71,8 +73,8 @@ public static class MahalleProfile
         get
         {
             if (data != null) return data;
-            try { data = JsonUtility.FromJson<MahalleSave>(PlayerPrefs.GetString(SaveKey, "")); }
-            catch (Exception) { data = null; }
+            data = LoadSlot(SaveKey, SumKey);                     // güncel kayıt
+            if (data == null) data = LoadSlot(BackupKey, BackupSumKey); // bozuksa bir önceki
             if (data == null)
             {
                 data = new MahalleSave();
@@ -120,15 +122,62 @@ public static class MahalleProfile
         for (int i = 0; i < value.stock.Length; i++) value.stock[i] = Mathf.Max(0, value.stock[i]);
         if (value.selectedSkin < 0 || value.selectedSkin >= Campaign.SkinCount || !value.skins[value.selectedSkin]) value.selectedSkin = 0;
     }
+    // ---------------------------------------------------------------
+    // KAYIT GÜVENLİĞİ
+    // Tek anahtara yazmak risklidir: yazma sırasında oyun kapanır veya veri
+    // bozulursa bütün ilerleme gider. Bu yüzden her kayıtta önce ÖNCEKİ
+    // sağlam kayıt yedek anahtara kopyalanır, sonra yenisi yazılır. Her
+    // kaydın yanında bir sağlama (checksum) durur; okurken tutmuyorsa o slot
+    // bozuk sayılır ve yedeğe düşülür.
+    public const string SumKey = SaveKey + "_sum";
+    public const string BackupKey = SaveKey + "_yedek";
+    public const string BackupSumKey = BackupKey + "_sum";
+
+    private static string Checksum(string json)
+    {
+        unchecked
+        {
+            uint h = 2166136261;
+            foreach (char c in json) { h ^= c; h *= 16777619; }
+            return (h ^ 0x4D49534Bu).ToString("X8");   // "MISK"
+        }
+    }
+
+    private static MahalleSave LoadSlot(string key, string sumKey)
+    {
+        string json = PlayerPrefs.GetString(key, "");
+        if (string.IsNullOrEmpty(json)) return null;
+        string sum = PlayerPrefs.GetString(sumKey, "");
+        // Sağlaması olmayan eski kayıtlar da kabul edilir (sürüm geçişi).
+        if (!string.IsNullOrEmpty(sum) && sum != Checksum(json)) return null;
+        try
+        {
+            var loaded = JsonUtility.FromJson<MahalleSave>(json);
+            return loaded != null && loaded.stars != null ? loaded : null;
+        }
+        catch (Exception) { return null; }
+    }
+
     public static void Save()
     {
 #if UNITY_EDITOR
         if (TestMode || PreviewMode) { Changed?.Invoke(); return; }
 #endif
-        PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(Data));
+        string json = JsonUtility.ToJson(Data);
+        // Önceki kayıt sağlamsa yedeğe al; bozuksa yedeğe dokunma.
+        if (LoadSlot(SaveKey, SumKey) != null)
+        {
+            PlayerPrefs.SetString(BackupKey, PlayerPrefs.GetString(SaveKey, ""));
+            PlayerPrefs.SetString(BackupSumKey, PlayerPrefs.GetString(SumKey, ""));
+        }
+        PlayerPrefs.SetString(SaveKey, json);
+        PlayerPrefs.SetString(SumKey, Checksum(json));
         PlayerPrefs.Save();
         Changed?.Invoke();
     }
+
+    // Test için: bir kaydın sağlam okunup okunmadığını söyler.
+    public static bool SlotValid(string key, string sumKey) => LoadSlot(key, sumKey) != null;
     // ---------------------------------------------------------------
     // TEST YAPISI. Telefonda butun bolumleri acar ki denge denenebilsin.
     // Editor'deki Preview build'e gecmedigi icin var.
@@ -365,6 +414,14 @@ public static class MahalleProfile
             Data.beads += reward.beads;
         }
         Save(); return reward;
+    }
+    // SONSUZ ÇEMBER: sadece rekor tutulur, boncuk yok (kampanyanın ekonomisini bozmasın).
+    public static bool FinishEndless(int score)
+    {
+        Data.knocked += Mathf.Max(0, score);
+        bool record = score > Data.endlessBest;
+        if (record) Data.endlessBest = score;
+        Save(); return record;
     }
     public static RoundReward Finish(int levelIndex, int stars, int score)
     {

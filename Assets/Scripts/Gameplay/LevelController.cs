@@ -66,9 +66,6 @@ public class LevelController : MonoBehaviour
 
     private void Start()
     {
-        // Duelloda bolumu DuelController kuruyor; kampanya bolumu yuklenirse
-        // bir an ekranda yanlis dizilis gorunur ve arena iki kez kurulur.
-        if (DuelSession.Active) return;
         RestartLevel();
     }
 
@@ -134,38 +131,6 @@ public class LevelController : MonoBehaviour
         SceneManager.LoadScene(GameSession.LevelSelectSceneName);
     }
 
-    // Duello icin: kampanya veritabanina bakmadan, verilen bolum verisiyle
-    // arenayi ve aticiyi kurar. Gorsel dunya kurulumu kampanyayla ayni.
-    public void ConfigureForDuel(LevelData duelLevel)
-    {
-        if (duelLevel == null) return;
-        level = duelLevel;
-        LevelIndex = 0;
-
-        if (arena != null)
-        {
-            arena.Configure(level.shape, level.arenaSize, level.rings, level.triangleRows, level.marbles);
-            arena.Rebuild();
-        }
-
-        if (shooter != null)
-        {
-            shooter.ResetTo(level.shooterStartPosition);
-            shooter.ShootingEnabled = true;
-        }
-
-        MahalleWorld.Apply(this);
-        shotsUsed = 0;
-        waitingForSettle = false;
-        scoredTimes.Clear();
-        shooterOutsideTime = 0f;
-        settleTimer = 0f;
-        State = LevelState.Playing;
-        IsPaused = false;
-        Time.timeScale = 1f;
-        StateChanged?.Invoke();
-    }
-
     public MarbleArena Arena => arena;
 
     public void RestartLevel()
@@ -183,7 +148,13 @@ public class LevelController : MonoBehaviour
             }
         }
 
-        if (GameSession.DailyMode && !GameSession.TutorialMode && DailyLevel.Today() != null)
+        if (GameSession.EndlessMode)
+        {
+            EndlessWave = 1; EndlessScore = 0;
+            level = EndlessLevel.Build(EndlessWave);
+            LevelIndex = level.district * 12 + 5;   // sadece dekor için
+        }
+        else if (GameSession.DailyMode && !GameSession.TutorialMode && DailyLevel.Today() != null)
         {
             level = DailyLevel.Today();
             LevelIndex = level.district * 12 + 4; // dekor için; park köşeleri (0-2) dışında
@@ -228,9 +199,6 @@ public class LevelController : MonoBehaviour
 
     private void HandleShotFired()
     {
-        // Duelloda atisi DuelController takip ediyor; kampanyanin bitis
-        // kontrolu burada calisirsa bolum verisi olmadan sonuc hesaplamaya calisir.
-        if (DuelSession.Active) return;
         shotsUsed++;
         scoreAtShot = Score;
         shooterOutsideTime = 0f;
@@ -311,6 +279,7 @@ public class LevelController : MonoBehaviour
 
     private void EvaluateTurn()
     {
+        if (GameSession.EndlessMode) { EvaluateEndlessTurn(); return; }
         if (GameSession.TutorialMode) { EvaluateTutorialTurn(); return; }
         MahalleProfile.RecordShot(Score - scoreAtShot);
         bool allMarblesOut = arena != null && arena.RemainingMarbles == 0;
@@ -362,6 +331,40 @@ public class LevelController : MonoBehaviour
     // 1. bölüm normal şekilde kaydedilir, oyuncu 2. bölüme geçer.
     // Öğreticinin güç denemeleri sırasında misketler biterse saha yeniden
     // dizilir; bölüm sadece son aşamada (TutorialFinalPhase) biter.
+    public int EndlessScore { get; private set; }
+    public int EndlessWave { get; private set; }
+    // SONSUZ ÇEMBER turu: saha boşalınca bir sonraki dizilim kurulur, puan devam eder.
+    private void EvaluateEndlessTurn()
+    {
+        int gained = Mathf.Max(0, Score - scoreAtShot);
+        EndlessScore += gained;
+        MahalleProfile.RecordShot(gained);
+        shotsUsed = Mathf.Max(0, shotsUsed - gained);   // her çıkan misket bir atış kazandırır
+
+        if (arena != null && arena.RemainingMarbles == 0)
+        {
+            EndlessWave++;
+            level = EndlessLevel.Build(EndlessWave);
+            arena.Configure(level.shape, level.arenaSize, level.rings, level.triangleRows, level.marbles);
+            arena.Rebuild();
+            MahalleWorld.Apply(this);
+            scoredTimes.Clear();
+        }
+        scoreAtShot = 0;
+
+        if (ShotsLeft <= 0)
+        {
+            State = LevelState.Lost;
+            LastEndlessRecord = MahalleProfile.FinishEndless(EndlessScore);
+            if (SfxPlayer.Instance != null) SfxPlayer.Instance.PlayLose();
+            if (shooter != null) shooter.ShootingEnabled = false;
+            StateChanged?.Invoke();
+            return;
+        }
+        if (shooter != null) { SettleShooter(); shooter.ShootingEnabled = true; }
+        StateChanged?.Invoke();
+    }
+    public bool LastEndlessRecord { get; private set; }
     public bool TutorialFinalPhase { get; private set; }
     public int TutorialKnocked { get; private set; }
     public void StartTutorialFinal()
