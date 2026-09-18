@@ -71,7 +71,9 @@ public class MahalleWorld : MonoBehaviour
         decor=new GameObject("Çevre ve engeller"); decor.transform.SetParent(transform);
         int district=controller.Level.district;
         int corner=controller.LevelIndex%12;
-        bool parkStudy=district==2 && corner<3;
+        // Bir mahalledeki bütün bölümler AYNI görünür. (Park 1-3'te ayrı bir ortam
+        // denemesi vardı, diğer Park bölümlerinden farklı duruyordu; kapatıldı.)
+        bool parkStudy=false;
         var ground=GameObject.Find("Ground");
         if(ground!=null)
         {

@@ -54,6 +54,18 @@ public static class MahalleVerify
             checks += SpecialMarblesVerify.RunChecks();
             checks += DistrictRewardVerify.RunChecks();
             checks += CameraFitVerify.RunChecks();
+            // GÖRÜNÜM TUTARLILIĞI: bir mahalledeki bütün bölümler aynı zemin ve
+            // aynı kamera kuralıyla kurulmalı; bölüme özel ortam denemesi kalmamalı.
+            for(int d=0;d<5;d++)
+            {
+                var ilk=Campaign.Database.Get(d*12);
+                for(int local=1;local<12;local++)
+                {
+                    var lv=Campaign.Database.Get(d*12+local);
+                    Check(lv.district==ilk.district,"Same district for every level in area "+d);
+                    Check(MahalleTheme.Get(lv.district).title==MahalleTheme.Get(ilk.district).title,"Same theme across the area "+d);
+                }
+            }
             // KAYIT GÜVENLİĞİ: bozuk kayıt yedekten dönmeli.
             {
                 MahalleProfile.TestMode=false;
