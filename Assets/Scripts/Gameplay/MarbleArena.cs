@@ -282,6 +282,17 @@ public class MarbleArena : MonoBehaviour
         totalMarbles = 0;
     }
 
+    // SONSUZ ÇEMBER: sahayı sıfırlamadan yeni misket ekler. Puan ve çıkanlar korunur.
+    public void AddMarbles(MarbleSpot[] spots)
+    {
+        if (spots == null || targetMarblePrefab == null) return;
+        Vector3 center = transform.position;
+        foreach (var spot in spots)
+            SpawnMarbleAt(new Vector3(center.x + spot.x, spawnHeight, center.z + spot.z), "TargetMarble_e" + spawnedMarbles.Count);
+        totalMarbles += spots.Length;
+        ScoreChanged?.Invoke(score, totalMarbles);
+    }
+
     private void SpawnMarbles()
     {
         if (targetMarblePrefab == null)

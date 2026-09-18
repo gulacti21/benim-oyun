@@ -71,6 +71,7 @@ public class LevelController : MonoBehaviour
 
     private void Update()
     {
+        if (GameSession.EndlessMode) UpdateEndless();
         if (State == LevelState.Playing)
         {
             UpdateSettle();
@@ -150,8 +151,9 @@ public class LevelController : MonoBehaviour
 
         if (GameSession.EndlessMode)
         {
-            EndlessWave = 1; EndlessScore = 0;
-            level = EndlessLevel.Build(EndlessWave);
+            EndlessStage = 1; EndlessScore = 0; EndlessElapsed = 0f;
+            EndlessTimeLeft = EndlessLevel.StartTime;
+            level = EndlessLevel.Build(EndlessStage);
             LevelIndex = level.district * 12 + 5;   // sadece dekor için
         }
         else if (GameSession.DailyMode && !GameSession.TutorialMode && DailyLevel.Today() != null)
@@ -332,35 +334,74 @@ public class LevelController : MonoBehaviour
     // Öğreticinin güç denemeleri sırasında misketler biterse saha yeniden
     // dizilir; bölüm sadece son aşamada (TutorialFinalPhase) biter.
     public int EndlessScore { get; private set; }
-    public int EndlessWave { get; private set; }
+    public int EndlessStage { get; private set; } = 1;
+    public float EndlessTimeLeft { get; private set; }
+    public float EndlessElapsed { get; private set; }
+    public float EndlessGainFlash { get; private set; }   // "+2.5 sn" yazısı için
+
+    // Süre akışı ve kademe atlama.
+    private void UpdateEndless()
+    {
+        if (IsPaused || State != LevelState.Playing) return;
+        float dt = Time.deltaTime;
+        EndlessElapsed += dt;
+        EndlessTimeLeft -= dt;
+        if (EndlessGainFlash > 0f) EndlessGainFlash -= dt;
+
+        int stage = EndlessLevel.StageAt(EndlessElapsed);
+        if (stage != EndlessStage)
+        {
+            // Kademe atladı: zemin değişir, gerekiyorsa yeni engel gelir.
+            EndlessStage = stage;
+            var next = EndlessLevel.Build(stage);
+            level.obstacles = next.obstacles;
+            level.obstacleCount = next.obstacleCount;
+            level.district = next.district;
+            LevelIndex = next.district * 12 + 5;
+            MahalleWorld.Apply(this);
+        }
+
+        if (EndlessTimeLeft <= 0f)
+        {
+            EndlessTimeLeft = 0f;
+            EndFromTime();
+        }
+    }
+
+    private void EndFromTime()
+    {
+        State = LevelState.Lost;
+        LastEndlessRecord = MahalleProfile.FinishEndless(EndlessScore);
+        if (SfxPlayer.Instance != null) SfxPlayer.Instance.PlayLose();
+        if (shooter != null) shooter.ShootingEnabled = false;
+        StateChanged?.Invoke();
+    }
     // SONSUZ ÇEMBER turu: saha boşalınca bir sonraki dizilim kurulur, puan devam eder.
     private void EvaluateEndlessTurn()
     {
         int gained = Mathf.Max(0, Score - scoreAtShot);
         EndlessScore += gained;
         MahalleProfile.RecordShot(gained);
-        shotsUsed = Mathf.Max(0, shotsUsed - gained);   // her çıkan misket bir atış kazandırır
-
-        if (arena != null && arena.RemainingMarbles == 0)
+        if (gained > 0)
         {
-            EndlessWave++;
-            level = EndlessLevel.Build(EndlessWave);
-            arena.Configure(level.shape, level.arenaSize, level.rings, level.triangleRows, level.marbles);
-            arena.Rebuild();
-            MahalleWorld.Apply(this);
-            scoredTimes.Clear();
+            EndlessTimeLeft += gained * EndlessLevel.TimePerMarble;   // çıkan her misket süre kazandırır
+            EndlessGainFlash = 1.2f;
         }
-        scoreAtShot = 0;
+        shotsUsed = 0;
+        scoreAtShot = Score;
 
-        if (ShotsLeft <= 0)
+        // Saha azaldıysa yeni misketler farklı yerlere dizilir: bekleme olmaz.
+        if (arena != null && arena.RemainingMarbles < EndlessLevel.RefillBelow)
         {
-            State = LevelState.Lost;
-            LastEndlessRecord = MahalleProfile.FinishEndless(EndlessScore);
-            if (SfxPlayer.Instance != null) SfxPlayer.Instance.PlayLose();
-            if (shooter != null) shooter.ShootingEnabled = false;
-            StateChanged?.Invoke();
-            return;
+            var busy = new System.Collections.Generic.List<Vector2>();
+            foreach (var m in arena.SpawnedMarbles)
+                if (m != null && !m.IsScored) busy.Add(new Vector2(m.transform.position.x, m.transform.position.z));
+            int need = EndlessLevel.BoardCount - arena.RemainingMarbles;
+            arena.AddMarbles(EndlessLevel.Spots(EndlessStage, need, busy, Mathf.RoundToInt(EndlessElapsed * 1000f) + EndlessScore));
+            scoreAtShot = Score;
         }
+
+        if (EndlessTimeLeft <= 0f) { EndFromTime(); return; }
         if (shooter != null) { SettleShooter(); shooter.ShootingEnabled = true; }
         StateChanged?.Invoke();
     }

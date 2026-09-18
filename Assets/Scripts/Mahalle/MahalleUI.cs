@@ -215,7 +215,7 @@ public class MahalleUI : MonoBehaviour
             var sl = sonsuz.GetComponentInChildren<TextMeshProUGUI>();
             sl.alignment = TextAlignmentOptions.Top; sl.margin = new Vector4(0, 14, 0, 0);
             var rekor = Text(sonsuz.transform, MahalleProfile.Data.endlessBest > 0
-                             ? L.F("REKOR {0}", MahalleProfile.Data.endlessBest) : L.T("YENİ MOD"),
+                             ? L.F("REKOR {0}", MahalleProfile.Data.endlessBest) : L.T("SÜRE YARIŞI"),
                              12, 62, 411, 30, 19, new Color(1, .95f, .86f, .6f), TextAlignmentOptions.Center);
             rekor.characterSpacing = 6f; rekor.fontStyle = FontStyles.Bold;
         }
@@ -590,17 +590,17 @@ public class MahalleUI : MonoBehaviour
         if(controller.Level.district==2 && controller.LevelIndex%12<3)title+=" · "+L.T(controller.Level.levelName);
         if(GameSession.TutorialMode)title+="  ·  "+L.T("NASIL OYNANIR");
         if(GameSession.DailyMode)title=L.T("GÜNÜN BÖLÜMÜ")+"  ·  "+DailyLevel.DateLabel;
-        if(GameSession.EndlessMode)title=L.T("SONSUZ ÇEMBER")+"  ·  "+L.F("TUR {0}",controller.EndlessWave);
+        if(GameSession.EndlessMode)title=L.T("SONSUZ ÇEMBER")+"  ·  "+L.F("KADEME {0}",controller.EndlessStage);
         Text(top.transform,title,28,14,830,59,36,Cream);
         if(GameSession.TutorialMode)LabelButton(top.transform,"GEÇ",872,16,134,92,new Color(.28f,.38f,.31f),Cream,SkipTutorial,30);
         else LabelButton(top.transform,"II",902,16,104,92,new Color(.28f,.38f,.31f),Cream,Pause,42);
         var score=Panel(top.transform,"Misket sayacı",24,92,330,100,new Color(.24f,.34f,.29f));
         Text(score.transform,"ÇIKAN MİSKET",18,10,294,29,23,new Color(.76f,.8f,.7f));scoreLabel=Text(score.transform,"0",18,39,294,51,39,Cream);
         var shots=Panel(top.transform,"Atış sayacı",374,92,255,100,new Color(.24f,.34f,.29f));
-        Text(shots.transform,"KALAN ATIŞ",18,10,219,29,23,new Color(.76f,.8f,.7f));shotsLabel=Text(shots.transform,"5",18,39,219,51,39,Gold);
+        Text(shots.transform,GameSession.EndlessMode?"SÜRE":"KALAN ATIŞ",18,10,219,29,23,new Color(.76f,.8f,.7f));shotsLabel=Text(shots.transform,"5",18,39,219,51,39,Gold);
         var wallet=Panel(top.transform,"Boncuk",649,117,250,75,new Color(.24f,.34f,.29f));
         Art(wallet.transform,"Boncuk",MahalleGraphic.Shape.Marble,18,16,43,43,Gold);beadsLabel=Text(wallet.transform,MahalleProfile.Beads.ToString(),79,4,156,67,34,Cream);
-        Text(top.transform,GameSession.EndlessMode?L.F("REKOR: {0} · HER ÇIKAN MİSKET BİR ATIŞ KAZANDIRIR",MahalleProfile.Data.endlessBest):GameSession.TutorialMode?"HEDEF: BÜTÜN MİSKETLERİ ÇEMBERİN DIŞINA ÇIKAR":L.F("HEDEF: ÇEMBERDEN EN AZ {0} MİSKET ÇIKAR",controller.Level.oneStarTarget),26,202,960,32,25,new Color(.81f,.84f,.75f));
+        Text(top.transform,GameSession.EndlessMode?L.F("REKOR: {0} · HER MİSKET +{1} SANİYE",MahalleProfile.Data.endlessBest,EndlessLevel.TimePerMarble.ToString("0.#")):GameSession.TutorialMode?"HEDEF: BÜTÜN MİSKETLERİ ÇEMBERİN DIŞINA ÇIKAR":L.F("HEDEF: ÇEMBERDEN EN AZ {0} MİSKET ÇIKAR",controller.Level.oneStarTarget),26,202,960,32,25,new Color(.81f,.84f,.75f));
 
         // BOLUM IMZASI (sadece test yapisi acikken).
         // "Editorde baska, telefonda baska bolum cikiyor" supheleri icin.
@@ -642,6 +642,14 @@ public class MahalleUI : MonoBehaviour
         if(GameSession.EndlessMode)
         {
             if(lastScore!=controller.EndlessScore){lastScore=controller.EndlessScore;scoreLabel.SetTextL(controller.EndlessScore.ToString());}
+            // Süre: son 10 saniyede kırmızı ve nabız gibi atar.
+            int kalan=Mathf.CeilToInt(controller.EndlessTimeLeft);
+            if(lastShots!=kalan){lastShots=kalan;shotsLabel.SetTextL(kalan.ToString());}
+            bool acil=controller.EndlessTimeLeft<=10f;
+            shotsLabel.color=acil?Color.Lerp(new Color(.95f,.35f,.28f),Cream,Mathf.PingPong(Time.unscaledTime*4f,1f)):Gold;
+            if(hintLabel!=null)
+                hintLabel.SetTextL(controller.EndlessGainFlash>0f?L.F("+{0} SANİYE",EndlessLevel.TimePerMarble.ToString("0.#")):
+                                   controller.WaitingForSettle?"Misketler duruluyor…":"");
         }
         else if(lastScore!=controller.Score){lastScore=controller.Score;scoreLabel.SetTextL(controller.Score+" / "+controller.TotalMarbles);}
         if(lastShots!=controller.ShotsLeft){lastShots=controller.ShotsLeft;shotsLabel.SetTextL(controller.ShotsLeft.ToString());}
@@ -781,7 +789,7 @@ public class MahalleUI : MonoBehaviour
         var chalk=new Color(1,.98f,.92f,.92f);
         var bg=Panel(card,"Zemin",0,0,1080,1920,new Color(.14f,.12f,.10f));bg.radius=0;
         Text(card,GameSession.EndlessMode?L.Up(L.T("SONSUZ ÇEMBER")):GameSession.DailyMode?L.Up(L.T("GÜNÜN BÖLÜMÜ")):L.Up(L.T(Campaign.Districts[lv.district]))+" · "+no.ToString("00"),0,150,1080,70,46,new Color(1,.97f,.89f,.7f),TextAlignmentOptions.Center);
-        Text(card,GameSession.EndlessMode?L.F("TUR {0}",controller.EndlessWave):GameSession.DailyMode?DailyLevel.DateLabel:lv.levelName,40,222,1000,100,68,Cream,TextAlignmentOptions.Center);
+        Text(card,GameSession.EndlessMode?L.F("KADEME {0}",controller.EndlessStage):GameSession.DailyMode?DailyLevel.DateLabel:lv.levelName,40,222,1000,100,68,Cream,TextAlignmentOptions.Center);
         var ring=Art(card,"Tebeşir çemberi",MahalleGraphic.Shape.ChalkRing,150,400,780,780,chalk);ring.stroke=10f;ring.progress=1f;
         for(int i=0;i<3;i++)
         {
@@ -1054,8 +1062,8 @@ public class MahalleUI : MonoBehaviour
     {
         bool rekor=controller.LastEndlessRecord;
         var box=Modal("Sonsuz sonucu",900);
-        Text(box,rekor?"YENİ REKOR!":"SÜRE DOLDU",30,34,924,77,rekor?52:48,Ink,TextAlignmentOptions.Center);
-        Text(box,L.F("TUR {0}",controller.EndlessWave),30,114,924,47,29,Muted,TextAlignmentOptions.Center);
+        Text(box,rekor?"YENİ REKOR!":"SÜRE BİTTİ",30,34,924,77,rekor?52:48,Ink,TextAlignmentOptions.Center);
+        Text(box,L.F("KADEME {0}",controller.EndlessStage),30,114,924,47,29,Muted,TextAlignmentOptions.Center);
         Art(box,"Büyük yıldız",MahalleGraphic.Shape.Star,412,180,160,160,rekor?Gold:Line);
         Text(box,controller.EndlessScore.ToString(),30,346,924,120,92,Ink,TextAlignmentOptions.Center);
         Text(box,"misket çıkardın",30,462,924,50,30,Muted,TextAlignmentOptions.Center);

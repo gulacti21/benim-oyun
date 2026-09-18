@@ -70,23 +70,28 @@ public static class MahalleVerify
                 PlayerPrefs.DeleteKey(MahalleProfile.BackupKey);PlayerPrefs.DeleteKey(MahalleProfile.BackupSumKey);
                 MahalleProfile.Reload();MahalleProfile.TestMode=true;MahalleProfile.SetTestData(data);
             }
-            // SONSUZ ÇEMBER: tur ilerledikçe saha küçülüp engel kazanmalı, dizilim oynanabilir kalmalı.
+            // SONSUZ ÇEMBER: süre yarışı. Kademe ilerledikçe engel gelmeli, misketler
+            // çemberin içinde ve birbirinden ayrık kalmalı, dolum yeri bulabilmeli.
             {
-                var ilk=EndlessLevel.Build(1);
-                Check(ilk.shotCount==EndlessLevel.StartShots&&ilk.TotalMarbles()>=8,"Endless first wave playable");
-                var sonra=EndlessLevel.Build(12);
-                Check(sonra.arenaSize<=ilk.arenaSize&&sonra.arenaSize>=2.7f,"Endless arena shrinks within limits");
-                Check((sonra.obstacles==null?0:sonra.obstacles.Length)>=(ilk.obstacles==null?0:ilk.obstacles.Length),"Endless adds obstacles over time");
-                for(int w=1;w<=20;w++)
+                Check(EndlessLevel.StageAt(0f)==1&&EndlessLevel.StageAt(EndlessLevel.StageEvery*3+1f)==4,"Endless stage rises with time");
+                Check(EndlessLevel.StageAt(9999f)==EndlessLevel.MaxStage,"Endless stage is capped");
+                Check(EndlessLevel.WallsFor(1)==0&&EndlessLevel.WallsFor(EndlessLevel.MaxStage)<=3,"Endless obstacles grow within limits");
+                Check(EndlessLevel.TimePerMarble>0f&&EndlessLevel.StartTime>=30f,"Endless time rules sane");
+                for(int st=1;st<=EndlessLevel.MaxStage;st++)
                 {
-                    var lv=EndlessLevel.Build(w);
-                    Check(lv.marbles!=null&&lv.marbles.Length>=8,"Endless wave has marbles "+w);
+                    var lv=EndlessLevel.Build(st);
+                    Check(lv.marbles.Length==EndlessLevel.BoardCount,"Endless board is full at stage "+st);
                     foreach(var m in lv.marbles)
-                        Check(new Vector2(m.x,m.z).magnitude<=lv.arenaSize-.2f,"Endless marbles inside ring "+w);
-                    Check(lv.TotalMarbles()<=14,"Endless marble count capped "+w);
+                        Check(new Vector2(m.x,m.z).magnitude<=lv.arenaSize-.4f,"Endless marbles inside ring "+st);
+                    for(int a=0;a<lv.marbles.Length;a++)
+                        for(int b=a+1;b<lv.marbles.Length;b++)
+                            Check(Vector2.Distance(new Vector2(lv.marbles[a].x,lv.marbles[a].z),
+                                                   new Vector2(lv.marbles[b].x,lv.marbles[b].z))>.6f,"Endless marbles never overlap "+st);
+                    var dolum=EndlessLevel.Spots(st,8,null,st*13);
+                    Check(dolum.Length==8,"Endless refill finds room at stage "+st);
                 }
-                var a1=EndlessLevel.Build(5);var a2=EndlessLevel.Build(5);
-                Check(Mathf.Approximately(a1.arenaSize,a2.arenaSize)&&a1.marbles.Length==a2.marbles.Length,"Endless wave is the same for everyone");
+                var s1=EndlessLevel.Build(3);var s2=EndlessLevel.Build(3);
+                Check(s1.marbles.Length==s2.marbles.Length&&Mathf.Approximately(s1.marbles[0].x,s2.marbles[0].x),"Endless stage is the same for everyone");
             }
             // USTA SEVİYESİ ve BAŞARIMLAR: puan artışı seviyeye dönüşüyor mu, ilerleme hedefi aşıyor mu.
             {
