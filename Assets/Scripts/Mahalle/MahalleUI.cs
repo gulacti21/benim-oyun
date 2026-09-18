@@ -45,6 +45,9 @@ public class MahalleUI : MonoBehaviour
         bleedBottom=Bleed("Alt taşma",Vector2.zero,new Vector2(1,.5f));
         root=Rect("SafeArea",transform);Stretch(root);root.gameObject.AddComponent<SafeAreaFit>();
         Canvas.ForceUpdateCanvases();
+        // Sahnede ses dinleyicisi yoksa (LevelSelect) hiçbir ses duyulmaz: kameraya ekle.
+        if(FindFirstObjectByType<AudioListener>()==null)
+        {var cam=Camera.main!=null?Camera.main.gameObject:gameObject;cam.AddComponent<AudioListener>();}
         MusicPlayer.Ensure();
         controller=FindFirstObjectByType<LevelController>();
         if(controller!=null)controller.AnchorRefunded+=()=>Toast("Misketin işe yarar bir yerde kalmadı. Hakkın iade edildi.");
