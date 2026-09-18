@@ -99,6 +99,16 @@ public static class ParkPhysicsVerify
     private static bool busy;
     private static readonly float[] CalibrationImpulses = { .55f, .65f, .75f, .85f };
 
+    // GÜNÜN BÖLÜMÜ üreticisi için: kampanya yerine verilen bölümleri ölç.
+    public static Func<int, LevelData> LevelOverride;
+    public static IReadOnlyList<int[]> Ledger => ledger;
+    public static void MeasureNormalNow(int[] indices, string fileName)
+    {
+        testSpecials = false; calibrating = false;
+        Begin(indices, fileName);
+        Pump();
+    }
+
     [MenuItem("MISKETR/Verify Park Physics Routes")]
     public static void RunPark()
     {
@@ -327,7 +337,7 @@ public static class ParkPhysicsVerify
 
     private static void BeginRun(int index, int variantIndex)
     {
-        level = Campaign.Database.Get(index);
+        level = LevelOverride != null ? LevelOverride(index) : Campaign.Database.Get(index);
         var v = Variants[calibrating ? 0 : variantIndex];
 
         scene = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
@@ -404,7 +414,7 @@ public static class ParkPhysicsVerify
     //     Ogretici mahallede bol, sinav bolumlerinde sifir.
     private static void Summarise()
     {
-        if (ledger.Count == 0) return;
+        if (ledger.Count == 0 || LevelOverride != null) return;
         var clear = new float[5]; var pay = new float[5]; var count = new int[5];
         var blocked = new List<string>(); var finals = new List<string>();
         foreach (var row in ledger)

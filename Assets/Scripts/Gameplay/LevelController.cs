@@ -183,6 +183,12 @@ public class LevelController : MonoBehaviour
             }
         }
 
+        if (GameSession.DailyMode && !GameSession.TutorialMode && DailyLevel.Today() != null)
+        {
+            level = DailyLevel.Today();
+            LevelIndex = level.district * 12 + 4; // dekor için; park köşeleri (0-2) dışında
+        }
+
         if (GameSession.TutorialMode)
         {
             level = TutorialLevel.Get();
@@ -319,7 +325,9 @@ public class LevelController : MonoBehaviour
                 // Rewards and unlocks are persisted together by the campaign profile.
             }
 
-            LastReward = MahalleProfile.Finish(LevelIndex, State == LevelState.Won ? Stars : 0, Score);
+            LastReward = GameSession.DailyMode
+                ? MahalleProfile.FinishDaily(State == LevelState.Won ? Stars : 0, Score)
+                : MahalleProfile.Finish(LevelIndex, State == LevelState.Won ? Stars : 0, Score);
 
             if (SfxPlayer.Instance != null)
             {

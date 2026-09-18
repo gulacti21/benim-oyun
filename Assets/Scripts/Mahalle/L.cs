@@ -289,7 +289,15 @@ public static class L
         {"Üçgenin içine koy", "Place it inside the triangle"}, {"Çizginin içine koy", "Place it on the line"},
         {"Burası dolu, boş bir yer seç", "This spot is taken, pick an empty one"},
         {"DİL: {0}", "LANGUAGE: {0}"},
-        {"MİSKO", "MISKO"}, {"Kesem", "Pouch"}, {"MÜZİK: {0}", "MUSIC: {0}"}, {"ÇOK YAKINDA", "COMING SOON"}, {"Online oyun çok yakında!", "Online play is coming soon!"}, {"İstatistik", "Stats"}, {"Görevler", "Tasks"},
+        {"MİSKO", "MISKO"}, {"Kesem", "Pouch"},
+        {"GÜNÜN BÖLÜMÜ", "DAILY LEVEL"}, {"1. bölümü bitirince açılır", "Opens after level 1"},
+        {"BUGÜN TAMAM · SERİ {0} GÜN", "DONE TODAY · {0}-DAY STREAK"}, {"SERİ {0} GÜN · +{1} BONCUK", "{0}-DAY STREAK · +{1} BEADS"},
+        {"Günün bölümü çok yakında!", "Daily level coming soon!"}, {"Günün bölümü 1. bölümü bitirince açılır.", "The daily level opens after you finish level 1."},
+        {"GÜNÜN BÖLÜMÜ TAMAM!", "DAILY LEVEL DONE!"}, {"+{0} BONCUK · SERİ {1} GÜN", "+{0} BEADS · {1}-DAY STREAK"},
+        {"Bugünün ödülünü aldın. Yarın yeni bölüm!", "You got today's reward. New level tomorrow!"},
+        {"Bugün istediğin kadar deneyebilirsin. Yarın yeni bölüm gelir.", "Try as often as you like today. A new level comes tomorrow."},
+        {"MİSKO · Günün bölümünü ({0}) {1} atışta {2} yıldızla bitirdim. Sen kaç atışta bitirirsin?", "MISKO · I beat the daily level ({0}) in {1} shots with {2} stars. How many shots will you need?"},
+        {"Günün Bölümü", "Daily Level"}, {"MÜZİK: {0}", "MUSIC: {0}"}, {"ÇOK YAKINDA", "COMING SOON"}, {"Online oyun çok yakında!", "Online play is coming soon!"}, {"İstatistik", "Stats"}, {"Görevler", "Tasks"},
         {"tur", "rounds"}, {"ÇIK", "EXIT"}, {"SIRA ATIŞI", "LAG SHOT"}, {"DÜELLO", "DUEL"},
     };
 }

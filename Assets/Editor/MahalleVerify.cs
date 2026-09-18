@@ -56,6 +56,26 @@ public static class MahalleVerify
             checks += DuelNetVerify.RunChecks();
             checks += DistrictRewardVerify.RunChecks();
             checks += CameraFitVerify.RunChecks();
+            // GÜNÜN BÖLÜMÜ havuzu: varsa her girdi oynanabilir ve hedefleri tutarlı olmalı.
+            if(DailyLevel.Available)
+            {
+                var pool=DailyLevel.Pool;
+                foreach(var e in pool.entries)
+                {
+                    var dl=DailyLevel.Build(e);int n=dl.TotalMarbles();
+                    Check(n>=4&&e.shots>0,"Daily playable setup");
+                    Check(e.one>0&&e.one<=e.two&&e.two<=e.three&&e.three<=e.ceiling&&e.ceiling<=n,"Daily targets within measured ceiling");
+                    Check(e.size>=2.4f&&e.size<=3.8f,"Daily arena size");
+                }
+                Check(DailyLevel.Today()!=null,"Daily level for today");
+                data.dailyDay=DailyLevel.DayIndex-1;data.dailyStreak=3;int before=data.beads;
+                var dr=MahalleProfile.FinishDaily(1,3);
+                Check(dr.beads==DailyLevel.RewardFor(4)&&data.dailyStreak==4&&data.beads==before+dr.beads,"Daily streak reward");
+                Check(MahalleProfile.FinishDaily(3,5).beads==0,"Daily reward once per day");
+                data.dailyDay=DailyLevel.DayIndex-3;var gap=MahalleProfile.FinishDaily(1,2);
+                Check(gap.beads==DailyLevel.RewardFor(1)&&data.dailyStreak==1,"Daily streak resets after a missed day");
+            }
+            else Debug.LogWarning("GUNLUK: DailyPool.json yok, gunun bolumu kapali.");
             Check(Resources.Load<TMPro.TMP_FontAsset>("Mahalle/Nunito SDF")!=null,"Turkish font included");
             Check(Resources.Load<Shader>("Mahalle/Marble")!=null,"Marble shader included");
             foreach(var scene in new[]{"Assets/Scenes/LevelSelect.unity","Assets/Scenes/Game.unity"})Check(File.Exists(scene),"Scene exists "+scene);

@@ -26,6 +26,9 @@ public class MahalleSave
     public string language = "";
     public bool sound = true;
     public bool music = true;
+    // GÜNÜN BÖLÜMÜ: ödül alınan son gün (DailyLevel.DayIndex) ve üst üste gün sayısı.
+    public int dailyDay = -9999;
+    public int dailyStreak;
     public bool haptics = true;
 }
 
@@ -281,6 +284,33 @@ public static class MahalleProfile
         for (int i = 0; i < Data.districtPlays.Length; i++)
             if (Data.districtPlays[i] > most) { most = Data.districtPlays[i]; best = i; }
         return best;
+    }
+    public static bool DailyDoneToday => Data.dailyDay == DailyLevel.DayIndex;
+    // Bugün oynanırsa geçerli olacak seri (dün bitirildiyse devam eder).
+    public static int DailyStreakShown
+    {
+        get
+        {
+            int today = DailyLevel.DayIndex;
+            if (Data.dailyDay == today || Data.dailyDay == today - 1) return Data.dailyStreak;
+            return 0;
+        }
+    }
+    public static int DailyNextReward => DailyLevel.RewardFor(Data.dailyDay == DailyLevel.DayIndex - 1 ? Data.dailyStreak + 1 : 1);
+    public static RoundReward FinishDaily(int stars, int score)
+    {
+        var reward = new RoundReward();
+        Data.knocked += Mathf.Max(0, score);
+        int today = DailyLevel.DayIndex;
+        if (stars > 0 && Data.dailyDay != today)
+        {
+            Data.dailyStreak = Data.dailyDay == today - 1 ? Data.dailyStreak + 1 : 1;
+            Data.dailyDay = today;
+            reward.firstWin = true;
+            reward.beads = DailyLevel.RewardFor(Data.dailyStreak);
+            Data.beads += reward.beads;
+        }
+        Save(); return reward;
     }
     public static RoundReward Finish(int levelIndex, int stars, int score)
     {

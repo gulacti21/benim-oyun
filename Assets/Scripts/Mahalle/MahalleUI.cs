@@ -53,7 +53,7 @@ public class MahalleUI : MonoBehaviour
         if(controller!=null)controller.AnchorRefunded+=()=>Toast("Misketin işe yarar bir yerde kalmadı. Hakkın iade edildi.");
         district=MahalleProfile.NextLevel/Campaign.PerDistrict;
         // Harita/başlık sahnesine dönüldüyse öğretici modu kapanmış olmalı.
-        if(controller==null)GameSession.TutorialMode=false;
+        if(controller==null){GameSession.TutorialMode=false;GameSession.DailyMode=false;}
         if(DuelSession.Active&&controller!=null)StartDuel();
         else if(controller!=null)ShowGame();
         else if(returnToTitle){returnToTitle=false;ShowTitle(true);}
@@ -196,8 +196,21 @@ public class MahalleUI : MonoBehaviour
         LabelButton(menu, playText, 90, 1245, 900, 132, Gold, new Color(.16f, .20f, .16f), () => { tab = 0; district = next / Campaign.PerDistrict; ShowHome(); }, resume ? 38 : 46);
         LabelButton(menu, "KESEM", 90, 1398, 435, 104, new Color(.24f, .34f, .30f), Cream, () => { tab = 1; ShowHome(); }, 32);
         LabelButton(menu, "GÖREVLER", 555, 1398, 435, 104, new Color(.24f, .34f, .30f), Cream, () => { tab = 2; ShowHome(); }, 32);
-        LabelButton(menu, "ONLİNE", 90, 1523, 900, 104, new Color(.30f, .42f, .36f), Cream, ShowOnlineMenu, 32);
-        LabelButton(menu, "AYARLAR", 90, 1648, 900, 92, new Color(.20f, .25f, .23f), new Color(1, .97f, .89f, .82f), Settings, 29);
+        // GÜNÜN BÖLÜMÜ
+        var daily = LabelButton(menu, "GÜNÜN BÖLÜMÜ", 90, 1523, 900, 104, new Color(.78f, .42f, .24f), Cream, StartDaily, 32);
+        {
+            var tl = daily.GetComponentInChildren<TextMeshProUGUI>();
+            tl.alignment = TextAlignmentOptions.Top; tl.margin = new Vector4(0, 12, 0, 0);
+            int seri = MahalleProfile.DailyStreakShown;
+            string alt = !DailyLevel.Available ? L.T("ÇOK YAKINDA")
+                       : MahalleProfile.Data.stars[0] == 0 ? L.T("1. bölümü bitirince açılır")
+                       : MahalleProfile.DailyDoneToday ? L.F("BUGÜN TAMAM · SERİ {0} GÜN", seri)
+                       : seri > 0 ? L.F("SERİ {0} GÜN · +{1} BONCUK", seri, MahalleProfile.DailyNextReward)
+                       : L.F("+{0} BONCUK", MahalleProfile.DailyNextReward);
+            Text(daily.transform, alt, 12, 60, 876, 34, 21, new Color(1, .93f, .78f, .9f), TextAlignmentOptions.Center);
+        }
+        LabelButton(menu, "ONLİNE", 90, 1648, 900, 104, new Color(.30f, .42f, .36f), Cream, ShowOnlineMenu, 32);
+        LabelButton(menu, "AYARLAR", 90, 1773, 900, 92, new Color(.20f, .25f, .23f), new Color(1, .97f, .89f, .82f), Settings, 29);
 
         // Boncuk kesesi sağ üstte.
         var wallet = Panel(menu, "Boncuk", 805, 35, 225, 76, new Color(.20f, .25f, .23f));
@@ -920,7 +933,7 @@ public class MahalleUI : MonoBehaviour
         {bool won=MahalleProfile.DistrictCompleted(i);var star=Art(content,"Ustalık rozeti",MahalleGraphic.Shape.Star,75+i*198,1280,116,116,won?Gold:Line);Text(content,Campaign.Districts[i],48+i*198,1410,186,70,24,won?Ink:Muted,TextAlignmentOptions.Center);}
     }
     private void OpenLevel(int index)
-    {if(!MahalleProfile.Unlocked(index))return;if(index==0&&!MahalleProfile.Data.howToPlayDone&&MahalleProfile.Data.stars[0]==0){StartTutorial(false);return;}GameSession.TutorialMode=false;GameSession.SelectedLevelIndex=index;Time.timeScale=1;SceneManager.LoadScene(GameSession.GameSceneName);}
+    {if(!MahalleProfile.Unlocked(index))return;if(index==0&&!MahalleProfile.Data.howToPlayDone&&MahalleProfile.Data.stars[0]==0){StartTutorial(false);return;}GameSession.TutorialMode=false;GameSession.DailyMode=false;GameSession.SelectedLevelIndex=index;Time.timeScale=1;SceneManager.LoadScene(GameSession.GameSceneName);}
     private void ShowGame()
     {
         ClearPage();lastScore=lastShots=-1;resultShown=false;
@@ -928,6 +941,7 @@ public class MahalleUI : MonoBehaviour
         string title=L.T(Campaign.Districts[controller.Level.district])+"  /  "+(controller.LevelIndex%12+1).ToString("00");
         if(controller.Level.district==2 && controller.LevelIndex%12<3)title+=" · "+L.T(controller.Level.levelName);
         if(GameSession.TutorialMode)title+="  ·  "+L.T("NASIL OYNANIR");
+        if(GameSession.DailyMode)title=L.T("GÜNÜN BÖLÜMÜ")+"  ·  "+DailyLevel.DateLabel;
         Text(top.transform,title,28,14,830,59,36,Cream);
         if(GameSession.TutorialMode)LabelButton(top.transform,"GEÇ",872,16,134,92,new Color(.28f,.38f,.31f),Cream,SkipTutorial,30);
         else LabelButton(top.transform,"II",902,16,104,92,new Color(.28f,.38f,.31f),Cream,Pause,42);
@@ -1074,6 +1088,7 @@ public class MahalleUI : MonoBehaviour
     private void Results()
     {
         if(GameSession.TutorialMode){TutorialDone();return;}
+        if(GameSession.DailyMode){DailyResults();return;}
         bool won=controller.State==LevelController.LevelState.Won;
         int need=MahalleProfile.Required(controller.LevelIndex);
         bool passed=won&&controller.Stars>=need;
@@ -1124,8 +1139,8 @@ public class MahalleUI : MonoBehaviour
         int stars=controller.State==LevelController.LevelState.Won?controller.Stars:0;
         var chalk=new Color(1,.98f,.92f,.92f);
         var bg=Panel(card,"Zemin",0,0,1080,1920,new Color(.14f,.12f,.10f));bg.radius=0;
-        Text(card,L.Up(L.T(Campaign.Districts[lv.district]))+" · "+no.ToString("00"),0,150,1080,70,46,new Color(1,.97f,.89f,.7f),TextAlignmentOptions.Center);
-        Text(card,lv.levelName,40,222,1000,100,68,Cream,TextAlignmentOptions.Center);
+        Text(card,GameSession.DailyMode?L.Up(L.T("GÜNÜN BÖLÜMÜ")):L.Up(L.T(Campaign.Districts[lv.district]))+" · "+no.ToString("00"),0,150,1080,70,46,new Color(1,.97f,.89f,.7f),TextAlignmentOptions.Center);
+        Text(card,GameSession.DailyMode?DailyLevel.DateLabel:lv.levelName,40,222,1000,100,68,Cream,TextAlignmentOptions.Center);
         var ring=Art(card,"Tebeşir çemberi",MahalleGraphic.Shape.ChalkRing,150,400,780,780,chalk);ring.stroke=10f;ring.progress=1f;
         for(int i=0;i<3;i++)
         {
@@ -1149,6 +1164,7 @@ public class MahalleUI : MonoBehaviour
     }
     private string ShareText()
     {
+        if(GameSession.DailyMode)return L.F("MİSKO · Günün bölümünü ({0}) {1} atışta {2} yıldızla bitirdim. Sen kaç atışta bitirirsin?",DailyLevel.DateLabel,controller.ShotsUsed,controller.Stars);
         int no=controller.LevelIndex%Campaign.PerDistrict+1;
         return L.F("MİSKO · {0} {1} bölümünü {2} atışta {3} yıldızla bitirdim. Sen kaç atışta bitirirsin?",L.T(Campaign.Districts[controller.Level.district]),no.ToString("00"),controller.ShotsUsed,controller.Stars);
     }
@@ -1377,6 +1393,40 @@ public class MahalleUI : MonoBehaviour
             Text(box,lines[i],150,160+i*130,780,100,30,Ink);
         }
         LabelButton(box,tutorialFromSettings?"TAMAM":"2. BÖLÜME GEÇ",36,750,912,110,Ink,Cream,()=>EndTutorial(TutorialLevel.LevelIndex+1),38);
+    }
+    // ---------------------------------------------------------------
+    // GÜNÜN BÖLÜMÜ
+    // ---------------------------------------------------------------
+    private void StartDaily()
+    {
+        if(!DailyLevel.Available){Toast("Günün bölümü çok yakında!");return;}
+        if(MahalleProfile.Data.stars[0]==0){Toast("Günün bölümü 1. bölümü bitirince açılır.");return;}
+        GameSession.TutorialMode=false;GameSession.DailyMode=true;
+        Time.timeScale=1;
+        SceneManager.LoadScene(GameSession.GameSceneName);
+    }
+    private void LeaveDaily()
+    {
+        GameSession.DailyMode=false;returnToTitle=true;Time.timeScale=1;
+        SceneManager.LoadScene(GameSession.LevelSelectSceneName);
+    }
+    private void DailyResults()
+    {
+        bool won=controller.State==LevelController.LevelState.Won;
+        int beads=controller.LastReward.beads;
+        var box=Modal("Günün bölümü sonucu",won?1010:900);
+        Text(box,won?"GÜNÜN BÖLÜMÜ TAMAM!":"BİR DAHA DENE",30,34,924,77,won?48:51,Ink,TextAlignmentOptions.Center);
+        Text(box,DailyLevel.DateLabel,30,114,924,47,31,Muted,TextAlignmentOptions.Center);
+        for(int i=0;i<3;i++){var star=Art(box,"Sonuç yıldızı "+i,MahalleGraphic.Shape.Star,259+i*163,i==1?184:201,i==1?142:115,i==1?142:115,Line);if(i<controller.Stars&&won)StartCoroutine(RevealStar(star,i));}
+        Text(box,L.F("{0} / {1} misket çıkardın",controller.Score,controller.TotalMarbles),30,366,924,64,40,Ink,TextAlignmentOptions.Center);
+        string line=beads>0?L.F("+{0} BONCUK · SERİ {1} GÜN",beads,MahalleProfile.Data.dailyStreak)
+                   :won?L.T("Bugünün ödülünü aldın. Yarın yeni bölüm!")
+                   :L.T("Bugün istediğin kadar deneyebilirsin. Yarın yeni bölüm gelir.");
+        Text(box,line,60,448,864,82,beads>0?38:28,beads>0?Ink:Muted,TextAlignmentOptions.Center);
+        LabelButton(box,"TEKRAR DENE",36,560,912,98,Ink,Cream,()=>{CloseModal();controller.RestartLevel();ShowGame();});
+        float y=682;
+        if(won){LabelButton(box,"PAYLAŞ",36,y,912,98,Gold,Ink,ShareCard,34);y+=122;}
+        LabelButton(box,"ANA MENÜ",36,y,912,86,new Color(.88f,.83f,.69f),Ink,LeaveDaily,30);
     }
     private IEnumerator RevealStar(MahalleGraphic star,int index)
     {
