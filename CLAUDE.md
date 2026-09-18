@@ -64,6 +64,20 @@ Her değişiklikten sonra `MahalleVerify.Run` çalıştır. Yeşilse commit et.
 
 ---
 
+## ONLINE / DÜELLO — ÇIKARILDI (geri getirilebilir)
+
+2026-09-18: online ve aynı cihazda düello oyundan çıkarıldı. Menüdeki ONLİNE
+butonu duruyor ama basılamıyor, altında "ÇOK YAKINDA" yazar.
+Kaldırılanlar: `Assets/Scripts/Online/` (DuelController, DuelMatch, DuelNet,
+DuelSession, DuelToss, DuelPlacement, DuelHole, WellMatch, DuelTransport),
+`Assets/Editor/DuelVerify.cs`, `DuelNetVerify.cs`, `DuelPhysicsVerify.cs`,
+MahalleUI'daki düello ekranları ve L.cs'teki düello çevirileri.
+Kopyası: `Backups/Online-Kaldirildi/`. Git'te son hali: commit 6e97e61.
+Geri getirilirse: MahalleUI'ya düello ekranları, LevelController.ConfigureForDuel,
+MahalleWorld'deki DuelSession/DuelHole satırları ve MahalleVerify çağrıları da geri gelmeli.
+
+---
+
 ## MİMARİ
 
 ```
