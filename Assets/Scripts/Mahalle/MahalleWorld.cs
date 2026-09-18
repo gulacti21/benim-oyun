@@ -67,9 +67,6 @@ public class MahalleWorld : MonoBehaviour
     }
     private void Build(LevelController controller)
     {
-        // Duellodan kalma cukur kampanya bolumune sizmasin.
-        if(!DuelSession.Active) DuelHole.RemoveStray();
-
         if(decor!=null) {decor.SetActive(false);Destroy(decor);}
         decor=new GameObject("Çevre ve engeller"); decor.transform.SetParent(transform);
         int district=controller.Level.district;
@@ -95,7 +92,7 @@ public class MahalleWorld : MonoBehaviour
         var camera=Camera.main;
         if(camera!=null)
         {
-            camera.orthographic=true; camera.orthographicSize=DuelSession.Active?Mathf.Max(6.3f,3.65f/camera.aspect):CameraSize(controller.Level.arenaSize,camera.aspect);
+            camera.orthographic=true; camera.orthographicSize=CameraSize(controller.Level.arenaSize,camera.aspect);
             // Eski kameraya göre ne kadar uzaklaştıysak parmak hareketi de o kadar ölçeklenir.
             float inputScale=camera.orthographicSize/Mathf.Max(6.3f,3.65f/camera.aspect);
             controller.Shooter.SetInputScale(inputScale);
