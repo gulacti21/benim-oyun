@@ -651,8 +651,11 @@ public class MahalleUI : MonoBehaviour
                 hintLabel.SetTextL(controller.EndlessGainFlash>0f?L.F("+{0} SANİYE",EndlessLevel.TimePerMarble.ToString("0.#")):
                                    controller.WaitingForSettle?"Misketler duruluyor…":"");
         }
-        else if(lastScore!=controller.Score){lastScore=controller.Score;scoreLabel.SetTextL(controller.Score+" / "+controller.TotalMarbles);}
-        if(lastShots!=controller.ShotsLeft){lastShots=controller.ShotsLeft;shotsLabel.SetTextL(controller.ShotsLeft.ToString());}
+        else
+        {
+            if(lastScore!=controller.Score){lastScore=controller.Score;scoreLabel.SetTextL(controller.Score+" / "+controller.TotalMarbles);}
+            if(lastShots!=controller.ShotsLeft){lastShots=controller.ShotsLeft;shotsLabel.SetTextL(controller.ShotsLeft.ToString());}
+        }
         beadsLabel.SetTextL(MahalleProfile.Beads.ToString());
         var shooter=controller.Shooter;
         if(shooter!=null)
