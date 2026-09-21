@@ -14,7 +14,7 @@ public class MahalleUI : MonoBehaviour
     private LevelController controller;
     private TextMeshProUGUI scoreLabel,shotsLabel,powerLabel,beadsLabel,hintLabel;
     private MahalleGraphic powerFill;
-    private RectTransform hand;
+    private float scorePop;
     private int district,tab,lastScore=-1,lastShots=-1;
     // Açılış ekranı uygulama başına BİR kez gösterilir. Bölümden çıkıp
     // mahalleye dönmek LevelSelect sahnesini yeniden yüklüyor; bu bayrak
@@ -585,7 +585,12 @@ public class MahalleUI : MonoBehaviour
     private void ShowGame()
     {
         ClearPage();lastScore=lastShots=-1;resultShown=false;
-        var top=Panel(page,"Oyun başlığı",24,12,1032,246,Ink);top.radius=30;
+        // Kabartma hissi ayri bir isik cizgisinden degil, panelin kendi renk
+        // gecisinden geliyor. Cizgi denendi: ucu keskin oldugu icin isik gibi
+        // degil, panele cizilmis bir cizgi gibi duruyordu.
+        var top=Panel(page,"Oyun başlığı",24,12,1032,246,new Color(.25f,.36f,.32f));top.radius=34;
+        top.colorB=new Color(.11f,.18f,.17f);top.shadow=18;
+        scorePop=0f;
         string title=L.T(Campaign.Districts[controller.Level.district])+"  /  "+(controller.LevelIndex%12+1).ToString("00");
         if(controller.Level.district==2 && controller.LevelIndex%12<3)title+=" · "+L.T(controller.Level.levelName);
         if(GameSession.TutorialMode)title+="  ·  "+L.T("NASIL OYNANIR");
@@ -594,11 +599,14 @@ public class MahalleUI : MonoBehaviour
         Text(top.transform,title,28,14,830,59,36,Cream);
         if(GameSession.TutorialMode)LabelButton(top.transform,"GEÇ",872,16,134,92,new Color(.28f,.38f,.31f),Cream,SkipTutorial,30);
         else LabelButton(top.transform,"II",902,16,104,92,new Color(.28f,.38f,.31f),Cream,Pause,42);
-        var score=Panel(top.transform,"Misket sayacı",24,92,330,100,new Color(.24f,.34f,.29f));
+        var score=Panel(top.transform,"Misket sayacı",24,92,330,100,new Color(.09f,.15f,.15f));
+        score.colorB=new Color(.24f,.34f,.30f);score.radius=22;
         Text(score.transform,"ÇIKAN MİSKET",18,10,294,29,23,new Color(.76f,.8f,.7f));scoreLabel=Text(score.transform,"0",18,39,294,51,39,Cream);
-        var shots=Panel(top.transform,"Atış sayacı",374,92,255,100,new Color(.24f,.34f,.29f));
+        var shots=Panel(top.transform,"Atış sayacı",374,92,255,100,new Color(.09f,.15f,.15f));
+        shots.colorB=new Color(.24f,.34f,.30f);shots.radius=22;
         Text(shots.transform,GameSession.EndlessMode?"SÜRE":"KALAN ATIŞ",18,10,219,29,23,new Color(.76f,.8f,.7f));shotsLabel=Text(shots.transform,"5",18,39,219,51,39,Gold);
-        var wallet=Panel(top.transform,"Boncuk",649,117,250,75,new Color(.24f,.34f,.29f));
+        var wallet=Panel(top.transform,"Boncuk",649,117,250,75,new Color(.09f,.15f,.15f));
+        wallet.colorB=new Color(.24f,.34f,.30f);wallet.radius=20;
         Art(wallet.transform,"Boncuk",MahalleGraphic.Shape.Marble,18,16,43,43,Gold);beadsLabel=Text(wallet.transform,MahalleProfile.Beads.ToString(),79,4,156,67,34,Cream);
         Text(top.transform,GameSession.EndlessMode?L.F("REKOR: {0} · HER MİSKET +{1} SANİYE",MahalleProfile.Data.endlessBest,EndlessLevel.TimePerMarble.ToString("0.#")):GameSession.TutorialMode?"HEDEF: BÜTÜN MİSKETLERİ ÇEMBERİN DIŞINA ÇIKAR":L.F("HEDEF: ÇEMBERDEN EN AZ {0} MİSKET ÇIKAR",controller.Level.oneStarTarget),26,202,960,32,25,new Color(.81f,.84f,.75f));
 
@@ -618,7 +626,8 @@ public class MahalleUI : MonoBehaviour
             // Cizim tanisi: mor/eksik nesne varsa adiyla yazar.
             Text(top.transform,MahalleWorld.Diagnose(),26,264,960,30,21,new Color(1f,.45f,.35f,.9f));
         }
-        var dock=Panel(page,"Atış alanı",24,0,1032,178,Ink);Bottom(dock.rectTransform,24,18,1032,178);
+        var dock=Panel(page,"Atış alanı",24,0,1032,178,new Color(.25f,.36f,.32f));
+        dock.colorB=new Color(.11f,.18f,.17f);dock.shadow=14;dock.radius=30;Bottom(dock.rectTransform,24,18,1032,178);
         var bag=Button(dock.transform,"Misket kesesi",16,18,330,140,new Color(.3f,.4f,.3f),OpenBag);
         var icon=Art(bag.transform,"Kese",MahalleGraphic.Shape.Bag,21,36,65,70,Gold);icon.accent=Cream;
         Text(bag.transform,"KESEM",105,24,197,53,34,Cream);Text(bag.transform,"Özel misket seç",105,78,206,40,23,new Color(.8f,.83f,.73f));
@@ -633,7 +642,6 @@ public class MahalleUI : MonoBehaviour
             var tutorial=Panel(page,"İlk atış",110,0,860,125,new Color(.16f,.25f,.23f,.94f));Bottom(tutorial.rectTransform,110,302,860,125);
             Text(tutorial.transform,"Geri çek, nişan al, bırak",20,12,820,52,36,Cream,TextAlignmentOptions.Center);
             Text(tutorial.transform,"Atıcıyı taşımak için alt çizgide bir yere dokun.",20,70,820,40,25,new Color(.81f,.84f,.75f),TextAlignmentOptions.Center);
-            var g=Art(page,"Öğreten el",MahalleGraphic.Shape.Hand,0,0,65,88,Cream);hand=g.rectTransform;
         }
     }
     private void Update()
@@ -653,27 +661,30 @@ public class MahalleUI : MonoBehaviour
         }
         else
         {
-            if(lastScore!=controller.Score){lastScore=controller.Score;scoreLabel.SetTextL(controller.Score+" / "+controller.TotalMarbles);}
+            if(lastScore!=controller.Score)
+            {
+                lastScore=controller.Score;scoreLabel.SetTextL(controller.Score+" / "+controller.TotalMarbles);
+                scorePop=1f;   // artti: kisa bir ziplama
+            }
             if(lastShots!=controller.ShotsLeft){lastShots=controller.ShotsLeft;shotsLabel.SetTextL(controller.ShotsLeft.ToString());}
+            // Son atis: sayac nabiz gibi atsin, oyuncu farketsin.
+            shotsLabel.color=controller.ShotsLeft<=1
+                ?Color.Lerp(new Color(.96f,.42f,.30f),Gold,Mathf.PingPong(Time.unscaledTime*3f,1f)):Gold;
         }
         beadsLabel.SetTextL(MahalleProfile.Beads.ToString());
+        // Sayi ziplamasi: misket cikinca gozle gorulur bir tepki.
+        if(scorePop>0f)
+        {
+            scorePop=Mathf.Max(0f,scorePop-Time.unscaledDeltaTime*4.2f);
+            float k=1f+Mathf.Sin(scorePop*Mathf.PI)*.24f;
+            scoreLabel.rectTransform.localScale=new Vector3(k,k,1f);
+        }
         var shooter=controller.Shooter;
         if(shooter!=null)
         {
             powerFill.rectTransform.sizeDelta=new Vector2(Mathf.Max(1,610*shooter.Power),16);
             powerLabel.SetTextL(shooter.SelectedPower==MarblePower.None?(SpecialMarbles.IsSpecial(shooter.ActiveSkin)?L.T(Campaign.SkinNames[shooter.ActiveSkin])+" · "+MahalleProfile.RemainingLife(shooter.ActiveSkin)+"/"+SpecialMarbles.MaxLife:"NORMAL MİSKET"):L.Up(L.T(Campaign.PowerNames[(int)shooter.SelectedPower])));
             hintLabel.SetTextL(controller.WaitingForSettle?"Misketler duruluyor…":shooter.IsAiming?"Gücü ayarla ve bırak":shooter.PositionLocked?"Misketin durduğu yerden atıyorsun.":"Çizgiye dokunarak atıcının yerini değiştirebilirsin.");
-            if(hand!=null)
-            {
-                hand.gameObject.SetActive(!MahalleProfile.Data.tutorialDone && !controller.IsPaused);
-                if(Camera.main!=null)
-                {
-                    var p=Camera.main.WorldToScreenPoint(shooter.transform.position);
-                    RectTransformUtility.ScreenPointToLocalPointInRectangle(root,p,null,out var local);
-                    hand.anchorMin=hand.anchorMax=root.pivot;hand.pivot=new Vector2(.2f,.9f);
-                    hand.anchoredPosition=local+new Vector2(24,-25-Mathf.PingPong(Time.unscaledTime*55,100));
-                }
-            }
             var tutorial=page.Find("İlk atış");if(tutorial!=null&&MahalleProfile.Data.tutorialDone)tutorial.gameObject.SetActive(false);
         }
         if(GameSession.TutorialMode&&tutStep>=0&&controller.State==LevelController.LevelState.Playing)TutorialTick(shooter);
@@ -888,7 +899,7 @@ public class MahalleUI : MonoBehaviour
         tutTitle=Text(panel.transform,"",28,14,904,54,34,Gold,TextAlignmentOptions.Center);
         tutBody=Text(panel.transform,"",28,70,904,106,29,Cream,TextAlignmentOptions.Center);
         tutSpot=Art(page,"Öğretici noktası",MahalleGraphic.Shape.ChalkRing,0,0,120,120,Gold);tutSpot.stroke=7f;
-        tutHand=Art(page,"Öğretici eli",MahalleGraphic.Shape.Hand,0,0,65,88,Cream).rectTransform;
+        tutHand=Art(page,"Öğretici eli",MahalleGraphic.Shape.Hand,0,0,65,88,new Color(1,.97f,.89f,0f)).rectTransform;
         tutSide=0;tutNudge=0;tutKesemDone=false;tutRetry=0;
         controller.Shooter.AimBlocked+=()=>tutNudge=2.2f;
         SetTutStep(0);

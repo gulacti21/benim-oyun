@@ -32,6 +32,7 @@ public class MarbleVisual : MonoBehaviour
             materials = new Material[Campaign.SkinCount];
             Shader shader = Resources.Load<Shader>("Mahalle/Marble");
             if (shader == null) shader = Shader.Find("Universal Render Pipeline/Lit");
+            Texture matcap = Resources.Load<Texture2D>("Mahalle/MarbleMatcap");
             for (int i=0;i<Campaign.SkinCount;i++)
             {
                 materials[i] = new Material(shader);
@@ -40,6 +41,7 @@ public class MarbleVisual : MonoBehaviour
                 materials[i].SetColor("_BaseColor", Campaign.SkinColors[i]);
                 materials[i].SetColor("_SwirlColor", SpecialMarbles.Accent(i));
                 if (materials[i].HasProperty("_Smoothness")) materials[i].SetFloat("_Smoothness",.95f);
+                if (matcap != null && materials[i].HasProperty("_Matcap")) materials[i].SetTexture("_Matcap", matcap);
             }
         }
         var renderer = GetComponent<Renderer>();

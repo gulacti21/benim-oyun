@@ -39,6 +39,9 @@ public class LevelController : MonoBehaviour
     private const float CrawlSpeed = .25f;        // bu hızın altı "sürünüyor" sayılır
     private const float RestThreshold = .22f;     // arenanın "durdu" eşiği (varsayılan .15)
     private const float QuickSettleDelay = .25f;  // atış sonrası bekleme payı (varsayılan .4)
+    // SON TUR: bu atis bolumu bitiriyorsa acele etme. Cemberin kenarinda hala
+    // yuvarlanan bir misket sayilmadan oyun bitmesin.
+    private const float FinalSettleDelay = 1f;
     private float shooterOutsideTime;
     private readonly System.Collections.Generic.Dictionary<TargetMarble, float> scoredTimes =
         new System.Collections.Generic.Dictionary<TargetMarble, float>();
@@ -232,6 +235,9 @@ public class LevelController : MonoBehaviour
 
         if (IsPaused) return;
         shotElapsed += Time.deltaTime;
+        // Bu atis bolumu bitiriyor mu? Bitiriyorsa esikler gevsetilir.
+        bool sonTur = !GameSession.EndlessMode &&
+                      (ShotsLeft <= 0 || (arena != null && arena.RemainingMarbles == 0));
         StopMarblesOutside();
         if (shotElapsed > (GameSession.EndlessMode ? EndlessLevel.SettleCutoff : 12f))
         {
@@ -247,7 +253,10 @@ public class LevelController : MonoBehaviour
                 if (b.isKinematic) continue;
                 float hiz = b.linearVelocity.magnitude;
                 if (hiz >= DampSpeed) continue;
-                if (shotElapsed > CrawlStopAfter && hiz < CrawlSpeed)
+                // Son turda gec ve daha dusuk esikte durdur: cemberden cikmak
+                // uzere olan misketi erken dondurup sayidan dusurmeyelim.
+                if (shotElapsed > (sonTur ? CrawlStopAfter + 1f : CrawlStopAfter)
+                    && hiz < (sonTur ? CrawlSpeed * .5f : CrawlSpeed))
                 {
                     b.linearVelocity = Vector3.zero;
                     b.angularVelocity = Vector3.zero;
@@ -271,7 +280,9 @@ public class LevelController : MonoBehaviour
 
         settleTimer += Time.deltaTime;
 
-        if (settleTimer < (GameSession.EndlessMode ? EndlessLevel.SettleDelay : QuickSettleDelay))
+        float bekleme = GameSession.EndlessMode ? EndlessLevel.SettleDelay
+                      : sonTur ? FinalSettleDelay : QuickSettleDelay;
+        if (settleTimer < bekleme)
         {
             return;
         }

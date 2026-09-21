@@ -8,7 +8,8 @@ public class MahalleGraphic : MaskableGraphic
     public enum Shape
     {
         Panel, Circle, Star, Marble, Lock, Bag, House, Arrow, Triangle, Ring, Hand,
-        ChalkRing, ChalkTriangle, Chevron, TabMap, TabTask
+        ChalkRing, ChalkTriangle, Chevron, TabMap, TabTask,
+        Gear, Clock, People, Calendar
     }
 
     public Shape shape;
@@ -134,6 +135,69 @@ public class MahalleGraphic : MaskableGraphic
                 }
                 Disc(vh, c, w * .07f, h * .07f, accent);
                 break;
+
+            // --- Ana menu simgeleri. Hepsi cizgi resim: ortasi bos kaliyor,
+            // boylece arkasindaki kart rengi gorunuyor, delik acmaya gerek yok.
+            case Shape.Gear:
+            {
+                float rr = w * .30f, tw2 = w * .10f;
+                for (int i = 0; i < 28; i++)
+                {
+                    float a = i * Mathf.PI * 2 / 28, b = (i + 1) * Mathf.PI * 2 / 28;
+                    Stroke(vh, c + new Vector2(Mathf.Cos(a) * rr, Mathf.Sin(a) * rr),
+                               c + new Vector2(Mathf.Cos(b) * rr, Mathf.Sin(b) * rr), tw2, color);
+                }
+                for (int i = 0; i < 8; i++)
+                {
+                    float a = i * Mathf.PI * 2 / 8;
+                    Vector2 d = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+                    Stroke(vh, c + d * (rr + tw2 * .2f), c + d * (rr + w * .15f), w * .13f, color);
+                }
+                break;
+            }
+
+            case Shape.Clock:
+            {
+                float rr = w * .34f, tw2 = w * .085f;
+                for (int i = 0; i < 32; i++)
+                {
+                    float a = i * Mathf.PI * 2 / 32, b = (i + 1) * Mathf.PI * 2 / 32;
+                    Stroke(vh, c + new Vector2(Mathf.Cos(a) * rr, Mathf.Sin(a) * rr),
+                               c + new Vector2(Mathf.Cos(b) * rr, Mathf.Sin(b) * rr), tw2, color);
+                }
+                Stroke(vh, c, c + new Vector2(0, h * .20f), tw2 * .85f, color);       // akrep
+                Stroke(vh, c, c + new Vector2(w * .16f, 0), tw2 * .85f, color);        // yelkovan
+                Rounded(vh, new Rect(c.x - w * .09f, c.y + rr, w * .18f, h * .07f), 3, color); // tepe dugmesi
+                break;
+            }
+
+            case Shape.People:
+            {
+                float tw2 = w * .085f;
+                // Arkadaki kisi
+                DiscRing(vh, c + new Vector2(w * .17f, h * .16f), w * .115f, tw2, color);
+                Arc(vh, c + new Vector2(w * .17f, -h * .17f), w * .21f, tw2, 0f, Mathf.PI, color);
+                // Ondeki kisi
+                DiscRing(vh, c + new Vector2(-w * .13f, h * .13f), w * .145f, tw2, color);
+                Arc(vh, c + new Vector2(-w * .13f, -h * .20f), w * .25f, tw2, 0f, Mathf.PI, color);
+                break;
+            }
+
+            case Shape.Calendar:
+            {
+                float tw2 = w * .075f;
+                float x0 = c.x - w * .33f, x1 = c.x + w * .33f;
+                float y0 = c.y - h * .34f, y1 = c.y + h * .28f;
+                Stroke(vh, new Vector2(x0, y0), new Vector2(x1, y0), tw2, color);
+                Stroke(vh, new Vector2(x0, y1), new Vector2(x1, y1), tw2, color);
+                Stroke(vh, new Vector2(x0, y0), new Vector2(x0, y1), tw2, color);
+                Stroke(vh, new Vector2(x1, y0), new Vector2(x1, y1), tw2, color);
+                Stroke(vh, new Vector2(x0, y1 - h * .17f), new Vector2(x1, y1 - h * .17f), tw2, color);
+                Stroke(vh, new Vector2(c.x - w * .17f, y1), new Vector2(c.x - w * .17f, y1 + h * .11f), tw2, color);
+                Stroke(vh, new Vector2(c.x + w * .17f, y1), new Vector2(c.x + w * .17f, y1 + h * .11f), tw2, color);
+                Disc(vh, c - new Vector2(0, h * .06f), w * .05f, h * .05f, color);
+                break;
+            }
 
             case Shape.Hand:
                 Rounded(vh, new Rect(c.x - w * .14f, c.y - h * .15f, w * .24f, h * .62f), w * .11f, color);
@@ -327,5 +391,29 @@ public class MahalleGraphic : MaskableGraphic
     private static Color AtY(Rect r, Color top, Color bottom, float y)
     {
         return Color.Lerp(bottom, top, Mathf.InverseLerp(r.yMin, r.yMax, y));
+    }
+
+    // Ici bos daire (halka).
+    private static void DiscRing(VertexHelper vh, Vector2 c, float r, float tw, Color col)
+    {
+        const int seg = 24;
+        for (int i = 0; i < seg; i++)
+        {
+            float a = i * Mathf.PI * 2 / seg, b = (i + 1) * Mathf.PI * 2 / seg;
+            Stroke(vh, c + new Vector2(Mathf.Cos(a) * r, Mathf.Sin(a) * r),
+                       c + new Vector2(Mathf.Cos(b) * r, Mathf.Sin(b) * r), tw, col);
+        }
+    }
+
+    // Yay: omuz cizgisi gibi yarim daireler icin.
+    private static void Arc(VertexHelper vh, Vector2 c, float r, float tw, float from, float to, Color col)
+    {
+        const int seg = 16;
+        for (int i = 0; i < seg; i++)
+        {
+            float a = Mathf.Lerp(from, to, i / (float)seg), b = Mathf.Lerp(from, to, (i + 1) / (float)seg);
+            Stroke(vh, c + new Vector2(Mathf.Cos(a) * r, Mathf.Sin(a) * r),
+                       c + new Vector2(Mathf.Cos(b) * r, Mathf.Sin(b) * r), tw, col);
+        }
     }
 }
