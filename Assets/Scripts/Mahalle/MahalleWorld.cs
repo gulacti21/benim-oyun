@@ -4,6 +4,11 @@ using UnityEngine.Rendering;
 public class MahalleWorld : MonoBehaviour
 {
     private Material groundMaterial, stoneMaterial;
+    // Kodla uretilen gurultu dokusu ayri tutuluyor: OnDestroy sadece BUNU yok
+    // etmeli. Fotograf kullanilirsa o Resources varligidir, yok edilmemeli.
+    private Texture2D grainTexture;
+    // Mahalle zemin fotograflari: Assets/Resources/Mahalle/Ground/<ad>.png
+    private static readonly string[] GroundFiles={"Apartman","Okul","Park","Toprak","Meydan"};
 
     // TANI ARACI.
     // "Editorde boyle, telefonda boyle" durumlarini tahminle degil olcumle
@@ -43,10 +48,11 @@ public class MahalleWorld : MonoBehaviour
     // Artık kamera, çemberin + çizgi dışı payının hem yatayda hem de üst
     // başlığın altında dikeyde görünmesine yetecek kadar açılır. Eski değerden
     // asla daha yakın olmaz, küçük sahalı bölümler aynen kalır.
-    public const float CamPitch=72f, CamFocusZ=-1.1f;
+    public const float CamPitch=72f, CamFocusZ=-.5f;
     public const float SideMargin=.4f;      // çemberin yanında görünecek çizgi dışı alan (dünya birimi)
     public const float TopMargin=.35f;      // çemberin üstünde görünecek alan
-    public const float HudTopRef=258f;      // üst oyun başlığının alt kenarı (1080 genişlik referansı)
+    public const float HudTopRef=356f;     // üst bilgi panelinin gerçek alt kenarı (1080 genişlik referansı)
+    public const float HudGap=55f;        // çemberin tepesiyle panel arasında kalacak en az boşluk
     public const float SafeTopFraction=.07f;// çentik/Dynamic Island payı (ekran yüksekliğinin oranı)
     public static float CameraSize(float arenaSize,float aspect)
     {
@@ -54,7 +60,7 @@ public class MahalleWorld : MonoBehaviour
         float legacy=Mathf.Max(6.3f,3.65f/aspect);
         float horizontal=(arenaSize+SideMargin)/aspect;
         float canvasHeight=1080f/aspect;
-        float topCover=HudTopRef/canvasHeight+SafeTopFraction;          // ekranın üstten örtülen oranı
+        float topCover=(HudTopRef+HudGap)/canvasHeight+SafeTopFraction;          // ekranın üstten örtülen oranı
         float farEdge=(arenaSize+TopMargin-CamFocusZ)*Mathf.Sin(CamPitch*Mathf.Deg2Rad);
         float vertical=farEdge/Mathf.Max(.2f,1f-2f*topCover);
         return Mathf.Max(legacy,horizontal,vertical);
@@ -85,10 +91,25 @@ public class MahalleWorld : MonoBehaviour
                 for(int y=0;y<128;y++) for(int x=0;x<128;x++)
                 {float grain=.82f+Mathf.PerlinNoise(x*.38f,y*.38f)*.28f; texture.SetPixel(x,y,new Color(grain,grain,grain,1));}
                 texture.wrapMode=TextureWrapMode.Repeat; texture.Apply();
-                groundMaterial.SetTexture("_BaseMap",texture); groundMaterial.SetTextureScale("_BaseMap",Vector2.one*12);
+                grainTexture=texture;
                 groundMaterial.SetFloat("_Smoothness",.04f);
             }
-            groundMaterial.SetColor("_BaseColor",parkStudy?ParkCorners.Floors[corner]:GroundColors[district]);
+            // Mahallenin kendi zemin fotografi varsa onu kullan; yoksa kodla
+            // uretilen gurultuyu mahalle rengiyle boya (eski davranis).
+            var foto = district>=0 && district<GroundFiles.Length
+                     ? Resources.Load<Texture2D>("Mahalle/Ground/"+GroundFiles[district]) : null;
+            if(foto!=null)
+            {
+                groundMaterial.SetTexture("_BaseMap",foto);
+                groundMaterial.SetTextureScale("_BaseMap",Vector2.one*5f);
+                groundMaterial.SetColor("_BaseColor",Color.white);
+            }
+            else
+            {
+                groundMaterial.SetTexture("_BaseMap",grainTexture);
+                groundMaterial.SetTextureScale("_BaseMap",Vector2.one*12);
+                groundMaterial.SetColor("_BaseColor",parkStudy?ParkCorners.Floors[corner]:GroundColors[district]);
+            }
             ground.GetComponent<Renderer>().sharedMaterial=groundMaterial;
         }
         var camera=Camera.main;
@@ -100,7 +121,7 @@ public class MahalleWorld : MonoBehaviour
             controller.Shooter.SetInputScale(inputScale);
             var scaledLine=FindFirstObjectByType<ShooterLine>();if(scaledLine!=null)scaledLine.SetInputScale(inputScale);
             camera.transform.rotation=Quaternion.Euler(72,0,0);
-            camera.transform.position=new Vector3(0,0,-1.1f)-camera.transform.forward*18;
+            camera.transform.position=new Vector3(0,0,CamFocusZ)-camera.transform.forward*18;
             camera.backgroundColor=new Color(.18f,.16f,.12f);
         }
         var light=FindFirstObjectByType<Light>();
@@ -172,5 +193,5 @@ public class MahalleWorld : MonoBehaviour
             pebble.transform.localScale=new Vector3(.08f+.06f*(i%3),.07f,.13f);pebble.GetComponent<Renderer>().sharedMaterial=stoneMaterial;
         }
     }
-    private void OnDestroy() {if(groundMaterial!=null) {Destroy(groundMaterial.GetTexture("_BaseMap"));Destroy(groundMaterial);}if(stoneMaterial!=null)Destroy(stoneMaterial);}
+    private void OnDestroy() {if(grainTexture!=null)Destroy(grainTexture);if(groundMaterial!=null)Destroy(groundMaterial);if(stoneMaterial!=null)Destroy(stoneMaterial);}
 }

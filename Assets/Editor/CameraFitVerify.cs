@@ -25,7 +25,7 @@ public static class CameraFitVerify
                 float size = MahalleWorld.CameraSize(l.arenaSize, aspect);
                 float halfWidth = size * aspect;
                 bool sides = halfWidth + 1e-4f >= l.arenaSize + MahalleWorld.SideMargin;
-                float cover = MahalleWorld.HudTopRef / (1080f / aspect) + MahalleWorld.SafeTopFraction;
+                float cover = (MahalleWorld.HudTopRef + MahalleWorld.HudGap) / (1080f / aspect) + MahalleWorld.SafeTopFraction;
                 float visibleTop = size * (1f - 2f * cover);
                 float farEdge = (l.arenaSize + MahalleWorld.TopMargin - MahalleWorld.CamFocusZ) * sin;
                 bool top = visibleTop + 1e-4f >= farEdge;
