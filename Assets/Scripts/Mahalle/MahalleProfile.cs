@@ -463,7 +463,7 @@ public static class MahalleProfile
         int count = 0; foreach (int s in Data.stars) if (s == 3) count++; return count;
     }
     public static readonly int[] MissionTargets = { 10, 150, 8 };
-    public static readonly int[] MissionRewards = { 30, 50, 60 };
+    public static readonly int[] MissionRewards = { 50, 80, 120 };
     public static readonly string[] MissionNames = { "Üç kez bölüm kazan", "Toplam 20 misket çıkar", "Üç bölümde üç yıldız al" };
     public static bool Claim(int id)
     {

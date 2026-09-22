@@ -9,7 +9,7 @@ public class MahalleGraphic : MaskableGraphic
     {
         Panel, Circle, Star, Marble, Lock, Bag, House, Arrow, Triangle, Ring, Hand,
         ChalkRing, ChalkTriangle, Chevron, TabMap, TabTask,
-        Gear, Clock, People, Calendar
+        Gear, Clock, People, Calendar, Bars
     }
 
     public Shape shape;
@@ -65,6 +65,16 @@ public class MahalleGraphic : MaskableGraphic
             case Shape.Circle:
                 Disc(vh, c, w * .5f, h * .5f, color);
                 break;
+
+            case Shape.Bars:
+            {
+                // Uc dikey cubuk: kisa, uzun, orta. Istatistik sekmesi.
+                float bw = w * .22f, ara = (w - bw * 3f) * .5f;
+                float[] oran = { .45f, 1f, .70f };
+                for (int i = 0; i < 3; i++)
+                    Rounded(vh, new Rect(r.x + i * (bw + ara), r.yMin, bw, h * oran[i]), bw * .38f, color);
+                break;
+            }
 
             case Shape.Star:
                 for (int i = 0; i < 10; i++)

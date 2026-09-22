@@ -20,6 +20,8 @@ public class MahalleUI : MonoBehaviour
     private static readonly Color CardBg=new Color(.22f,.31f,.27f), CardBgB=new Color(.15f,.22f,.19f);
     private float scorePop;
     private int district,tab,lastScore=-1,lastShots=-1;
+    private int selectedLevel=-1;          // haritada secili bolum
+    private TextMeshProUGUI playLabel;     // alttaki tek OYNA dugmesinin yazisi
     // Açılış ekranı uygulama başına BİR kez gösterilir. Bölümden çıkıp
     // mahalleye dönmek LevelSelect sahnesini yeniden yüklüyor; bu bayrak
     // olmadan oyuncu her dönüşünde tebeşir animasyonunu baştan izlerdi.
@@ -122,25 +124,30 @@ public class MahalleUI : MonoBehaviour
     }
     private void Nav()
     {
-        var bg=Panel(page,"Alt menü",24,0,1032,132,new Color(.21f,.32f,.28f));
-        bg.colorB=new Color(.11f,.18f,.16f);bg.radius=34;bg.shadow=14;bg.highlight=true;
+        // Krem cubuk: ust haplarla ve OYNA dugmesiyle ayni dil.
+        var bg=Panel(page,"Alt menu",24,0,1032,132,Krem);
+        bg.colorB=new Color(.918f,.890f,.831f);bg.radius=34;bg.shadow=16;bg.highlight=false;
         Bottom(bg.rectTransform,24,18,1032,132);
-        // Dördüncü sekme "MENÜ": açılış ekranına (başlık menüsü) döner.
+        // Dorduncu sekme "MENÜ": acilis ekranina (baslik menusu) doner.
         string[] names={"MENÜ","MAHALLE","KESEM","İSTATİSTİK","GÖREVLER"};
+        string[] files={"Alt/SekmeGeri","Alt/SekmeHarita","Alt/SekmeKese","Alt/SekmeGrafik","Alt/SekmeListe"};
         int[] ids={-1,0,1,3,2};
-        var shapes=new[]{MahalleGraphic.Shape.Chevron,MahalleGraphic.Shape.TabMap,MahalleGraphic.Shape.Bag,MahalleGraphic.Shape.Star,MahalleGraphic.Shape.TabTask};
-        var faded=new Color(1,.97f,.89f,.6f);
+        var shapes=new[]{MahalleGraphic.Shape.Chevron,MahalleGraphic.Shape.TabMap,MahalleGraphic.Shape.Bag,MahalleGraphic.Shape.Bars,MahalleGraphic.Shape.TabTask};
+        var pasif=new Color(Komur.r,Komur.g,Komur.b,.70f);
         for(int i=0;i<5;i++)
         {
             int id=ids[i];bool on=id==tab;
             System.Action act=id<0?(System.Action)(()=>ShowTitle(true)):()=>{tab=id;ShowHome();};
-            var b=Button(bg.transform,names[i],10+i*202,10,196,112,on?new Color(1,1,1,.1f):new Color(1,1,1,0),act);
+            var b=Button(bg.transform,names[i],10+i*202,4,196,120,new Color(1,1,1,0),act);
             b.GetComponent<MahalleGraphic>().radius=26;
             b.gameObject.AddComponent<MahalleTap>();
-            var icon=id<0?Art(b.transform,"Simge",shapes[i],72,18,52,52,faded):id==3?Art(b.transform,"Simge",shapes[i],67,14,62,62,on?Gold:faded):Art(b.transform,"Simge",shapes[i],63,12,70,64,on?Gold:faded);
-            icon.accent=on?Gold:faded;
-            if(id<0)icon.mirror=true;
-            Text(b.transform,names[i],4,80,188,36,id==3?21:24,on?Gold:faded,TextAlignmentOptions.Center);
+            // Secili sekme: koyu yesil dolu hap, uzerinde acik ikon.
+            if(on){var hap=Art(b.transform,"Seçim hapı",MahalleGraphic.Shape.Panel,44,0,108,76,Orman);hap.radius=28;}
+            var renk=on?Krem:pasif;
+            var cizim=IconOrShape(b.transform,files[i],shapes[i],68,9,60,58,renk);
+            if(cizim!=null){cizim.accent=renk;if(id<0)cizim.mirror=true;}
+            var yazi=Text(b.transform,Yumusat(names[i]),4,80,188,34,23,on?Orman:pasif,TextAlignmentOptions.Center);
+            if(on)yazi.fontStyle=FontStyles.Bold;
         }
     }
     // ---------------------------------------------------------------
@@ -206,14 +213,27 @@ public class MahalleUI : MonoBehaviour
 
     // Menu simgesi: Assets/Resources/Mahalle/Icons/<ad>.png varsa o kullanilir,
     // yoksa kodla cizilen sekle dusulur. Boylece gorseller gelene kadar oyun calisir.
-    private void IconOrShape(Transform parent, string dosya, MahalleGraphic.Shape shape,
+    // Gorsel varsa onu kullanir, yoksa kodla cizilen sekle duser.
+    // Cizilen sekil dondurulur ki gerekirse aynalansin.
+    private MahalleGraphic IconOrShape(Transform parent, string dosya, MahalleGraphic.Shape shape,
                              float x, float y, float w, float h, Color renk)
     {
         var sp = dosya == null ? null : Resources.Load<Sprite>("Mahalle/Icons/" + dosya);
-        if (sp == null) { Art(parent, dosya ?? "simge", shape, x, y, w, h, renk); return; }
+        if (sp == null) return Art(parent, dosya ?? "simge", shape, x, y, w, h, renk);
         var r = Rect(dosya, parent); Place(r, x, y, w, h);
         var img = r.gameObject.AddComponent<Image>();
         img.sprite = sp; img.color = renk; img.preserveAspect = true; img.raycastTarget = false;
+        return null;
+    }
+
+    // "MENÜ" -> "Menü". Ceviri anahtari buyuk harfli kalir, ekranda yumusak gorunur.
+    private static string Yumusat(string deger)
+    {
+        var metin = L.T(deger);
+        if (string.IsNullOrEmpty(metin)) return metin;
+        var kultur = new System.Globalization.CultureInfo("tr-TR");
+        metin = metin.ToLower(kultur);
+        return char.ToUpper(metin[0], kultur) + metin.Substring(1);
     }
 
     private void ShowTitle() { ShowTitle(false); }
@@ -446,7 +466,7 @@ public class MahalleUI : MonoBehaviour
     private void ShowHome()
     {
         ClearPage();
-        if(tab==0){Background(new Color(.14f,.12f,.10f));MapScreen();}
+        if(tab==0){Background(new Color(.74f,.67f,.55f));MapScreen();}
         else
         {
             Background(Paper);
@@ -467,112 +487,160 @@ public class MahalleUI : MonoBehaviour
         var inner=Rect("Düzen",content);Place(inner,0,-171,1080,height+171);
         return inner;
     }
-    // Mahalle haritası. Zemin, yol ve duraklar MahalleMapView içinde çizilir.
+    // Mahalle haritasi. Zemin, yol ve duraklar MahalleMapView icinde cizilir.
     private void MapScreen()
     {
         var theme=MahalleTheme.Get(district);
 
-        // Harita bütün ekranı kaplar. Başlık üstte durur, harita altından kayıp geçer.
         var viewport=Rect("Harita",page);
         Stretch(viewport);
+        // Harita alt guvenli alanin (home indicator seridi) altina kadar uzar,
+        // boylece ekranin dibinde siyah bant kalmaz. Dugmeler guvenli alanda kalir.
+        viewport.offsetMin=new Vector2(0,-AltGuvenliPay());
+        // Harita ust guvenli alanin (centik / durum cubugu seridi) icine de uzanir,
+        // boylece basligin ustunde bos krem bant kalmaz. Baslik yerinde durur.
+        viewport.offsetMax=new Vector2(0,UstGuvenliPay());
         viewport.gameObject.AddComponent<RectMask2D>();
         var catcher=viewport.gameObject.AddComponent<Image>();catcher.color=Color.clear;catcher.raycastTarget=true;
 
-        var content=Rect("Harita içeriği",viewport);
+        var content=Rect("Harita icerigi",viewport);
         content.anchorMin=new Vector2(0,1);content.anchorMax=new Vector2(1,1);content.pivot=new Vector2(.5f,1);
         content.sizeDelta=new Vector2(0,MahalleMapView.ContentHeight);content.anchoredPosition=Vector2.zero;
 
         var scroll=viewport.gameObject.AddComponent<ScrollRect>();
         scroll.viewport=viewport;scroll.content=content;scroll.horizontal=false;scroll.vertical=true;
-        scroll.movementType=ScrollRect.MovementType.Elastic;scroll.elasticity=.09f;
+        // Clamped: icerik bitince yaylanma yok. Elastic'te fazla cekilince
+        // haritanin arkasindaki koyu zemin gorunuyordu.
+        scroll.movementType=ScrollRect.MovementType.Clamped;
         scroll.scrollSensitivity=45;scroll.decelerationRate=.12f;
 
-        MahalleMapView.Build(content,district,font,OpenLevel,Toast);
+        // Acilista secili bolum: oyuncunun siradaki bolumu, bu mahallede degilse mahallenin ilki.
+        int first=district*Campaign.PerDistrict;
+        int next=MahalleProfile.NextLevel;
+        selectedLevel=(next>=first&&next<first+Campaign.PerDistrict)?next:first;
 
-        // Ekran, oyuncunun sıradaki bölümüne bakarak açılır.
+        MahalleMapView.Build(content,district,font,SelectLevel,OpenLevel,Toast);
+        MahalleMapView.Select(selectedLevel-first);
+
+        // Ekran secili bolume bakarak acilir.
         Canvas.ForceUpdateCanvases();
         float visible=viewport.rect.height;
-        int local=Mathf.Clamp(MahalleProfile.NextLevel-district*Campaign.PerDistrict,0,Campaign.PerDistrict-1);
-        float focus=MahalleMapView.StopOffset(local)-visible*.5f;   // başlık ve alt çubuk eşit yükseklikte
+        float focus=MahalleMapView.StopOffset(selectedLevel-first)-visible*.5f;
         content.anchoredPosition=new Vector2(0,Mathf.Clamp(focus,0,Mathf.Max(0,MahalleMapView.ContentHeight-visible)));
 
         MapHeader(theme);
         MapDock();
     }
 
+    // Ust guvenli alan payi (centik / durum cubugu seridi).
+    private float UstGuvenliPay()
+    {
+        if(root==null||Screen.height<=0) return 0f;
+        var safe=Screen.safeArea;
+        if(safe.height<=0) return 0f;
+        float ust=Screen.height-safe.yMax;
+        if(ust<=0) return 0f;
+        float tamYukseklik=root.rect.height*Screen.height/safe.height;
+        return ust/Screen.height*tamYukseklik;
+    }
+
+    // Alt guvenli alan payi, canvas birimine cevrilmis hali.
+    // Cihazda home indicator yoksa 0 doner ve hicbir sey degismez.
+    private float AltGuvenliPay()
+    {
+        if(root==null||Screen.height<=0) return 0f;
+        var safe=Screen.safeArea;
+        if(safe.height<=0||safe.y<=0) return 0f;
+        float tamYukseklik=root.rect.height*Screen.height/safe.height;
+        return safe.y/Screen.height*tamYukseklik;
+    }
+
+    // Duraga dokununca bolum secilir; baslatma alttaki tek dugmededir.
+    private void SelectLevel(int index)
+    {
+        selectedLevel=index;
+        if(playLabel!=null) playLabel.text=PlayCaption(index);
+    }
+
+    private string PlayCaption(int index)
+    {
+        var lv=Campaign.Database.Get(index);
+        return L.T("OYNA")+"  \u00b7  "+(index%Campaign.PerDistrict+1).ToString("00")+"  "+L.T(lv.levelName);
+    }
+
     private void MapHeader(MahalleTheme theme)
     {
-        SetBleed(Paper,bleedBottom!=null?bleedBottom.color:Color.clear);
-        var head=Panel(page,"Başlık",0,0,1080,300,Paper);head.radius=0;head.shadow=18;head.raycastTarget=true;
+        SetBleed(Color.clear,new Color(.078f,.157f,.133f));
+        // Duz krem blok yok: baslik ogeleri haritanin uzerinde yuzen haplar.
+        // Seffaf katman yalnizca dokunmalari yakalar, haritaya kazara basilmasin.
+        var head=Panel(page,"Baslik",0,0,1080,300,new Color(0,0,0,0));
+        head.radius=0;head.shadow=0;head.raycastTarget=true;
 
-        // Sol üstte kuşandığın misket durur; dokununca koleksiyona gider.
+        // Sol ustte kusandigin misket durur; dokununca koleksiyona gider.
         int skin=Mathf.Clamp(MahalleProfile.EffectiveSkin,0,Campaign.SkinNames.Length-1);
-        var mine=Button(head.transform,"Kuşandığın misket",48,26,326,78,new Color(.24f,.36f,.31f),()=>{tab=1;ShowHome();});
+        var mine=Button(head.transform,"Kusandigin misket",48,26,326,78,Orman,()=>{tab=1;ShowHome();});
         var mineFace=mine.GetComponent<MahalleGraphic>();
-        mineFace.colorB=new Color(.10f,.18f,.16f);mineFace.radius=39;mineFace.shadow=9;mineFace.highlight=true;
+        mineFace.colorB=new Color(.086f,.172f,.145f);mineFace.radius=39;mineFace.shadow=8;mineFace.highlight=false;
         mine.gameObject.AddComponent<MahalleTap>();
         var art=Art(mine.transform,"Misket",MahalleGraphic.Shape.Marble,16,17,44,44,Campaign.SkinColors[skin]);
         art.accent=SpecialMarbles.Accent(skin);
-        Text(mine.transform,Campaign.SkinNames[skin],76,0,238,78,28,Cream);
+        Text(mine.transform,Campaign.SkinNames[skin],76,0,238,78,28,Krem);
 
-        // Üst sıranın ortasında mahallenin yıldız ilerlemesi.
+        // Ust siranin ortasinda mahallenin yildiz ilerlemesi.
         int stars=0;
         for(int i=district*Campaign.PerDistrict;i<(district+1)*Campaign.PerDistrict;i++)stars+=MahalleProfile.Data.stars[i];
         int full=Campaign.PerDistrict*3;
-        var meter=Panel(head.transform,"Yıldız ilerlemesi",390,26,396,78,new Color(.88f,.84f,.73f));
-        meter.colorB=new Color(.83f,.79f,.67f);meter.radius=39;meter.highlight=true;
-        Art(meter.transform,"Yıldız",MahalleGraphic.Shape.Star,20,19,40,40,Gold);
-        Text(meter.transform,stars+" / "+full,68,19,116,40,30,Ink);
-        var track=Panel(meter.transform,"Yol",190,33,186,12,new Color(.16f,.25f,.23f,.24f));track.radius=6;
-        var fill=Panel(meter.transform,"Dolu",190,33,Mathf.Max(12f,186f*stars/full),12,Gold);
-        fill.colorB=new Color(.85f,.53f,.15f);fill.radius=6;
+        var meter=Panel(head.transform,"Yildiz ilerlemesi",390,26,396,78,new Color(.906f,.878f,.816f));
+        meter.colorB=new Color(.863f,.831f,.757f);meter.radius=39;meter.highlight=false;
+        Art(meter.transform,"Yildiz",MahalleGraphic.Shape.Star,20,19,40,40,Amber);
+        Text(meter.transform,stars+" / "+full,68,19,116,40,30,Komur);
+        var track=Panel(meter.transform,"Yol",190,33,186,12,new Color(Komur.r,Komur.g,Komur.b,.18f));track.radius=6;
+        var fill=Panel(meter.transform,"Dolu",190,33,Mathf.Max(12f,186f*stars/full),12,Amber);
+        fill.colorB=new Color(.882f,.576f,.176f);fill.radius=6;
 
-        var wallet=Panel(head.transform,"Boncuk",802,26,230,78,new Color(.24f,.36f,.31f));
-        wallet.colorB=new Color(.10f,.18f,.16f);wallet.radius=39;wallet.shadow=9;wallet.highlight=true;
-        Art(wallet.transform,"Boncuk simgesi",MahalleGraphic.Shape.Marble,16,17,44,44,Gold);
-        beadsLabel=Text(wallet.transform,MahalleProfile.Beads.ToString(),76,0,140,78,36,Cream);
+        var wallet=Panel(head.transform,"Boncuk",802,26,230,78,Orman);
+        wallet.colorB=new Color(.086f,.172f,.145f);wallet.radius=39;wallet.shadow=8;wallet.highlight=false;
+        Art(wallet.transform,"Boncuk simgesi",MahalleGraphic.Shape.Marble,16,17,44,44,Amber);
+        beadsLabel=Text(wallet.transform,MahalleProfile.Beads.ToString(),76,0,140,78,36,Krem);
 
-        var prev=Button(head.transform,"Önceki mahalle",48,144,96,96,new Color(.88f,.85f,.76f),()=>{district=(district+4)%5;ShowHome();});
+        var prev=Button(head.transform,"Onceki mahalle",48,144,96,96,new Color(.906f,.878f,.816f),()=>{district=(district+4)%5;ShowHome();});
         prev.GetComponent<MahalleGraphic>().radius=30;prev.gameObject.AddComponent<MahalleTap>();
-        Art(prev.transform,"Sol",MahalleGraphic.Shape.Chevron,26,26,44,44,Ink).mirror=true;
+        Art(prev.transform,"Sol",MahalleGraphic.Shape.Chevron,26,26,44,44,Komur).mirror=true;
 
-        var next=Button(head.transform,"Sonraki mahalle",936,144,96,96,new Color(.88f,.85f,.76f),()=>{district=(district+1)%5;ShowHome();});
+        var next=Button(head.transform,"Sonraki mahalle",936,144,96,96,new Color(.906f,.878f,.816f),()=>{district=(district+1)%5;ShowHome();});
         next.GetComponent<MahalleGraphic>().radius=30;next.gameObject.AddComponent<MahalleTap>();
-        Art(next.transform,"Sağ",MahalleGraphic.Shape.Chevron,26,26,44,44,Ink);
+        Art(next.transform,"Sag",MahalleGraphic.Shape.Chevron,26,26,44,44,Komur);
 
-        Text(head.transform,theme.title,164,140,752,62,46,Ink,TextAlignmentOptions.Center);
-        Text(head.transform,theme.subtitle,164,202,752,44,26,Muted,TextAlignmentOptions.Center);
+        // Mahalle adi kendi krem kapsulunde: her zeminde okunur, blok gibi durmaz.
+        var isim=Panel(head.transform,"Mahalle adı",164,120,752,160,Krem);
+        isim.colorB=new Color(.933f,.906f,.851f);isim.radius=46;isim.shadow=10;isim.raycastTarget=false;
+        var baslik=Text(isim.transform,theme.title,0,18,752,64,48,Komur,TextAlignmentOptions.Center);
+        baslik.fontStyle=FontStyles.Bold;
+        Text(isim.transform,theme.subtitle,0,82,752,44,26,new Color(Komur.r,Komur.g,Komur.b,.62f),TextAlignmentOptions.Center);
 
         for(int i=0;i<5;i++)
         {
             bool on=i==district;
-            Art(head.transform,"Nokta "+i,MahalleGraphic.Shape.Circle,483+i*26,on?254:256,on?14:10,on?14:10,
-                on?Gold:new Color(.16f,.25f,.23f,.22f));
+            Art(isim.transform,"Nokta "+i,MahalleGraphic.Shape.Circle,319+i*26,on?126:128,on?14:10,on?14:10,
+                on?Amber:new Color(Komur.r,Komur.g,Komur.b,.24f));
         }
     }
 
+    // Harita altinda tek ana eylem dugmesi. Siyah geciste yok; alt cubuk Nav() cizer.
     private void MapDock()
     {
-        // Harita alt çubuğun altında düz kesilmez, koyu zemine doğru erir.
-        var dark=new Color(.14f,.12f,.10f);
-        // Koyu zemin sadece alt menünün arkasında; devam çubuğu haritanın üstünde durur.
-        var blend=Panel(page,"Alt geçiş",0,0,1080,250,new Color(dark.r,dark.g,dark.b,0));
-        blend.radius=0;blend.colorB=dark;
-        Bottom(blend.rectTransform,0,158,1080,250);
-        var floor=Panel(page,"Alt zemin",0,0,1080,158,dark);
-        floor.radius=0;floor.raycastTarget=true;
-        Bottom(floor.rectTransform,0,0,1080,158);
+        int first=district*Campaign.PerDistrict;
+        if(selectedLevel<first||selectedLevel>=first+Campaign.PerDistrict)selectedLevel=first;
 
-        int next=MahalleProfile.NextLevel;
-        var level=Campaign.Database.Get(next);
-        var resume=Button(page,"Devam et",48,0,984,120,Gold,()=>OpenLevel(next));
-        var face=resume.GetComponent<MahalleGraphic>();
-        face.colorB=new Color(.85f,.53f,.15f);face.radius=32;face.shadow=14;face.highlight=true;
-        Bottom((RectTransform)resume.transform,48,166,984,120);
-        resume.gameObject.AddComponent<MahalleTap>();
-        Text(resume.transform,"DEVAM ET",34,16,700,36,23,new Color(.15f,.2f,.17f,.72f));
-        Text(resume.transform,(next%Campaign.PerDistrict+1).ToString("00")+" · "+L.T(level.levelName),34,48,700,54,36,new Color(.13f,.18f,.15f));
-        Art(resume.transform,"Ok",MahalleGraphic.Shape.Chevron,878,36,48,48,new Color(.13f,.18f,.15f));
+        var play=Button(page,"Oyna",48,0,984,124,Amber,()=>OpenLevel(selectedLevel));
+        var face=play.GetComponent<MahalleGraphic>();
+        // highlight kapali: ust kenara cizilen beyaz serit duz tasarimda cizgi gibi duruyordu.
+        face.colorB=new Color(.902f,.604f,.180f);face.radius=34;face.shadow=14;face.highlight=false;
+        Bottom((RectTransform)play.transform,48,172,984,124);
+        play.gameObject.AddComponent<MahalleTap>();
+        playLabel=Text(play.transform,PlayCaption(selectedLevel),46,0,800,124,40,Komur);
+        playLabel.fontStyle=FontStyles.Bold;
+        Art(play.transform,"Ok",MahalleGraphic.Shape.Chevron,884,38,48,48,Komur);
     }
 
     private void Collection()
@@ -640,7 +708,7 @@ public class MahalleUI : MonoBehaviour
         }
 
         // USTA SEVİYESİ: yıldız, çıkardığın misket ve günlük seriler puana dönüşür.
-        var seviye=Panel(content,"Usta seviyesi",48,1140,984,190,Ink);seviye.radius=28;seviye.highlight=true;
+        var seviye=Panel(content,"Usta seviyesi",48,1140,984,190,Ink);seviye.radius=28;seviye.highlight=false;
         Text(seviye.transform,L.F("USTA SEVİYESİ {0}",MahalleProfile.MasteryLevel),36,24,700,46,30,Gold);
         Text(seviye.transform,L.F("{0} / {1} puan",MahalleProfile.MasteryIntoLevel,MahalleProfile.MasteryPerLevel),36,74,700,44,26,new Color(1,.97f,.89f,.7f));
         Panel(seviye.transform,"Yol",36,134,912,16,new Color(1,1,1,.14f)).radius=8;
@@ -693,6 +761,7 @@ public class MahalleUI : MonoBehaviour
     private static readonly Color Krem   = new Color(.961f, .937f, .886f);
     private static readonly Color Komur  = new Color(.176f, .169f, .145f);
     private static readonly Color Amber  = new Color(.918f, .651f, .251f);
+    private static readonly Color Orman  = new Color(.125f, .239f, .204f);
 
     // Zemin uzerine yazilan metin. Mahallelerin zemini koyu asfalttan acik
     // betona kadar degistigi icin tek renk her yerde okunmuyor: krem yazinin
@@ -784,8 +853,9 @@ public class MahalleUI : MonoBehaviour
         }
 
         // --- ALT PANEL: tek krem panel ---
-        var dock=Panel(page,"Atış alanı",0,0,1008,190,Krem);
-        dock.radius=52; dock.shadow=12;
+        // Alt cubuk artik koyu: ustteki bilgi paneliyle ayni aile, ortadaki oyun alani one cikiyor.
+        var dock=Panel(page,"Atış alanı",0,0,1008,190,Komur);
+        dock.colorB=new Color(.129f,.125f,.106f); dock.radius=52; dock.shadow=14;
         Bottom(dock.rectTransform,36,40,1008,190);
 
         // Dokunma alani amber dairenin degil, yaziyla birlikte butun solun
@@ -794,19 +864,19 @@ public class MahalleUI : MonoBehaviour
         ((MahalleGraphic)kese.targetGraphic).radius=40;
         var daire=Panel(kese.transform,"Kese dairesi",8,7,120,120,Amber); daire.radius=60;
         IconOrShape(daire.transform,"Kesem",MahalleGraphic.Shape.Bag,20,20,80,80,Komur);
-        Text(kese.transform,"KESEM",154,18,240,44,34,Komur).fontStyle=FontStyles.Bold;
-        Text(kese.transform,"Özel misket seç",154,68,260,40,24,new Color(Komur.r,Komur.g,Komur.b,.62f));
+        Text(kese.transform,"KESEM",154,18,240,44,34,Krem).fontStyle=FontStyles.Bold;
+        Text(kese.transform,"Özel misket seç",154,68,260,40,24,new Color(Krem.r,Krem.g,Krem.b,.62f));
         if(GameSession.TutorialMode){tutBag=(RectTransform)kese.transform;kese.gameObject.SetActive(false);}
 
-        Panel(dock.transform,"Ayırıcı",446,40,2,110,new Color(Komur.r,Komur.g,Komur.b,.18f)).radius=1;
+        Panel(dock.transform,"Ayırıcı",446,40,2,110,new Color(Krem.r,Krem.g,Krem.b,.22f)).radius=1;
 
         Art(dock.transform,"Seçili misket",MahalleGraphic.Shape.Marble,486,44,58,58,Amber);
-        powerLabel=Text(dock.transform,"NORMAL MİSKET",562,40,420,44,30,Komur);
+        powerLabel=Text(dock.transform,"NORMAL MİSKET",562,40,420,44,30,Krem);
         powerLabel.fontStyle=FontStyles.Bold;
         powerLabel.enableAutoSizing=true; powerLabel.fontSizeMin=20; powerLabel.fontSizeMax=30;
-        Text(dock.transform,"ATIŞ GÜCÜ",562,88,420,34,22,new Color(Komur.r,Komur.g,Komur.b,.62f)).characterSpacing=2f;
-        Panel(dock.transform,"Güç boş",562,132,412,14,new Color(Komur.r,Komur.g,Komur.b,.16f)).radius=7;
-        powerFill=Panel(dock.transform,"Güç dolu",562,132,1,14,Komur); powerFill.radius=7;
+        Text(dock.transform,"ATIŞ GÜCÜ",562,88,420,34,22,new Color(Krem.r,Krem.g,Krem.b,.62f)).characterSpacing=2f;
+        Panel(dock.transform,"Güç boş",562,132,412,14,new Color(Krem.r,Krem.g,Krem.b,.18f)).radius=7;
+        powerFill=Panel(dock.transform,"Güç dolu",562,132,1,14,Amber); powerFill.radius=7;
 
         // --- YARDIM METNI: kutu yok, ortalanmis ---
         var hintGolge=Text(page,"",51,0,984,54,34,new Color(.06f,.05f,.04f,.55f),TextAlignmentOptions.Center);
@@ -1095,10 +1165,14 @@ public class MahalleUI : MonoBehaviour
     }
     private void TutorialPanel()
     {
-        var panel=Panel(page,"Öğretici",60,0,960,190,new Color(.16f,.25f,.23f,.95f));Bottom(panel.rectTransform,60,300,960,190);
-        tutTitle=Text(panel.transform,"",28,14,904,54,34,Gold,TextAlignmentOptions.Center);
-        tutBody=Text(panel.transform,"",28,70,904,106,29,Cream,TextAlignmentOptions.Center);
-        tutSpot=Art(page,"Öğretici noktası",MahalleGraphic.Shape.ChalkRing,0,0,120,120,Gold);tutSpot.stroke=7f;
+        // Anlatim paneli oyun ekraninin geri kalaniyla ayni aile: komur zemin,
+        // amber baslik, krem metin. Eski yesil, altindaki komur atis cubuguyla
+        // yamali duruyordu.
+        var panel=Panel(page,"Öğretici",60,0,960,190,new Color(Komur.r,Komur.g,Komur.b,.95f));
+        panel.radius=42;Bottom(panel.rectTransform,60,300,960,190);
+        tutTitle=Text(panel.transform,"",28,14,904,54,34,Amber,TextAlignmentOptions.Center);
+        tutBody=Text(panel.transform,"",28,70,904,106,29,Krem,TextAlignmentOptions.Center);
+        tutSpot=Art(page,"Öğretici noktası",MahalleGraphic.Shape.ChalkRing,0,0,120,120,Amber);tutSpot.stroke=7f;
         tutHand=Art(page,"Öğretici eli",MahalleGraphic.Shape.Hand,0,0,65,88,new Color(1,.97f,.89f,0f)).rectTransform;
         tutSide=0;tutNudge=0;tutKesemDone=false;tutRetry=0;
         controller.Shooter.AimBlocked+=()=>tutNudge=2.2f;

@@ -10,6 +10,25 @@ public class MarbleTextureImport : AssetPostprocessor
         // Harfe duyarli karsilastirma yapmiyoruz: macOS buyuk/kucuk harfi
         // ayirmadigi icin dosya "logo.png" diye kaydedilebiliyor.
         var yol = assetPath.ToLowerInvariant();
+        // Harita arka planlari: dikeyde tekrar ettigi icin Repeat, genis oldugu icin 2048.
+        if (yol.Contains("resources/mahalle/map/"))
+        {
+            var mp = (TextureImporter)assetImporter;
+            mp.textureType = TextureImporterType.Default;
+            mp.wrapMode = TextureWrapMode.Clamp;
+            mp.filterMode = FilterMode.Bilinear;
+            // Mipmap yok: harita ekranda 1:1'e yakin gosteriliyor, mipmap sadece
+            // bulaniklastirir ve bellegi %33 artirir.
+            mp.mipmapEnabled = false;
+            mp.sRGBTexture = true;
+            mp.alphaSource = TextureImporterAlphaSource.None;
+            // 4096 sinirinda Unity 4476'lik gorseli kuculturdu, sonra ekranda
+            // tekrar buyurdu. Sinir yukseltildi, tek yeniden ornekleme kalmadi.
+            mp.maxTextureSize = 8192;
+            mp.textureCompression = TextureImporterCompression.CompressedHQ;
+            return;
+        }
+
         // Mahalle zemin fotograflari: doseniyor, o yuzden Repeat ve mipmap sart.
         if (yol.Contains("resources/mahalle/ground/"))
         {

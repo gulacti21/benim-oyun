@@ -45,8 +45,8 @@ public static class MahalleVerify
             data.beads=100;Check(MahalleProfile.EquipOrBuy(1)&&data.beads==60&&data.selectedSkin==1,"Skin purchase equips");
             Check(MahalleProfile.EquipOrBuy(1)&&data.beads==60,"Owned skin never charged twice");
             Check(!MahalleProfile.EquipOrBuy(5)&&data.beads==60,"Unaffordable skin refused");
-            data.wins=10;Check(MahalleProfile.Claim(0)&&data.beads==90,"Completed mission reward");
-            Check(!MahalleProfile.Claim(0)&&data.beads==90,"Mission cannot be claimed twice");
+            data.wins=10;Check(MahalleProfile.Claim(0)&&data.beads==60+MahalleProfile.MissionRewards[0],"Completed mission reward");
+            Check(!MahalleProfile.Claim(0)&&data.beads==60+MahalleProfile.MissionRewards[0],"Mission cannot be claimed twice");
             reward=MahalleProfile.Finish(11,1,3);Check(!reward.newBadge&&reward.districtBonus==0,"Incomplete final never awards district bonus");
             reward=MahalleProfile.Finish(11,1,3);Check(!reward.newBadge&&reward.beads==0,"Mastery bonus paid once");
             var roundTrip=JsonUtility.FromJson<MahalleSave>(JsonUtility.ToJson(data));
@@ -54,6 +54,7 @@ public static class MahalleVerify
             checks += SpecialMarblesVerify.RunChecks();
             checks += DistrictRewardVerify.RunChecks();
             checks += CameraFitVerify.RunChecks();
+            checks += MapLayoutVerify.RunChecks();
             // GÖRÜNÜM TUTARLILIĞI: bir mahalledeki bütün bölümler aynı zemin ve
             // aynı kamera kuralıyla kurulmalı; bölüme özel ortam denemesi kalmamalı.
             for(int d=0;d<5;d++)
