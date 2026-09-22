@@ -26,6 +26,15 @@ public class ShotController : MonoBehaviour
     private float defaultMass;
     private readonly List<RaycastResult> uiHits = new List<RaycastResult>();
     private bool keepsPosition, positionLocked, anchorUsedStock;
+    // DOKUNMA / SÜRÜKLEME AYRIMI: misketin yakınına basmak artık hemen nişan
+    // değil. Parmak basılan yerden eşik kadar kayarsa nişan başlar; kaymadan
+    // kalkarsa dokunuş sayılır ve çizgideyse atıcı oraya taşınır.
+    // Ölçüm (ShooterTapVerify, önceki hal): çizgiye dokunuşların ~%45'i nişana
+    // gidiyor, kıpırdamadan kalkan parmak %39'a kadar güçle atış yapıyordu.
+    private bool pendingPress;
+    private Vector2 pressScreen;
+    private Vector3 pressWorld;
+    private static float DragThresholdPx => Mathf.Max(12f, Screen.height * .012f);
     public event Action ShotFired;
     // Öğretici: atıcı çizgide yer değiştirdi.
     public event Action Repositioned;
@@ -106,14 +115,20 @@ public class ShotController : MonoBehaviour
         if (visual != null) visual.SetSkin(SelectedPower == MarblePower.Iron ? 5 : MahalleProfile.EffectiveSkin);
         return true;
     }
-    public void CancelAim() { isAiming = false; Power = 0; if (aimIndicator != null) aimIndicator.Hide(); }
+    public void CancelAim() { isAiming = false; pendingPress = false; Power = 0; if (aimIndicator != null) aimIndicator.Hide(); }
     private void OnApplicationFocus(bool focus) { if (!focus) CancelAim(); }
     private void Update()
     {
         var pointer = Pointer.current;
         if (pointer == null || gameCamera == null || !ShootingEnabled) { CancelAim(); return; }
         aimPlane = new Plane(Vector3.up, transform.position);
-        if (pointer.press.wasPressedThisFrame) BeginAim(pointer.position.ReadValue());
+        if (pointer.press.wasPressedThisFrame)
+        {
+            BeginAim(pointer.position.ReadValue());
+            // Çok hızlı dokunuşta basma ve bırakma aynı karede gelebilir.
+            if (pendingPress && !pointer.press.isPressed) ReleaseTap();
+        }
+        else if (pendingPress) { if (pointer.press.isPressed) DragPending(pointer.position.ReadValue()); else ReleaseTap(); }
         else if (isAiming && pointer.press.wasReleasedThisFrame) { UpdateAim(pointer.position.ReadValue()); ReleaseAim(); }
         else if (isAiming && pointer.press.isPressed) UpdateAim(pointer.position.ReadValue());
     }
@@ -134,18 +149,31 @@ public class ShotController : MonoBehaviour
     {
         if (!AtRest || OverUI(screen) || !TryGetPlanePoint(screen, out var world)) return;
         Vector3 flat = transform.position; flat.y = world.y;
-        if (Vector3.Distance(world, flat) > grabRadius)
-        {
-            if (!positionLocked && shooterLine != null && shooterLine.IsNear(world))
-            {
-                var position = shooterLine.ClampToLine(world, transform.position.y);
-                body.position = position; transform.position = position;
-                Repositioned?.Invoke();
-            }
-            return;
-        }
+        if (Vector3.Distance(world, flat) > grabRadius) { TryMoveOnLine(world); return; }
+        pendingPress = true; pressScreen = screen; pressWorld = world;
+    }
+    // Misketin yakınına basıldı, parmak kaydı mı? Kaydıysa nişan başlar.
+    private void DragPending(Vector2 screen)
+    {
+        if ((screen - pressScreen).sqrMagnitude < DragThresholdPx * DragThresholdPx) return;
+        pendingPress = false;
         if (AimLocked) { AimBlocked?.Invoke(); return; }
-        isAiming = true; pullPoint = world;
+        isAiming = true; pullPoint = pressWorld;
+        UpdateAim(screen);
+    }
+    // Parmak kaymadan kalktı: atış yok, çizgideyse yer değiştir.
+    private void ReleaseTap()
+    {
+        if (!pendingPress) return;
+        pendingPress = false;
+        TryMoveOnLine(pressWorld);
+    }
+    private void TryMoveOnLine(Vector3 world)
+    {
+        if (positionLocked || shooterLine == null || !shooterLine.IsNear(world)) return;
+        var position = shooterLine.ClampToLine(world, transform.position.y);
+        body.position = position; transform.position = position;
+        Repositioned?.Invoke();
     }
     private void UpdateAim(Vector2 screen)
     {
