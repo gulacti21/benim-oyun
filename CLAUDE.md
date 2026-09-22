@@ -130,7 +130,11 @@ ilgili Verify aracını çalıştır.
 **Ekonomi**: kese 40 boncuk başlangıç. İlk geçiş 6 boncuk, yıldız başına 3,
 **tekrar oynama 0** (eskiden 3'tü, saatte ~700 boncuk farmlanabiliyordu).
 Güçler 16/14/10/32, kaplamalar 0/40/80/110/140/180 + dört özel 400'er,
-tamir 130.
+tamir 130 (ömür 150 atış).
+Günün ödülü `25 + min(50, (seri-1)*7)` → 25'ten 75'e. Görevler 50/80/120.
+Tek seferlik toplam gelir ~1365 + günlük akış. **Bölüm ödülleri bilerek
+artırılmadı**: kampanya gelirini şişirmek boncuğu anlamsızlaştırır ve 1.1'deki
+satın almaya satacak bir şey bırakmaz.
 
 **Düello (çember/üçgen/dizi)**: kese 12, her el 4 ortaya, 5 el, turda en fazla
 3 atış, 4 boş tur el sonu. Atıcı sahanın iç %35'inde durursa misketini kaybeder.
@@ -200,19 +204,28 @@ sorunsuz.
 yoksa Unity temizliğinde yok edilip nesne mor kalabiliyor.
 
 **Git LFS**: `.wav/.ttf/.png` LFS'te, Linux VM'de git-lfs YOK. Bu yüzden
-`Assets/Audio`, `Assets/Fonts`, `Assets/TextMesh Pro` hep değişmiş görünür —
-**asla stage etme**, pointer'ları bozarsın.
+dokunulmamış ses/font/görsel dosyaları `git status`ta "M" görünür — gerçek
+değişiklik değil, pointer/içerik karışması. **Bunları asla commit etme**, repoyu
+bozarsın. Yeni görselleri kullanıcı kendi terminalinden ekler.
 
-**`device_bash` dosya silemez**: git `index.lock`/`HEAD.lock` bırakır. Her git
-işleminden önce `rm -f .git/index.lock .git/HEAD.lock` (silme izni verilmişse)
-ya da `_to_delete/` altına taşı.
+**Git kilit dosyaları**: yarıda kesilen bir git çağrısı `.git/index.lock` ve
+`.git/HEAD.lock` bırakır, bu VM'de varsayılan olarak silinemez ve kullanıcının
+git komutlarını bloklar. `device_request_delete_permission` ile izin iste, sonra
+`rm -f .git/*.lock` ve `find .git/objects -name 'tmp_obj_*' -delete`.
 
-**Git kimliği**: commit'lerde
-`-c user.name="Ahmet Furkan Gulacti" -c user.email="ahmetfurkangulacti@gmail.com"`
+**Git kimliği**: VM'de tanımsız. Commit öncesi repoya özel ayarla —
+`git config user.name` / `user.email`, kullanıcının önceki commit'lerinden al.
 
-**Ağ**: Linux VM github.com'a erişemiyor, **push'u kullanıcı yapar.**
+**Push edilemez**: VM'in ağ çıkışı proxy tarafından engelli (HTTP 403).
+`git push`u kullanıcı kendi terminalinden yapar.
 
----
+**Unity Editor açıkken batchmode çalışmaz.** Çıkış kodu 1, derleme hatası 0.
+Test çalıştırmadan önce kullanıcıya "Unity kapalı mı?" diye sor, "kapalı"
+demesini bekle. Bir günde üç kez boşa denendi.
+
+**Renk/yerleşim hatasını test yakalamaz.** `MahalleVerify` sadece derlemeyi ve
+sayısal kuralları ölçer. Görsel değişiklikleri kullanıcı telefonda görmeden
+"tamam" deme. Claude oyunu çalıştıramaz, ekran görüntüsü alamaz.
 
 ## AÇIK TEST BAYRAKLARI — YAYINDAN ÖNCE KAPAT
 
@@ -252,6 +265,102 @@ bayraklar kapanınca ikisi de kaybolur.
   `CameraFitVerify` her `MahalleVerify.Run`'da 60 bölüm × 3 ekran oranını ölçer.
   Düello kamerası değişmedi.
 - IAP: para mağazası yok. Boncuk mağazası (KESEM) çalışıyor.
+- **Reklam + boncuk satın alma 1.1'e ERTELENDİ** (kullanıcı kararı). Sebep: ilk
+  inceleme en riskli olanı ve reklam eklemek altı ayrı ret sebebi açıyor —
+  privacy manifest (her SDK kendi dosyasını getirmeli), App Privacy etiketleri,
+  ATT izni, Kids kategorisi yasağı, Paid Apps sözleşmesi, "Satın Alımları Geri
+  Yükle" düğmesi. 1.0 reklamsız çıkacak, ekonomi günlük ödülle dengelendi.
+  Yapılırken `unity:levelplay-unity-integration` ve
+  `unity:implement-in-app-purchases` skill'lerini aç, API'yi kafadan yazma.
+- Alt sekme ikonları bekleniyor: `Resources/Mahalle/Icons/Alt/` içine
+  `SekmeGeri`, `SekmeHarita`, `SekmeKese`, `SekmeGrafik`, `SekmeListe` —
+  512×512, şeffaf, **beyaz çizgi** (kod renklendiriyor). Gelene kadar kodla
+  çizilen şekiller çalışıyor.
+- Bundle ID yayında `com.gulacti.misko` olacak; **şimdi değiştirme**, kayıtları
+  sıfırlar.
+- Android: Google Play kişisel hesapta 12 test kullanıcısı × 14 gün kesintisiz
+  şartı var, Apple'dan uzun sürer. Önce iOS, Android sonra.
+
+---
+
+## TASARIM DİLİ (22-23 Eylül 2026'da kuruldu)
+
+Dört renk. `MahalleUI` içinde sabit:
+
+```
+Krem  #F5EFE2   Komur #2D2B25   Amber #F4AE42   Orman #203D34
+```
+
+Koyu **yazı** `Komur`, koyu **panel** `Orman`. Bunlar ayrı — karıştırma.
+
+`MahalleGraphic.highlight` projede **tamamen kapalı**. Panelin üst kenarına
+3.5px beyaz şerit çiziyordu, düz tasarımda çizgi gibi duruyordu. `true` yapma.
+
+**Eski palet hâlâ duruyor**: `Paper/Ink/Muted/Gold/Cream/Line` sabitleri
+dokunmadığımız ekranlarda (İstatistik, Görevler, Ayarlar, sonuç pencereleri,
+Kesem) kullanılıyor — 189 yerde. Beş tanesi düz değiştirilebilir; `Ink` tek
+başına hem yazı hem panel olduğu için ~60 kullanımın her birine tek tek bakmak
+gerekiyor. Kullanıcı bir kez denedi, beğenmedi, geri alındı. Toplu değiştirme
+yapma, ekran ekran ilerle ve her adımda kullanıcıya göster.
+
+---
+
+## HARİTA EKRANI (`MahalleMapView` + `MahalleUI.MapScreen`)
+
+**Durak anatomisi** — hepsi aynı: ince kesik tebeşir çemberi (190px), içinde cam
+misketler (sıradaki bölümde tek büyük, diğerlerinde üç küçük), karşı tarafında
+amber numara etiketi, kömür kalın bölüm adı, üç yıldız. Sıradaki bölümde
+yıldız yerine "SIRADAKİ" yazıyor.
+
+**Seçim ≠ başlatma.** Durağa dokunmak bölümü *seçer*, alttaki tek amber OYNA
+düğmesi başlatır. Seçili durağa ikinci kez dokunmak da başlatır. Kaydırırken
+kazara seçilmesin diye `MahalleStopTap` 26px hareket eşiği koyar — Unity'nin
+Button'ı parmak kaydıktan sonra bile tıklama sayıyor.
+
+**Arka plan**, üç kademeli düşüşle: `Resources/Mahalle/Map/Harita<Ad>.png` →
+yoksa `Resources/Mahalle/Ground/<Ad>.png` döşenir → o da yoksa eski prosedürel
+`MahalleGround`. Fotoğraf varken kodla çizilen dekorlar (`theme.decor`)
+çizilmez, ikisi üst üste binmesin diye.
+
+**Harita görselleri 1080×4476 olmak zorunda** (oran 1:4.14 = `ContentHeight`).
+ChatGPT 1:2.5 civarı üretiyor; farkı Claude kapatıyor: iki farklı banttan
+dönüşümlü uzatma + 130px smoothstep geçiş + unsharp mask + aşağı doğru %6 ışık
+düşüşü. Tekil kaynak görseller `Backups/harita-orijinal/` içinde. Import
+ayarları: Clamp, mipmap **kapalı**, maxTextureSize **8192**, CompressedHQ —
+4096 sınırında Unity küçültüp sonra ekranda büyütüyordu, bulanıklığın sebebi oydu.
+
+**Güvenli alan**: harita hem üst çentik hem alt home indicator şeridine uzanır
+(`UstGuvenliPay()` / `AltGuvenliPay()`), böylece uçlarda düz renk bant kalmaz.
+Kaydırma `Clamped` — `Elastic`te fazla çekince arka zemin görünüyordu.
+
+**Başlıkta düz krem blok yok**: mahalle adı kendi krem kapsülünde, misket /
+yıldız / boncuk hapları haritanın üzerinde yüzüyor.
+
+`MapLayoutVerify` her `MahalleVerify.Run`'da 12 durak × 3 ekran oranı ölçer:
+taşma, üst üste binme, başlık ve alt düğme payları.
+
+---
+
+## KAMERA (oyun ekranı)
+
+`MahalleWorld`: `CamFocusZ = -0.5`, `HudTopRef = 356`, `HudGap = 55`.
+
+Çemberin tepesi ile üstteki bilgi paneli arası eskiden 45px'ti, şimdi ~127px ve
+beş mahallede de aynı. Odak kaydırması zoom değiştirmez, sadece kadrajı aşağı
+alır — ölçülmüş yıldız hedeflerine ve fiziğe dokunmaz. Kullanıcı bu değeri üç
+turda ayarladı (-1.1 → -0.4 fazla, -0.75 orta, **-0.5 kabul edildi**).
+
+---
+
+## USTA GÖZÜ (`AimIndicator`)
+
+Kılavuz **sadece** Usta Gözü gücü seçiliyken çalışır. Normal atışta kısa yön
+çizgisi vardır, tahmin yoktur. Herkese açmak o gücün tek satış noktasını yok
+eder — kullanıcı bunu açıkça reddetti.
+
+Usta Gözü iki çizgi gösterir: ilk temas noktası (küre) + **çarpılan misketin
+fırlayacağı yön**. Yön iki kürenin merkezleri arasından hesaplanır. Hedef misket
+değil de duvarsa, kendi misketinin sekme açısı çizilir.
 
 ---
 
