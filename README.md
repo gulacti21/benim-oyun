@@ -53,3 +53,5 @@ Unity'deki önizleme, gerçek cihazda performans / dokunma / titreşim testinin 
 ## Kod düzeni
 
 Mevcut fizik, ses, sahne ve iOS araçları korunur. Yeni sistemler `Assets/Scripts/Mahalle` altındadır. `MahalleBoot` mevcut iki sahnede eski Canvas'ı devre dışı bırakıp yeni arayüzü oluşturur. `Campaign` bölüm verilerini, `MahalleProfile` tek kayıt içindeki ekonomi ve ilerlemeyi, `MahalleUI` arayüzü yönetir. Görsel shader ve Türkçe yazı tipi `Assets/Resources/Mahalle` altında bulunur.
+
+Bulut testi
