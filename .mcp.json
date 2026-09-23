@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "unity-editor-mcp": {
+      "type": "stdio",
+      "command": "/Users/ahmetfurkangulacti/.unity/bin/unity",
+      "args": ["mcp", "--project-path", "/Users/ahmetfurkangulacti/Documents/Codex/2026-09-09/kan/outputs/MISKETR-Yayin"]
+    }
+  }
+}

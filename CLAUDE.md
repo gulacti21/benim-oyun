@@ -25,7 +25,32 @@ Dosyaları önce yedekle.
 
 ---
 
+## ÇALIŞMA DÜZENİ: MAC vs BULUT
+
+**Bulutta (claude.ai/code, Mac kapalı):** Unity YOK. Derleyemezsin, test
+çalıştıramazsın, sahneye bakamazsın. Sadece kod yaz, yeni bir dalda commit et,
+PR aç. PR açıklamasına **"Unity'de test edilmedi"** yaz. Asla `main`e birleştirme.
+Ölçülmüş sabitlere (aşağıda) bulutta dokunma — ölçmeden değiştirilmez.
+LFS dosyalarına (.wav/.ttf/.png) dokunma.
+
+**Mac'te (Unity açık):** bulutun açtığı PR'ı çek, testi çalıştır, yeşilse birleştir.
+
 ## TESTLER NASIL ÇALIŞTIRILIR
+
+**Yeni yol (2026-09-24'ten beri, Unity AÇIKKEN):** Unity Pipeline paketi
+(`com.unity.pipeline`) kurulu, `unity` CLI açık Editor'a bağlanıyor:
+
+```bash
+unity status                       # state "ready" olmalı
+unity command eval --timeout 600 --no-banner 'try { MahalleVerify.Run(); return "OK"; } catch (System.Exception e) { return "HATA: " + e.Message; }'
+grep -n "MAHALLE_VERIFY\|CHECK FAILED" ~/Library/Logs/Unity/Editor.log | tail
+```
+
+Önce açık sahnenin `isDirty` olmadığını kontrol et — test sahne açıyor,
+kaydedilmemiş değişiklik kaybolur. İlk çalıştırmada 4291 kontrol geçti.
+`.mcp.json` aynı bağlantıyı MCP olarak da tanımlıyor.
+
+**Eski yol (Unity KAPALIYKEN, kuyruk script'i):**
 
 **Unity Editor KAPALI olmalı.** Açıkken batchmode çalışmaz; log
 "Successfully changed project path" satırından sonra durur, çıkış kodu 1 olur.
