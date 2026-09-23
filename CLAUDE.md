@@ -60,6 +60,11 @@ başlatılmalı):
 | `SpecialMarblesVerify.Run` | Özel misketler |
 | `ParkPhysicsVerify.Batch*` | Bölüm fizik ölçümü (BatchChanged/All/Park/Finals/Meydan) |
 
+`MahalleVerify.Run` içinde `ShooterTapVerify` de çalışır: gerçek `ShotController`
+ile 60 bölüm × 3 ekran oranında çizgiye 81 dokunuş yapar. Kıpırdamadan dokunuş
+nişana giderse, çizgideki bir nokta atıcıyı taşımazsa ya da sürükleme nişan
+başlatmazsa **CHECK FAILED** verir.
+
 Her değişiklikten sonra `MahalleVerify.Run` çalıştır. Yeşilse commit et.
 
 ---
@@ -349,6 +354,28 @@ taşma, üst üste binme, başlık ve alt düğme payları.
 beş mahallede de aynı. Odak kaydırması zoom değiştirmez, sadece kadrajı aşağı
 alır — ölçülmüş yıldız hedeflerine ve fiziğe dokunmaz. Kullanıcı bu değeri üç
 turda ayarladı (-1.1 → -0.4 fazla, -0.75 orta, **-0.5 kabul edildi**).
+
+---
+
+## ATIŞ GİRDİSİ (`ShotController`) — dokunma ≠ sürükleme
+
+Misketin yakınına (`grabRadius` = 1.15 × `InputScale`) basmak **hemen nişan
+değildir**. Parmak basılan yerden `DragThresholdPx` (ekran yüksekliğinin
+%1.2'si, en az 12px) kayarsa nişan başlar; kaymadan kalkarsa dokunuş sayılır ve
+çizgideyse atıcı oraya taşınır (`ReleaseTap` → `TryMoveOnLine`).
+
+Neden (2026-09-23, ölçüldü): eski halde çizgiye dokunuşların ~%45'i nişana
+gidiyordu ve `GetShot` gücü misketin merkezinden ölçtüğü için kıpırdamadan
+kalkan parmak **%39'a kadar güçle atış** yapıyordu (180/180 durumda). #9 Son
+Basamak ve #40 Yan Çizgi'de `halfWidth` (0.85/0.9) `grabRadius`'tan küçük
+olduğundan çizgi hiç çalışmıyordu. Düzeltmeden sonra: kazara atış 0/180,
+çizginin her noktası taşıyor. Güç hesabı ve ölçülmüş dengeler değişmedi.
+
+- Görünen çizgi (`LineRenderer`) ile `ClampToLine` aynı `halfWidth`'i kullanır;
+  "çizgi göründüğünden kısa" değildir.
+- `positionLocked` (Yerinde Kal sonrası) taşımayı **bilerek** kapatır, ekranda
+  ipucu var.
+- Yeni girdi davranışı eklersen `ShooterTapVerify`'ı güncelle.
 
 ---
 
