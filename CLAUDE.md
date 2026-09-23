@@ -28,12 +28,21 @@ Dosyaları önce yedekle.
 ## ÇALIŞMA DÜZENİ: MAC vs BULUT
 
 **Bulutta (claude.ai/code, Mac kapalı):** Unity YOK. Derleyemezsin, test
-çalıştıramazsın, sahneye bakamazsın. Sadece kod yaz, yeni bir dalda commit et,
-PR aç. PR açıklamasına **"Unity'de test edilmedi"** yaz. Asla `main`e birleştirme.
+çalıştıramazsın, sahneye bakamazsın. Her görev için `codex/mahalle-konsepti`
+üzerinden **yeni bir dal** aç (`bulut/<kisa-ad>`), sadece oraya commit et, PR'ın
+hedefi `codex/mahalle-konsepti` olsun. PR açıklamasına **"Unity'de test
+edilmedi"** yaz. `codex/mahalle-konsepti`ye ve `main`e **asla doğrudan push
+etme, asla birleştirme** — birleştirme kararı kullanıcının.
 Ölçülmüş sabitlere (aşağıda) bulutta dokunma — ölçmeden değiştirilmez.
 LFS dosyalarına (.wav/.ttf/.png) dokunma.
 
-**Mac'te (Unity açık):** bulutun açtığı PR'ı çek, testi çalıştır, yeşilse birleştir.
+**Mac'te (Unity açık):** önce yerel değişiklik var mı bak, sonra bulutun dalına
+geç, testi çalıştır, kullanıcı telefonda denesin.
+- Kullanıcı **onaylarsa**: PR'ı birleştir.
+- **Onaylamazsa**: `codex/mahalle-konsepti`ye geri dön, PR'ı kapat, dalı sil.
+  Ana dal hiç değişmemiş olur.
+- Birleştirdikten sonra vazgeçerse: `git revert <commit>` (geçmişi silmez, geri
+  alan yeni bir commit ekler).
 
 ## TESTLER NASIL ÇALIŞTIRILIR
 
