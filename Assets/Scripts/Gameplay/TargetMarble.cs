@@ -17,9 +17,9 @@ public class TargetMarble : MonoBehaviour
     public int Owner { get; set; } = -1;
 
     public bool IsScored { get; private set; }
-    // Kaç misket değerinde. Karpuzun yarımları 0: ikisi birlikte 1 (Twin ile, MarbleArena sayar).
+    // Kaç misket değerinde. Karpuz yarımı 0: HERHANGİ iki yarım birlikte 1 (MarbleArena sayar).
     public int Worth { get; set; } = 1;
-    public TargetMarble Twin { get; set; }
+    public bool IsHalf { get; set; }
     public Rigidbody Body => body;
 
     private void Awake()

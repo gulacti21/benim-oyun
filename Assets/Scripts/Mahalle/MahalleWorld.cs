@@ -42,6 +42,7 @@ public class MahalleWorld : MonoBehaviour
             : "BOZUK " + bozuk + "/" + toplam + " · " + ilk;
     }
     private GameObject decor;
+    public const float GroundGrow=2f;
     private static readonly Color[] GroundColors={new Color(.57f,.42f,.28f),new Color(.53f,.52f,.44f),new Color(.47f,.49f,.30f),new Color(.64f,.43f,.28f),new Color(.57f,.51f,.40f),
         new Color(.80f,.70f,.50f),new Color(.50f,.40f,.29f),new Color(.44f,.53f,.32f),new Color(.60f,.54f,.45f),new Color(.55f,.46f,.40f)};
     // KAMERA KIRPMASI DÜZELTMESİ
@@ -103,16 +104,21 @@ public class MahalleWorld : MonoBehaviour
             if(foto!=null)
             {
                 groundMaterial.SetTexture("_BaseMap",foto);
-                groundMaterial.SetTextureScale("_BaseMap",Vector2.one*5f);
+                groundMaterial.SetTextureScale("_BaseMap",Vector2.one*5f*GroundGrow);
                 groundMaterial.SetColor("_BaseColor",Color.white);
             }
             else
             {
                 groundMaterial.SetTexture("_BaseMap",grainTexture);
-                groundMaterial.SetTextureScale("_BaseMap",Vector2.one*12);
+                groundMaterial.SetTextureScale("_BaseMap",Vector2.one*12*GroundGrow);
                 groundMaterial.SetColor("_BaseColor",parkStudy?ParkCorners.Floors[corner]:GroundColors[Mathf.Clamp(district,0,GroundColors.Length-1)]);
             }
             ground.GetComponent<Renderer>().sharedMaterial=groundMaterial;
+            // ZEMİN KAPSAMI: sahnedeki zemin 20x20 (Plane x2). 4.0'lık sahada uzun ekranlı
+            // telefonda kamera ~9.5 açılıyor ve ekranın altı z=-10.5'e iniyordu: zeminin dışı,
+            // kameranın kahverengi arka planı görünüyordu. Zemin 2 kat büyür, doku ölçeği de 2 kat:
+            // desen aynı sıklıkta kalır, sadece her yeri örter.
+            ground.transform.localScale=new Vector3(2f*GroundGrow,1f,2f*GroundGrow);
         }
         var camera=Camera.main;
         if(camera!=null)

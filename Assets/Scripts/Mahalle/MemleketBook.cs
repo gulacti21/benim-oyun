@@ -644,7 +644,7 @@ public static class MemleketBook
         { 55, new[] { 4, 6 } },
         { 56, new[] { 3, 5 } },
         { 57, new[] { 3, 4 } },
-        { 58, new[] { 6, 6 } },
+        { 58, new[] { 6, 7 } },
         { 59, new[] { 4, 6 } },
     };
 

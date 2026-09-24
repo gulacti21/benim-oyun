@@ -451,8 +451,10 @@ iki haritayı toplar. Memleket bölge ödülü boncuk + rozet, **kaplama vermez*
 - Buzlu misket (`IceShell`): kinematic başlar; temas hızı ≥ **3.0 m/s** kabuğu
   kırar, misket yerinde kalır. Saha ortasında ~%55 güç.
 - Karpuz (`SplitMarble`): temas hızı ≥ **3.0 m/s** ikiye böler (×0.7, yarı kütle,
-  ±16°), tek kademe. **1 misket değerinde**: bütün çıkarsa 1, bölünürse İKİ YARISI
-  BİRLİKTE 1 (ikinci yarım çıkınca sayılır) — kullanıcı kararı 2026-09-24.
+  ±16°), tek kademe. **1 misket değerinde**: bütün çıkarsa 1; yarımlar havuz —
+  HERHANGİ iki yarım (farklı karpuzlardan da) 1 misket — kullanıcı kararı 2026-09-24.
+- Oyun zemini 40x40 (`MahalleWorld.GroundGrow`=2): 20x20'de 4.0 sahada uzun ekranda
+  alt kenar zeminin dışına taşıyor, kahverengi arka plan görünüyordu. `CameraFitVerify` ölçüyor.
 - Kum ek drag **1.5**, çamur **14**, çukur yakalama **2.2 m/s**. Eğim: sadece
   hareket edene, hızla orantılı (0.3 → 2.3 m/s arası artar). Sabit eğim yavaş
   misketi sahadan akıtıyordu — ölçüldü, düzeltildi.

@@ -34,6 +34,7 @@ public class MarbleArena : MonoBehaviour
     private readonly Vector3[] triangleCorners = new Vector3[3];
     private LineRenderer outline;
     private int score;
+    private int halvesOut;   // sahadan çıkan karpuz yarımı sayısı (her iki yarım = 1 misket)
     private int totalMarbles;
 
     public event Action<int, int> ScoreChanged;
@@ -77,8 +78,8 @@ public class MarbleArena : MonoBehaviour
             MahalleFeedback.Score(marble.transform.position);
             activeMarbles.RemoveAt(i);
             score += marble.Worth;
-            // Karpuzun ikinci yarımı da çıktıysa çift 1 misket sayılır.
-            if (marble.Twin != null && marble.Twin.IsScored) score++;
+            // Karpuz yarımları: çıkan her iki yarım (hangi karpuzdan olursa olsun) 1 misket.
+            if (marble.IsHalf && ++halvesOut % 2 == 0) score++;
             MarbleLeft?.Invoke(marble);
 
             if (SfxPlayer.Instance != null)
@@ -284,6 +285,7 @@ public class MarbleArena : MonoBehaviour
         activeMarbles.Clear();
         score = 0;
         totalMarbles = 0;
+        halvesOut = 0;
     }
 
     // SONSUZ ÇEMBER: sahayı sıfırlamadan yeni misket ekler. Puan ve çıkanlar korunur.
@@ -434,7 +436,6 @@ public class MarbleArena : MonoBehaviour
         spawnedMarbles.Remove(parent);
         var pa = a != null ? a.GetComponent<TargetMarble>() : null;
         var pb = b != null ? b.GetComponent<TargetMarble>() : null;
-        if (pa != null && pb != null) { pa.Twin = pb; pb.Twin = pa; }
         foreach (var piece in new[] { pa, pb })
         {
             if (piece == null) continue;

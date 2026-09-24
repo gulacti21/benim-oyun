@@ -32,7 +32,14 @@ public static class CameraFitVerify
                 bool top = visibleTop + 1e-4f >= farEdge;
                 float legacy = Mathf.Max(6.3f, 3.65f / aspect);
                 bool notCloser = size + 1e-4f >= legacy;
-                checks += 3;
+                // ZEMİN KAPSAMI: ekranın alt/üst kenarı zemin düzleminin içinde kalmalı
+                // (dışı kameranın kahverengi arka planı). Zemin yarı boyu = 10 * 2 * GroundGrow / 2.
+                float groundHalf = 10f * MahalleWorld.GroundGrow;
+                float reachZ = size / sin + Mathf.Abs(MahalleWorld.CamFocusZ);
+                float reachX = size * aspect;
+                if (reachZ > groundHalf - .5f || reachX > groundHalf - .5f)
+                    throw new Exception("CHECK FAILED: Ground covers the whole screen " + i + " " + AspectNames[a] + " (" + reachZ.ToString("F1") + " / " + groundHalf + ")");
+                checks += 4;
                 if (!sides) throw new Exception("CHECK FAILED: Camera shows ring sides " + i + " " + AspectNames[a]);
                 if (!top) throw new Exception("CHECK FAILED: Camera shows ring top under HUD " + i + " " + AspectNames[a]);
                 if (!notCloser) throw new Exception("CHECK FAILED: Camera never closer than before " + i);

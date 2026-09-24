@@ -368,33 +368,27 @@ public static class MemleketPhysicsVerify
             if (r.kind == MarbleKind.Ice && r.ice) { var ice = live[k].GetComponent<IceShell>(); if (ice != null && !ice.Intact) { r.ice = false; iceBreaks++; } }
             recs[ri] = r;
         }
-        // Önceki atışlardan kalan yarımlar: çiftin ikisi de çıkınca 1 (bu atışta tamamlandıysa kazanç).
-        var pairWasDone = new Dictionary<int, bool>();
-        foreach (var r in state) if (r.pair >= 0) pairWasDone[r.pair] = (pairWasDone.TryGetValue(r.pair, out var d0) ? d0 : true) && r.gone;
         foreach (var r in recs) if (r.gone || r.lost || r.worth > 0 || r.pair >= 0) result.Add(r);
-        for (int q = 0; q < pieceRecs.Count; q += 2)
+        foreach (var pr in pieceRecs)
         {
-            int id = ++pairCounter;   // her bölünme kendi çifti
-            for (int h = 0; h < 2 && q + h < pieceRecs.Count; h++)
-            {
-                var b = pieceRecs[q + h].body;
-                var r = new Rec { kind = MarbleKind.Normal, scale = b.transform.localScale.x, mass = b.mass, worth = 0, pair = id, pos = b.position };
-                r.pos.y = r.scale * .5f;
-                if (lost.Contains(b)) r.lost = true;
-                else if (gone.ContainsKey(b)) r.gone = true;
-                result.Add(r);
-            }
+            var b = pr.body;
+            var r = new Rec { kind = MarbleKind.Normal, scale = b.transform.localScale.x, mass = b.mass, worth = 0, pair = 0, pos = b.position };
+            r.pos.y = r.scale * .5f;
+            if (lost.Contains(b)) r.lost = true;
+            else if (gone.ContainsKey(b)) r.gone = true;
+            result.Add(r);
         }
-        var pairNowDone = new Dictionary<int, bool>();
-        foreach (var r in result) if (r.pair >= 0) pairNowDone[r.pair] = (pairNowDone.TryGetValue(r.pair, out var d1) ? d1 : true) && r.gone;
-        foreach (var kv in pairNowDone) if (kv.Value && !(pairWasDone.TryGetValue(kv.Key, out var was) && was)) gained += 1;
+        // Karpuz yarımları havuz: çıkan her iki yarım (hangi karpuzdan olursa olsun) 1 misket.
+        int halvesBefore = 0, halvesAfter = 0;
+        foreach (var r in state) if (r.pair >= 0 && r.gone) halvesBefore++;
+        foreach (var r in result) if (r.pair >= 0 && r.gone) halvesAfter++;
+        gained += halvesAfter / 2 - halvesBefore / 2;
         // Eşitlikte kalanları kenara yaklaştıranı seç (ParkPhysicsVerify ile aynı).
         float spread = 0f;
         foreach (var r in result) if (!r.gone && !r.lost) spread += new Vector2(r.pos.x, r.pos.z).magnitude;
         return new Outcome { state = result, gained = gained, iceBreaks = iceBreaks, splits = splits, value = gained + spread * .001f - Lost(result) * .01f };
     }
 
-    private static int pairCounter;
     private static int Lost(List<Rec> s) { int n = 0; foreach (var r in s) if (r.lost) n++; return n; }
 
     private static readonly List<(int parent, Rigidbody a, Rigidbody b)> pendingSplits = new List<(int, Rigidbody, Rigidbody)>();

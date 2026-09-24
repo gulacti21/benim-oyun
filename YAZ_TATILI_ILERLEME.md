@@ -485,8 +485,12 @@ taktik not, oyuncuya ipucu olabilir.
 
 ## Kullanıcı geri bildirimi sonrası (2026-09-24 öğleden sonra)
 
-- **Karpuz artık 1 misket:** bütün çıkarsa 1, bölünürse iki yarısı birlikte 1
-  (`TargetMarble.Twin`, `MarbleArena`). Ölçüm aracı yarımları çift olarak izliyor.
+- **Karpuz artık 1 misket:** bütün çıkarsa 1; yarımlar havuz: **herhangi iki
+  yarım** (farklı karpuzlardan da) 1 misket (`TargetMarble.IsHalf`, `MarbleArena`).
+- **Oyun zemini büyüdü (kahverengi şerit):** 4.0 sahalarda uzun ekranlı telefonda
+  ekranın altı 20x20 zeminin dışına taşıyordu. Zemin 40x40, doku ölçeği 2 kat
+  (desen aynı). `CameraFitVerify` her bölüm × ekran oranında zeminin ekranı
+  örttüğünü ölçüyor.
   Karpuzlu 16 bölüm yeniden ölçüldü, atış hakları/hedefler yeniden seçildi.
   Tezgâh Arası tezgâhları kısaltıldı (uzun tezgâhlarla %40'ta takılıyordu).
 - **Yeni özellik kartları:** kum, çamur, eğim, buzlu misket, karpuz, çukur ilk
@@ -497,7 +501,7 @@ taktik not, oyuncuya ipucu olabilir.
   çemberin içinde + ekranın üstünde EĞİM rozeti (ok eğimin yönünü gösterir).
 - Sıra kuralındaki "bir misket payı" iki komşu bölümden kaba ölçülenin
   misketi (15 misketli bölümde bir misket 6.7 puan, 9'luda 11).
-- MahalleVerify **16747 yeşil**. Memleket ort. temizlenebilirlik %53.
+- MahalleVerify **17107 yeşil**. Memleket ort. temizlenebilirlik %53.
 
 ## Telefonda kontrol edilecek
 - (Faz 7'ye kadar Memleket'e arayüzden girilemiyor; görsel kontrol o zaman.)
@@ -515,7 +519,8 @@ taktik not, oyuncuya ipucu olabilir.
 - 4.0 sahaya büyütülen bölümlerde kamera (test ölçüyor ama göz de baksın).
 - Yeni özellik kartları (çizimler, metin sığıyor mu), EĞİM rozeti (test yapısında
   üstteki turuncu imza yazısıyla aynı hizada).
-- Karpuz: bir yarımı çıkarınca sayaç artmamalı, ikincisi çıkınca +1.
+- Karpuz: bir yarımı çıkarınca sayaç artmamalı, herhangi bir ikinci yarım çıkınca +1.
+- Oyun ekranının altında kahverengi şerit kalmamalı (özellikle 4.0 sahalar).
 
 ## Bekleyen işler (kullanıcıda)
 - Memleket görselleri: `Resources/Mahalle/Map/Harita{Sahil,Koy,Yayla,Pazar,Bayram}.png`
