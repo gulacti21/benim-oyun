@@ -470,6 +470,12 @@ ustalık sınavı bölgenin en zoru. **Bir bölümü değiştirirsen** onu
 `Tuning` satırını güncelle; çeşitlilik bozulursa `MemleketVarietyTuner.Run
 -memleketLevels <g>` sadece o bölümü ayarlar (diğerlerinin fiziği değişmesin).
 
+**Harita geçişi:** yeni harita ilk açıldığında ~5 sn kodla çizilen animasyon
+(`MahalleUI.MapIntro`: tebeşir çemberi → yuvarlanan misket → yeni çember → harita adı +
+misket yağmuru → HADİ GİDELİM / SONRA). Kayıtta `mapsAnnounced` ile bir kez. Test
+yapısında her şey açık olduğundan kayıttan tetiklenmez; haritanın son bölümünü
+geçip haritaya dönünce oynar (`pendingMapIntro`).
+
 **Yeni özellik kartları:** kum/çamur/eğim/buz/karpuz/çukur ilk çıktığı bölümde oyun
 başlamadan kart (`MahalleUI.ShowNewMechanics`, kayıtta `mechanicsSeen` bitleri).
 Eğimli bölümde ekranın üstünde EĞİM rozeti (ok yönü); zemindeki oklar çemberin içinde.

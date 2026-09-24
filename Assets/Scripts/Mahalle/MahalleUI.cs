@@ -709,8 +709,136 @@ public class MahalleUI : MonoBehaviour
             if(!MahalleProfile.MapUnlocked(m))break;
             MahalleProfile.Data.mapsAnnounced=m;MahalleProfile.Save();
             // Test yapısı her şeyi açık gösterir; orada duyuru gürültü olur.
-            if(!MahalleProfile.TestUnlockAllLevels)Toast(L.F("{0} açıldı! Haritalar'dan geçebilirsin.",L.T(Maps.Names[m])));
+            if(!MahalleProfile.TestUnlockAllLevels)PlayMapIntro(m);
         }
+        if(pendingMapIntro>0){int m=pendingMapIntro;pendingMapIntro=-1;PlayMapIntro(m);}
+    }
+
+    // HARİTA GEÇİŞİ: yeni harita açılınca bir kez oynar (~5 sn), kodla çizilir.
+    // Tebeşir çemberinden çıkan misket yeni haritanın çemberine yuvarlanır, harita adı
+    // gelir, misket yağar. Test yapısında her şey açık olduğu için kayıttan tetiklenmez;
+    // orada haritanın son bölümü geçilince oynar (pendingMapIntro) ki telefonda denensin.
+    private static int pendingMapIntro=-1;
+    private bool introPlaying;
+    private void PlayMapIntro(int map){if(introPlaying||map<1||map>=Maps.Count)return;StartCoroutine(MapIntro(map));}
+    private static RectTransform Centre(RectTransform r,float x,float y,float w,float h)
+    {r.anchorMin=r.anchorMax=r.pivot=new Vector2(.5f,.5f);r.anchoredPosition=new Vector2(x,y);r.sizeDelta=new Vector2(w,h);return r;}
+    private IEnumerator MapIntro(int map)
+    {
+        introPlaying=true;
+        // Canvas'ın kendisine: çentik ve alt şerit dahil bütün ekranı örter.
+        var layer=Rect("Harita geçişi",transform);Stretch(layer);layer.SetAsLastSibling();
+        var group=layer.gameObject.AddComponent<CanvasGroup>();group.alpha=0;
+        var bg=Panel(layer,"Perde",0,0,1080,2600,Orman,true);bg.radius=0;bg.colorB=new Color(.078f,.157f,.133f);Stretch(bg.rectTransform);
+        var rain=Rect("Misket yağmuru",layer);Stretch(rain);
+        // Düzen 1080x1900'lük bir kutuda; kısa ekranda (iPad) kutu küçülür, taşmaz.
+        var box=Centre(Rect("Geçiş içeriği",layer),0,0,1080,1900);
+        Canvas.ForceUpdateCanvases();
+        box.localScale=Vector3.one*Mathf.Min(1f,layer.rect.height/1900f);
+        yield return Fade(group,.35f);
+
+        // 1) Önceki harita tamam: başlık ve üç yıldız.
+        var done=Text(box,L.F("{0} TAMAMLANDI",L.Up(L.T(Maps.Names[map-1]))),0,0,1000,80,46,Krem,TextAlignmentOptions.Center);
+        Centre(done.rectTransform,0,720,1000,80);done.fontStyle=FontStyles.Bold;
+        for(int i=0;i<3;i++)
+        {
+            var star=Art(box,"Yıldız "+i,MahalleGraphic.Shape.Star,0,0,0,0,Amber);
+            Centre(star.rectTransform,(i-1)*110f,i==1?610:595,i==1?86:70,i==1?86:70);
+            star.transform.localScale=Vector3.zero;StartCoroutine(PopMarble(star.transform));
+            if(SfxPlayer.Instance!=null)SfxPlayer.Instance.PlayMarbleTick(i);
+            yield return new WaitForSecondsRealtime(.12f);
+        }
+
+        // 2) Eski haritanın çemberi, içinde oyuncunun misketi.
+        Vector2 a=new Vector2(-250,370),b=new Vector2(0,-40),ctrl=new Vector2(360,300);
+        var chalk=new Color(Krem.r,Krem.g,Krem.b,.85f);
+        var ringA=Art(box,"Eski çember",MahalleGraphic.Shape.ChalkRing,0,0,0,0,chalk);Centre(ringA.rectTransform,a.x,a.y,240,240);ringA.SetProgress(0f);
+        int skin=Mathf.Clamp(MahalleProfile.EffectiveSkin,0,Campaign.SkinColors.Length-1);
+        var marble=Art(box,"Misket",MahalleGraphic.Shape.Marble,0,0,0,0,Campaign.SkinColors[skin]);
+        marble.accent=SpecialMarbles.Accent(skin);Centre(marble.rectTransform,a.x,a.y,70,70);marble.transform.localScale=Vector3.zero;
+        if(SfxPlayer.Instance!=null)SfxPlayer.Instance.PlayChalk(false);
+        for(float t=0;t<.5f;t+=Time.unscaledDeltaTime){ringA.SetProgress(Mathf.SmoothStep(0,1,t/.5f));yield return null;}
+        ringA.SetProgress(1f);
+        yield return PopMarble(marble.transform);
+        yield return new WaitForSecondsRealtime(.2f);
+
+        // 3) Misket yola çıkar, arkasında tebeşir noktaları bırakır.
+        const float roll=1.5f;float lastDot=-1f;int dots=0;
+        for(float t=0;t<roll;t+=Time.unscaledDeltaTime)
+        {
+            float k=Mathf.SmoothStep(0,1,t/roll),u=1-k;
+            Vector2 p=u*u*a+2*u*k*ctrl+k*k*b;
+            marble.rectTransform.anchoredPosition=p;
+            if(t-lastDot>.055f)
+            {
+                lastDot=t;
+                var dot=Art(box,"İz",MahalleGraphic.Shape.Circle,0,0,0,0,new Color(Krem.r,Krem.g,Krem.b,.5f));
+                Centre(dot.rectTransform,p.x,p.y,14,14);dot.transform.SetSiblingIndex(marble.transform.GetSiblingIndex());
+                if(++dots%5==0&&SfxPlayer.Instance!=null)SfxPlayer.Instance.PlayMarbleTick(dots/5%6);
+            }
+            yield return null;
+        }
+        marble.rectTransform.anchoredPosition=b;
+
+        // 4) Yeni haritanın çemberi çizilir.
+        var ringB=Art(box,"Yeni çember",MahalleGraphic.Shape.ChalkRing,0,0,0,0,Amber);Centre(ringB.rectTransform,b.x,b.y,380,380);ringB.SetProgress(0f);
+        ringB.transform.SetSiblingIndex(marble.transform.GetSiblingIndex());
+        if(SfxPlayer.Instance!=null)SfxPlayer.Instance.PlayChalk(false);
+        for(float t=0;t<.8f;t+=Time.unscaledDeltaTime){ringB.SetProgress(Mathf.SmoothStep(0,1,t/.8f));yield return null;}
+        ringB.SetProgress(1f);
+        StartCoroutine(PopMarble(marble.transform));
+
+        // 5) Harita adı + misket yağmuru.
+        var pill=Panel(box,"Yeni harita",0,0,0,0,Amber);Centre(pill.rectTransform,0,-330,460,62);pill.radius=31;pill.highlight=false;
+        var pillText=Text(pill.transform,"YENİ HARİTA AÇILDI",0,0,460,62,26,Komur,TextAlignmentOptions.Center);pillText.fontStyle=FontStyles.Bold;
+        var title=Text(box,L.Up(L.T(Maps.Names[map])),0,0,1040,150,118,Amber,TextAlignmentOptions.Center);
+        Centre(title.rectTransform,0,-440,1040,150);title.fontStyle=FontStyles.Bold;
+        title.enableAutoSizing=true;title.fontSizeMin=60;title.fontSizeMax=118;
+        var sub=Text(box,Maps.Subtitles[map],0,0,960,60,32,new Color(Krem.r,Krem.g,Krem.b,.8f),TextAlignmentOptions.Center);
+        Centre(sub.rectTransform,0,-535,960,60);
+        pill.transform.localScale=title.transform.localScale=sub.transform.localScale=Vector3.zero;
+        if(SfxPlayer.Instance!=null)SfxPlayer.Instance.PlayWin();
+        StartCoroutine(MarbleRain(rain,layer.rect.height));
+        StartCoroutine(PopMarble(pill.transform));
+        yield return new WaitForSecondsRealtime(.12f);
+        StartCoroutine(PopMarble(title.transform));
+        yield return new WaitForSecondsRealtime(.18f);
+        yield return PopMarble(sub.transform);
+        yield return new WaitForSecondsRealtime(.4f);
+
+        // 6) Düğmeler.
+        var buttons=Rect("Düğmeler",box);Stretch(buttons);
+        var bgroup=buttons.gameObject.AddComponent<CanvasGroup>();bgroup.alpha=0;
+        System.Action close=()=>{if(layer!=null)Destroy(layer.gameObject);introPlaying=false;};
+        var go=LabelButton(buttons,"HADİ GİDELİM",0,0,0,0,Amber,Komur,()=>
+        {close();RememberMap(map);district=MahalleProfile.NextLevelIn(map)/Campaign.PerDistrict;tab=0;ShowHome();},40);
+        Centre((RectTransform)go.transform,0,-700,760,120);
+        var goFace=go.GetComponent<MahalleGraphic>();goFace.radius=60;goFace.shadow=10;goFace.highlight=false;
+        foreach(var t in go.GetComponentsInChildren<TextMeshProUGUI>()){t.fontStyle=FontStyles.Bold;t.rectTransform.sizeDelta=new Vector2(736,120);}
+        var later=LabelButton(buttons,"SONRA",0,0,0,0,new Color(0,0,0,0),new Color(Krem.r,Krem.g,Krem.b,.7f),()=>close(),30);
+        Centre((RectTransform)later.transform,0,-830,400,80);
+        foreach(var t in later.GetComponentsInChildren<TextMeshProUGUI>())t.rectTransform.sizeDelta=new Vector2(376,80);
+        yield return Fade(bgroup,.3f);
+    }
+    // Yukarıdan düşen renkli misketler; ekranın altından çıkınca silinir.
+    private IEnumerator MarbleRain(RectTransform parent,float height)
+    {
+        const int count=30;
+        var items=new RectTransform[count];var speed=new float[count];
+        for(int i=0;i<count;i++)
+        {
+            float size=UnityEngine.Random.Range(34f,62f);
+            var m=Art(parent,"Yağan misket",MahalleGraphic.Shape.Marble,0,0,0,0,Campaign.SkinColors[UnityEngine.Random.Range(0,Campaign.SkinColors.Length)]);
+            items[i]=Centre(m.rectTransform,UnityEngine.Random.Range(-500f,500f),height*.5f+60+UnityEngine.Random.Range(0f,900f),size,size);
+            speed[i]=UnityEngine.Random.Range(700f,1300f);
+        }
+        for(float t=0;t<4f&&parent!=null;t+=Time.unscaledDeltaTime)
+        {
+            for(int i=0;i<count;i++)
+                if(items[i]!=null){speed[i]+=900f*Time.unscaledDeltaTime;items[i].anchoredPosition-=new Vector2(0,speed[i]*Time.unscaledDeltaTime);}
+            yield return null;
+        }
+        if(parent!=null)foreach(var r in items)if(r!=null)Destroy(r.gameObject);
     }
 
     // Harita altinda tek ana eylem dugmesi. Siyah geciste yok; alt cubuk Nav() cizer.
@@ -1196,6 +1324,10 @@ public class MahalleUI : MonoBehaviour
         bool won=controller.State==LevelController.LevelState.Won;
         int need=MahalleProfile.Required(controller.LevelIndex);
         bool passed=won&&controller.Stars>=need;
+        // Test yapısında harita geçişi kayıttan tetiklenmez: son bölümü geçince haritaya dönüşte oynasın.
+        if(passed&&MahalleProfile.TestUnlockAllLevels&&!GameSession.DailyMode&&!GameSession.EndlessMode
+           &&Maps.Local(controller.LevelIndex)==Maps.PerMap-1&&Maps.MapOf(controller.LevelIndex)+1<Maps.Count)
+            pendingMapIntro=Maps.MapOf(controller.LevelIndex)+1;
         var box=Modal("Bölüm sonucu",won&&passed&&controller.HasNextLevel?1110:1010);
         Text(box,won?(controller.LastReward.newBadge||(controller.Level.mastery&&passed)?"MAHALLE USTASI!":"GÜZEL ATIŞLAR!"):"BİR DAHA DENE",30,34,924,77,51,Ink,TextAlignmentOptions.Center);
         Text(box,controller.Level.levelName,30,114,924,47,31,Muted,TextAlignmentOptions.Center);
