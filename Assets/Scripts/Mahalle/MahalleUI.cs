@@ -957,7 +957,7 @@ public class MahalleUI : MonoBehaviour
         string[] notes={
             "Bitirdiğin bölümlerde çemberden çıkardıkların",
             "Tek bir atışla aynı anda çıkardığın en çok misket",
-            fav>=0?L.F("{0} bölüm bitirdin",MahalleProfile.Data.districtPlays[fav]):"Bir bölüm bitirince burada görünür"};
+            fav>=0?L.F("{0} bölüm bitirdin",MahalleProfile.DistrictPlays(fav)):"Bir bölüm bitirince burada görünür"};
         for(int i=0;i<3;i++)
         {
             var card=Panel(content,labels[i],48,370+i*250,984,220,Cream);

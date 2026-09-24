@@ -148,6 +148,15 @@ public static class MapsVerify
         Check(round.maps[0].stars[3] == 3, "Maps: Memleket stars survive save/load");
         Check(round.lastMap == 1, "Maps: last map survives save/load");
 
+        // --- sıfırlama: yeni kayıt Memleket slotuyla gelmeli (yoksa İstatistik çöküyordu) ---
+        MahalleProfile.Reset();
+        var fresh = MahalleProfile.Data;
+        Check(fresh.maps != null && fresh.maps.Length == Maps.Count - 1 && fresh.maps[0].stars.Length == Maps.PerMap, "Maps: reset save has map slots");
+        Check(MahalleProfile.TotalStars == 0 && MahalleProfile.FavoriteDistrict() == -1 && MahalleProfile.AchievementProgress(0) == 0, "Maps: stats readable after reset");
+        fresh.maps[0].districtPlays[2] = 4;
+        Check(MahalleProfile.FavoriteDistrict() == 7 && MahalleProfile.DistrictPlays(7) == 4, "Maps: Memleket favourite district read through map slot");
+        MahalleProfile.SetTestData(round);
+
         // --- oyun oturumu ---
         int old = GameSession.SelectedLevelIndex;
         GameSession.SelectedLevelIndex = Maps.Global(1, 7);

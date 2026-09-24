@@ -544,5 +544,6 @@ public static class MahalleProfile
         Data.claimed[id] = true; Data.beads += MissionRewards[id]; Save(); return true;
     }
     public static void Reload() { data = null; }
-    public static void Reset() { data = new MahalleSave(); Save(); }
+    // Normalize şart: yeni kayıtta maps boş dizi, Memleket okunurken taşıyordu (İstatistik çöküyordu).
+    public static void Reset() { data = new MahalleSave(); Normalize(data); Save(); }
 }
