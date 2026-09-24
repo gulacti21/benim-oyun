@@ -126,6 +126,8 @@ public static class L
         {"YENİ HARİTA AÇILDI", "NEW MAP UNLOCKED"},
         {"HADİ GİDELİM", "LET'S GO"},
         {"SONRA", "LATER"},
+        {"İlerlemen iCloud'dan yüklendi.", "Your progress was loaded from iCloud."},
+        {"GAME CENTER · SIRALAMA", "GAME CENTER · LEADERBOARDS"},
         {"Sahil", "Beach"}, {"Köy Meydanı", "Village Square"}, {"Yayla", "Highlands"},
         {"Kasaba Pazarı", "Town Market"}, {"Bayram Yeri", "Fairground"},
         {"Kum ayağının altında. Misket de yavaşlıyor.", "Sand under your feet. The marble slows down too."},

@@ -47,6 +47,7 @@ public class MahalleUI : MonoBehaviour
         if(FindFirstObjectByType<AudioListener>()==null)
         {var cam=Camera.main!=null?Camera.main.gameObject:gameObject;cam.AddComponent<AudioListener>();}
         MusicPlayer.Ensure();
+        MisketrGameCenter.Authenticate();
         MisketrNotify.Refresh();
         controller=FindFirstObjectByType<LevelController>();
         if(controller!=null)controller.AnchorRefunded+=()=>Toast("Misketin işe yarar bir yerde kalmadı. Hakkın iade edildi.");
@@ -240,7 +241,7 @@ public class MahalleUI : MonoBehaviour
 
     private void ShowTitle(bool instant)
     {
-        titleShown=true;
+        titleShown=true;onHome=false;
         ClearPage();
         Background(new Color(.14f, .12f, .10f));
         MenuBackdrop();
@@ -466,6 +467,7 @@ public class MahalleUI : MonoBehaviour
     // ---------------------------------------------------------------
     private void ShowHome()
     {
+        onHome=true;
         ClearPage();
         if(tab==0){Background(new Color(.74f,.67f,.55f));MapScreen();}
         else
@@ -945,7 +947,7 @@ public class MahalleUI : MonoBehaviour
     // İSTATİSTİK: üç kart. Rekor ve mahalle sayımı bu sürümle başladı.
     private void Stats()
     {
-        var content=HomeScroll(2180);
+        var content=HomeScroll(MisketrCloud.Enabled?2300:2180);
         Text(content,"Karnen",48,190,984,66,47,Ink);
         Text(content,"Bitirdiğin her bölüm buraya yazılır.",48,268,984,70,30,Muted);
         int fav=MahalleProfile.FavoriteDistrict();
@@ -992,6 +994,9 @@ public class MahalleUI : MonoBehaviour
             Panel(kart.transform,"Yol",712,64,240,10,Line).radius=5;
             var d2=Panel(kart.transform,"Dolu",712,64,Mathf.Max(10f,240f*ilerleme/hedef),10,tamam?Gold:Ink);d2.radius=5;
         }
+        // Game Center: liderlik tabloları ve başarımlar (ücretli hesapla açılır, MisketrCloud.Enabled).
+        if(MisketrCloud.Enabled)
+            LabelButton(content,"GAME CENTER · SIRALAMA",48,2170,984,96,Ink,Cream,MisketrGameCenter.ShowDashboard,30);
     }
     private void Missions()
     {
@@ -1249,8 +1254,25 @@ public class MahalleUI : MonoBehaviour
         }
     }
 
+    // iCLOUD / GAME CENTER: menüdeyken iki saniyede bir bak. Başka cihazdan daha yeni
+    // kayıt geldiyse al (oyun sırasında asla), değişen skor/başarımları gönder.
+    private float nextCloudTick;
+    private bool onHome;
+    private void CloudTick()
+    {
+        if(!MisketrCloud.Enabled||controller!=null||Time.unscaledTime<nextCloudTick)return;
+        nextCloudTick=Time.unscaledTime+2f;
+        if(MisketrCloud.ConsumeChanged()&&MahalleProfile.AdoptCloudIfNewer())
+        {
+            district=MahalleProfile.NextLevelIn(CurrentMap())/Campaign.PerDistrict;
+            if(onHome&&modal==null)ShowHome();
+            Toast("İlerlemen iCloud'dan yüklendi.");
+        }
+        MisketrGameCenter.ReportIfChanged();
+    }
     private void Update()
     {
+        CloudTick();
         if(controller==null || scoreLabel==null)return;
         if(GameSession.EndlessMode)
         {

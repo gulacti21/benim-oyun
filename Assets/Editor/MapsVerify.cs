@@ -67,7 +67,8 @@ public static class MapsVerify
         foreach (var t in new[] { "HARİTALAR", "BURADASIN", "{0} / {1} yıldız", "Her haritanın kendi 60 bölümü var. Dokun, geç.",
                                   "{0} haritasını bitir, bu harita açılsın.", "{0} açıldı! Haritalar'dan geçebilirsin.",
                                   "{0} haritası, {1} haritasının son bölümünü geçince açılır.",
-                                  "{0} TAMAMLANDI", "YENİ HARİTA AÇILDI", "HADİ GİDELİM", "SONRA" })
+                                  "{0} TAMAMLANDI", "YENİ HARİTA AÇILDI", "HADİ GİDELİM", "SONRA",
+                                  "İlerlemen iCloud'dan yüklendi.", "GAME CENTER · SIRALAMA" })
             Check(L.Has(t), "Maps: EN map screen text " + t);
 
         // --- yeni özellik kartları: her özellik ilk kez kendi öğretme bölümünde çıkar ---

@@ -494,6 +494,32 @@ Eğimli bölümde ekranın üstünde EĞİM rozeti (ok yönü); zemindeki oklar 
 - Batchmode ölçümleri uzun sürer (60 bölüm ~1-3 saat): `nohup … &` ile
   başlat, log'u izle. Aynı projede ikinci Unity açılamaz.
 
+## iCLOUD KAYDI + GAME CENTER (2026-09-24, KAPALI — ücretli hesap bekliyor)
+
+`Scripts/Mahalle/MisketrCloud.cs` + `Plugins/iOS/MisketrCloud.mm`. Tek anahtar:
+`MisketrCloud.Enabled` (şimdi **false**). Ücretsiz Apple hesabıyla bu yetkiler varken
+Xcode imzalayamaz; false iken oyun bugünkü gibi derlenir, hiçbir çağrı yapılmaz.
+
+- **iCloud:** kayıt JSON'u NSUbiquitousKeyValueStore'a da yazılır. `MahalleSave.saveCount`
+  her kayıtta artar; açılışta ve menüdeyken (2 sn'de bir) buluttaki daha büyükse o alınır
+  (oyun sırasında asla). Sıfırlama sayacı korur, yoksa eski ilerleme buluttan geri gelirdi.
+- **Game Center:** açılışta giriş; menüde değişen toplam yıldız / tek atış rekoru ve
+  6 başarımın yüzdesi gönderilir. İstatistik'te "GAME CENTER · SIRALAMA" düğmesi.
+- `IosPostBuild`: GameKit her zaman bağlanır; yetkiler (iCloud KVS + Game Center)
+  sadece Enabled iken eklenir.
+
+**Açmak için (kullanıcı, ücretli hesap alınca):**
+1. `MisketrCloud.Enabled = true`, Player Settings'te Team ID.
+2. App Store Connect → uygulama → Game Center: liderlik tabloları `misko.yildiz`
+   (toplam yıldız) ve `misko.tek_atis` (tek atış), başarımlar `misko.basarim1`…`6`
+   (sıra: İlk Atış, Mahalle Ustası, Keskin Nişancı, Koleksiyoncu, Sadık Oyuncu, Yıldız Avcısı).
+3. Telefonda iki cihaz / sil-kur ile iCloud'dan ilerlemenin geldiğini dene.
+
+**Ekran testi (`ScreenVerify`, MahalleVerify içinde):** menü ekranları + pencereler +
+harita geçişi × 4 kayıt (yeni, sıfırlanmış, yarıda, iki harita bitmiş). Çökmeyi yakalar,
+görünümü değil. Sıfırlanmış kayıt gerçek `Reset()` yolundan kurulur (SetTestData onarıp
+hatayı gizliyordu — denendi).
+
 ## ÇALIŞMA TARZI
 
 - Türkçe konuş, teknik terimler İngilizce kalsın.

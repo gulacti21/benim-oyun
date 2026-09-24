@@ -23,8 +23,20 @@ public static class IosPostBuild
 
         proj.AddFrameworkToProject(framework, "UserNotifications.framework", false);
         proj.AddFrameworkToProject(main, "UserNotifications.framework", false);
+        // MisketrCloud.mm GameKit kullanıyor: yetki kapalı olsa da bağlanmalı, yoksa link hatası.
+        proj.AddFrameworkToProject(framework, "GameKit.framework", false);
 
         proj.WriteToFile(projPath);
+
+        // iCloud (anahtar-değer deposu) + Game Center yetkileri. SADECE ücretli hesapla:
+        // ücretsiz hesapta bu yetkiler varken Xcode imzalayamaz. Anahtar: MisketrCloud.Enabled.
+        if (MisketrCloud.Enabled)
+        {
+            var caps = new ProjectCapabilityManager(projPath, "Unity-iPhone/misko.entitlements", null, main);
+            caps.AddiCloud(true, false, null);
+            caps.AddGameCenter();
+            caps.WriteToFile();
+        }
     }
 }
 #endif

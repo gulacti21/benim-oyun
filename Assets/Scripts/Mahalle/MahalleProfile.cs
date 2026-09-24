@@ -50,6 +50,9 @@ public class MahalleSave
     public int mapsAnnounced;
     // Oyuncuya anlatılan yeni özellikler (MahalleUI.Mechanics bitleri: kum, çamur, eğim, buz, karpuz, çukur).
     public int mechanicsSeen;
+    // iCLOUD: her kayıtta bir artar. İki kayıttan sayısı büyük olan daha yenidir
+    // (yeni telefon / yeniden kurulum buluttakini alır). Sıfırlamada sayı korunur.
+    public int saveCount;
 }
 
 [Serializable]
@@ -98,9 +101,30 @@ public static class MahalleProfile
                 data = new MahalleSave();
                 for (int i = 0; i < 6; i++) data.stars[i] = Mathf.Clamp(PlayerPrefs.GetInt("MISKETR_Stars_" + i, 0), 0, 3);
             }
+            var cloud = LoadCloud();
+            if (cloud != null && cloud.saveCount > data.saveCount) { data = cloud; WriteLocal(JsonUtility.ToJson(data)); }
             Normalize(data);
             return data;
         }
+    }
+    // Buluttaki kayıt (sağlaması tutmuyorsa yok sayılır).
+    private static MahalleSave LoadCloud()
+    {
+        if (!MisketrCloud.Read(out string json, out string sum)) return null;
+        if (sum != Checksum(json)) return null;
+        try { var loaded = JsonUtility.FromJson<MahalleSave>(json); return loaded != null && loaded.stars != null ? loaded : null; }
+        catch (Exception) { return null; }
+    }
+    // Oyun açıkken başka cihazdan / geç gelen bulut kaydı daha yeniyse onu alır.
+    public static bool AdoptCloudIfNewer()
+    {
+        var cloud = LoadCloud();
+        if (cloud == null || cloud.saveCount <= Data.saveCount) return false;
+        Normalize(cloud);
+        data = cloud;
+        WriteLocal(JsonUtility.ToJson(data));
+        Changed?.Invoke();
+        return true;
     }
     private static void Normalize(MahalleSave value)
     {
@@ -195,7 +219,14 @@ public static class MahalleProfile
 #if UNITY_EDITOR
         if (TestMode || PreviewMode) { Changed?.Invoke(); return; }
 #endif
+        Data.saveCount++;
         string json = JsonUtility.ToJson(Data);
+        WriteLocal(json);
+        MisketrCloud.Write(json, Checksum(json));
+        Changed?.Invoke();
+    }
+    private static void WriteLocal(string json)
+    {
         // Önceki kayıt sağlamsa yedeğe al; bozuksa yedeğe dokunma.
         if (LoadSlot(SaveKey, SumKey) != null)
         {
@@ -205,7 +236,6 @@ public static class MahalleProfile
         PlayerPrefs.SetString(SaveKey, json);
         PlayerPrefs.SetString(SumKey, Checksum(json));
         PlayerPrefs.Save();
-        Changed?.Invoke();
     }
 
     // Test için: bir kaydın sağlam okunup okunmadığını söyler.
@@ -545,5 +575,6 @@ public static class MahalleProfile
     }
     public static void Reload() { data = null; }
     // Normalize şart: yeni kayıtta maps boş dizi, Memleket okunurken taşıyordu (İstatistik çöküyordu).
-    public static void Reset() { data = new MahalleSave(); Normalize(data); Save(); }
+    // Sayaç korunur: yoksa sıfırlanan kayıt buluttaki eskiden "eski" görünür, eski ilerleme geri gelirdi.
+    public static void Reset() { int count = data != null ? data.saveCount : 0; data = new MahalleSave(); Normalize(data); data.saveCount = count; Save(); }
 }
