@@ -919,7 +919,7 @@ public class MahalleUI : MonoBehaviour
         string hedef=GameSession.EndlessMode
                    ? L.F("Her misket +{0} saniye",EndlessLevel.TimePerMarble.ToString("0.#"))
                    : GameSession.TutorialMode ? L.T("Bütün misketleri çemberin dışına çıkar")
-                   : L.F("En az {0} misketi çemberden çıkar",controller.Level.oneStarTarget);
+                   : L.F("En az {0} misketi çemberden çıkar",PassTarget());
         // Hedef artik ayri bir krem kutu degil, ayni panelin alt seridi.
         // Ayri kutu cemberle HUD'un arasini daraltiyordu.
         Panel(bilgi.transform,"Hedef ayırıcı",40,132,904,2,new Color(Krem.r,Krem.g,Krem.b,.16f)).radius=1;
@@ -1179,6 +1179,14 @@ public class MahalleUI : MonoBehaviour
         else LabelButton(box,"TEKRAR DENE",36,290,912,100,new Color(.88f,.83f,.69f),Ink,()=>{CloseModal();controller.RestartLevel();ShowGame();});
         LabelButton(box,"MAHALLEYE DÖN",36,416,912,100,new Color(.88f,.83f,.69f),Ink,()=>controller.OpenLevelSelect());
         LabelButton(box,"AYARLAR",36,554,912,78,Paper,Muted,Settings,27);
+    }
+    // Hedef yazısı: sonraki bölümü açmak için gereken misket. Ustalık sınavında 2 yıldız
+    // gerekiyor, 1 yıldızın sayısını yazmak oyuncuyu yanıltıyordu (kullanıcı, 2026-09-24).
+    private int PassTarget()
+    {
+        var l=controller.Level;
+        int need=GameSession.DailyMode?1:MahalleProfile.Required(controller.LevelIndex);
+        return need>=3?l.threeStarTarget:need==2?l.twoStarTarget:l.oneStarTarget;
     }
     private void Results()
     {
