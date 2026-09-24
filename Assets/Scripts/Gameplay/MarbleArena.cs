@@ -328,7 +328,7 @@ public class MarbleArena : MonoBehaviour
         {
             MarbleSpot spot = handPlaced[i];
             Vector3 position = new Vector3(center.x + spot.x, spawnHeight, center.z + spot.z);
-            SpawnMarbleAt(position, "TargetMarble_h" + i);
+            SpawnMarbleAt(position, "TargetMarble_h" + i, spot.kind);
         }
     }
 
@@ -385,7 +385,7 @@ public class MarbleArena : MonoBehaviour
         }
     }
 
-    private void SpawnMarbleAt(Vector3 position, string instanceName)
+    private void SpawnMarbleAt(Vector3 position, string instanceName, MarbleKind kind = MarbleKind.Normal)
     {
         GameObject instance = Instantiate(targetMarblePrefab, position, Quaternion.identity, transform);
         instance.name = instanceName;
@@ -399,5 +399,8 @@ public class MarbleArena : MonoBehaviour
             spawnedMarbles.Add(marble);
             activeMarbles.Add(marble);
         }
+
+        // HARİTA 2: buzlu misket kabuğu içinde, kıpırdamadan başlar.
+        if (kind == MarbleKind.Ice) instance.AddComponent<IceShell>().Freeze(true);
     }
 }

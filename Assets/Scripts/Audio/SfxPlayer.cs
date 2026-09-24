@@ -79,6 +79,25 @@ public class SfxPlayer : MonoBehaviour
         Play(marbleHitClip, 0.25f + (0.7f * Mathf.Clamp01(strength)), Random.Range(0.9f, 1.15f));
     }
 
+    // BUZLU MİSKET: kırılma = yüksek perdeli sert tık üst üste, zayıf darbe = ince kısa tık.
+    // Ayrı ses dosyası yok; misket çarpma sesinin perdesi yükseltilerek üretilir.
+    public void PlayIceBreak(float strength)
+    {
+        Play(marbleHitClip, .7f + .3f * Mathf.Clamp01(strength), 1.75f);
+        Play(marbleHitClip, .45f, 2.3f);
+    }
+
+    public void PlayIceTick(float strength)
+    {
+        Play(marbleHitClip, .18f + .25f * Mathf.Clamp01(strength), 2.6f);
+    }
+
+    // BÖLÜNEN MİSKET: kısa "çıt" — alçak ve kuru.
+    public void PlaySplit(float strength)
+    {
+        Play(marbleHitClip, .6f + .35f * Mathf.Clamp01(strength), .72f);
+    }
+
     public void PlayMarbleOut()
     {
         Play(marbleOutClip, 0.7f, Random.Range(0.98f, 1.05f));

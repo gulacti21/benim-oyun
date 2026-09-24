@@ -6,8 +6,13 @@ using UnityEngine;
 public struct MarbleSpot
 {
     public float x, z;
-    public MarbleSpot(float x, float z) { this.x = x; this.z = z; }
+    // Harita 2: buzlu / bölünen misket. Varsayılan Normal, Harita 1'in bütün bölümleri Normal.
+    public MarbleKind kind;
+    public MarbleSpot(float x, float z) { this.x = x; this.z = z; kind = MarbleKind.Normal; }
+    public MarbleSpot(float x, float z, MarbleKind kind) { this.x = x; this.z = z; this.kind = kind; }
 }
+
+public enum MarbleKind { Normal = 0, Ice = 1, Split = 2 }
 
 // Gerçek çarpışan engel. Dekor değildir: misket ona çarpar ve seker.
 [System.Serializable]

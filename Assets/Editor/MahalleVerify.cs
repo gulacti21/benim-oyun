@@ -57,6 +57,7 @@ public static class MahalleVerify
             checks += ShooterTapVerify.RunChecks();
             checks += MapLayoutVerify.RunChecks();
             checks += MapsVerify.RunChecks();
+            checks += IceMarbleVerify.RunChecks();
             // GÖRÜNÜM TUTARLILIĞI: bir mahalledeki bütün bölümler aynı zemin ve
             // aynı kamera kuralıyla kurulmalı; bölüme özel ortam denemesi kalmamalı.
             for(int d=0;d<5;d++)

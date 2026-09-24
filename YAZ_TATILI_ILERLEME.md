@@ -8,8 +8,8 @@ _(iş bitince buraya 10 satırlık özet gelecek)_
 
 | Faz | Durum | Commit | MahalleVerify |
 |---|---|---|---|
-| 1 Harita altyapısı | ✅ bitti | (aşağıda) | 5461 kontrol yeşil (Harita 1'in 4291'i + 1170 yeni) |
-| 2 Buzlu misket | ⏳ | | |
+| 1 Harita altyapısı | ✅ bitti | 47c584e | 5461 kontrol yeşil (Harita 1'in 4291'i + 1170 yeni) |
+| 2 Buzlu misket | ✅ bitti | (aşağıda) | 5481 yeşil (+20 buz) |
 | 3 Bölünen misket | ⏳ | | |
 | 4 Zemin kuralları | ⏳ | | |
 | 5 60 bölüm dizilimi | ⏳ | | |
@@ -72,8 +72,70 @@ dokunuş testi dahil) aynen geçiyor.
 
 ---
 
+## Ölçü notu: "geçme oranı" = temizlenebilirlik
+
+Plandaki Harita 1 merdiveni (Apartman %97 → Meydan %57) bir geçme oranı değil;
+`ParkPhysicsVerify.RunAll`'ın **temizlenebilirlik** ölçüsü: açgözlü arama ile
+normal misketin çıkarabildiği en çok misket / toplam misket (bkz.
+`Logs/AllLevelsPhysicsVerify.txt`, "ZORLUK OZETI"). Harita 2 hedefleri
+(Sahil ~%62 → Bayram ~%40) bu yüzden aynı ölçüyle ayarlanacak (Faz 6).
+Aynı logda Harita 1 için bir uyarı var: "KAPALI BOLUMLER: PARK 10 (gecis 7,
+tavan 6)" — açgözlü arama PARK 10'da 7'yi bulamamış. Eski ölçüm, Harita 1'e
+dokunulmadı; ayrıca bakılmalı.
+
+---
+
+## Faz 2 — Buzlu misket (2026-09-24)
+
+**Nasıl çalışıyor** (`Gameplay/IceShell.cs`)
+- Bölüm verisinde `MarbleSpot.kind = MarbleKind.Ice` (yeni alan, varsayılan
+  Normal → Harita 1'in bütün bölümleri aynen).
+- Buzlu misket **kinematic** başlar: kıpırdamaz, çarpan misket duvara çarpmış
+  gibi seker. Temas doğrultusundaki bağıl hız ≥ `BreakSpeed` ise kabuk kırılır;
+  misket kinematic iken vurulduğu için **hız almaz, yerinde kalır**, sonra normal
+  hedef olur. Eşik altı darbe: ince tık sesi + kısa çatlak parıltısı, başka bir
+  şey yok.
+- Görsel: `Resources/Mahalle/Ice.shader` (yarı saydam açık mavi, fresnel kenar,
+  çatlak çizgileri). Kabuk = Sphere primitive, materyal önce atanır, collider
+  hemen silinir (bileşik collider olmasın). Kırılınca 7 küçük Cube parçası.
+  Ses: mevcut `MarbleHit` klibinin perdesi yükseltilerek (kırılma 1.75+2.3,
+  tık 2.6) — yeni ses dosyası yok.
+- `[ExecuteAlways]`: ölçüldü, preview sahnede `physicsScene.Simulate` ile
+  normal MonoBehaviour'a `OnCollisionEnter` **gelmiyor**, `[ExecuteAlways]`
+  olana geliyor. Böylece fizik ölçüm araçları oyunun bileşeninin aynısını
+  kullanabiliyor (ayrı bir taklit yok).
+
+**Eşik ölçümü** (`IceMarbleVerify.Measure`, `Logs/IceThreshold.txt`),
+atıcı çizgisi → buz mesafesine göre temas hızı (m/s):
+
+| güç | 1.5 | 3.0 | 4.5 | 6.0 | 7.5 |
+|---|---|---|---|---|---|
+| %30 | 2.28 | 1.41 | 0.55 | 0 | 0 |
+| %45 | 4.45 | 2.88 | 2.01 | 1.15 | 0.29 |
+| %60 | 6.64 | 4.61 | 3.49 | 2.65 | 1.77 |
+| %80 | 9.41 | 7.78 | 6.01 | 4.64 | 3.78 |
+| %100 | 12.08 | 10.58 | 9.01 | 7.42 | 5.86 |
+
+Zincir (önce normal misket, o buza): %60 → 1.55, %80 → 4.28, %100 → 6.54.
+Yavaş yuvarlanan misket 3 m/s ile gelse bile buza 2.55.
+
+**Seçim: `BreakSpeed = 3.0 m/s`.** Saha ortasındaki buz (~4.5) %55 civarı
+güçle kırılır, uzak kenardaki (~7.5) %70+ ister; yakın buz %40 civarı.
+Dolaylı (zincir) kırma sadece sert atışta (%80+) olur, atıştan sonra
+yuvarlanan misketler asla kırmaz. Yani "kırmak" bilinçli, sert bir atış.
+
+**Test (`IceMarbleVerify.RunChecks`, 20 kontrol):** donuk başlar ve kaymaz;
+zayıf darbe kırmaz, kıpırdatmaz, atıcı seker; tam güç kırar, tek sefer olay,
+misket yerinde (<0.05 kayma), gövde dinamik olur ve çarpışma modu geri gelir;
+ikinci vuruş misketi taşır; eşiğin %85'i kırmaz, %125'i kırar; ölçüm aracı için
+Freeze/Thaw geri sarılabilir; shader Resources'ta.
+
+---
+
 ## Telefonda kontrol edilecek
 - (Faz 7'ye kadar Memleket'e arayüzden girilemiyor; görsel kontrol o zaman.)
+- Buz kabuğu görünümü (saydamlık, kenar parlaklığı), kırılma parçaları ve
+  kırılma/tık sesinin perdesi.
 
 ## Bekleyen işler (kullanıcıda)
 - Memleket görselleri: `Resources/Mahalle/Map/Harita{Sahil,Koy,Yayla,Pazar,Bayram}.png`
