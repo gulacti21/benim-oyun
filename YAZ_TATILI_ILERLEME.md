@@ -427,6 +427,36 @@ misket ister (Harita 1'in tasarım kuralı).
 
 Bölge ortalamaları: Sahil %60 · Köy Meydanı %57 · Yayla %51 · Kasaba Pazarı %49 · Bayram Yeri %45 · **Memleket %53** (Mahalle %73).
 
+**Son ölçüm (son atış hakları ve hedeflerle, 713.010 + 500.946 simülasyon):**
+Açgözlü tavanlar `Tuning` tablosuyla birebir aynı çıktı (tekrarlanabilirlik).
+"Sıradan oyuncu" (rastgele 10 aday, nişan/güç hatası) 1-yıldız geçme oranı,
+bölge ortalaması: Sahil %35 · Köy %39 · Yayla %26 · Pazar %39 · Bayram %26.
+12 bölümde %10'un altında (Sahil 07/11/12, Köy 11/12, Yayla 04/06/12, Pazar
+08, Bayram 08/11/12). **Yorum:** bu model kötümser — aynı modelle Harita 1'de
+Okul 07 %11, Park 07 %0, Toprak 09 %1 çıkıyor, yani oyuncunun gerçek geçme
+oranı değil, bölümler arası karşılaştırma. Yine de bu 12 bölüm telefonda ilk
+denenecekler: gerçek oyuncu zorlanırsa en ucuz ayar atış hakkını +1 yapmak
+(`Tuning` satırı; tavan eğrisi `Logs/MemleketCurve.tsv`'de hazır, yeniden
+ölçmeye gerek yok).
+
+**Güç ve özel misketle tavan (ustalık sınavları):**
+
+| Sınav | Normal | Baş Misket | Demir | Ağır | İnce | Sekici | Kaygan | 3y |
+|---|---|---|---|---|---|---|---|---|
+| Sahil 12 | 7 | 10 | 9 | 4 | 7 | 6 | 8 | 12 |
+| Köy 12 | 7 | 10 | 8 | 4 | 6 | 7 | 9 | 13 |
+| Yayla 12 | 6 | 5 | 9 | 5 | 7 | 7 | 7 | 13 |
+| Pazar 12 | 7 | 12 | 11 | 7 | 6 | 8 | 10 | 15 |
+| Bayram 12 | 6 | 11 | 10 | 6 | 8 | 8 | 9 | 15 |
+
+Güçler (Baş Misket, Demir) her sınavda tavanı 3-5 misket yükseltiyor ama
+**hiçbirinde geçiş için şart değil** (kilit = normal misketin tavanı) — para
+tuzağı yok. 3 yıldız hiçbir tek varyantla açgözlü aramada bulunmadı: güçlerin
+atış atış karıştırılmasını bu arama denemiyor; "3 yıldız = ustalık" tasarımı
+Harita 1'deki gibi. Buzlu sınavda (Yayla) Baş Misket normalden kötü (5 < 6):
+büyük misket buz kabuğunu kırmak için gereken hızı yakalayamıyor — ilginç bir
+taktik not, oyuncuya ipucu olabilir.
+
 ---
 
 ## Faz 7 — Harita seçimi, görünüm, dil (2026-09-24)
