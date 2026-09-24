@@ -730,10 +730,20 @@ public class MahalleUI : MonoBehaviour
         var layer=Rect("Harita geçişi",transform);Stretch(layer);layer.SetAsLastSibling();
         var group=layer.gameObject.AddComponent<CanvasGroup>();group.alpha=0;
         var bg=Panel(layer,"Perde",0,0,1080,2600,Orman,true);bg.radius=0;bg.colorB=new Color(.078f,.157f,.133f);Stretch(bg.rectTransform);
+        // Arka plan: önceki haritanın son bölgesi (üst ucu), yeni çember çizilirken yeni
+        // haritanın ilk bölgesine (alt ucu, başlangıç) geçer. İkisi de yavaşça kayar.
+        var oldPhoto=Photo(layer,MahalleMapView.MapPhoto(Maps.FirstDistrict(map)-1));
+        // Özel geçiş görseli varsa o (Resources/Mahalle/Gecis/<Harita>.png), yoksa ilk bölgenin haritası.
+        var custom=Resources.Load<Texture2D>("Mahalle/Gecis/"+Maps.Names[map]);
+        var newPhoto=Photo(layer,custom!=null?custom:MahalleMapView.MapPhoto(Maps.FirstDistrict(map)));
+        if(newPhoto!=null)newPhoto.color=new Color(1,1,1,0);
+        var tint=Panel(layer,"Karartma",0,0,1080,2600,new Color(Orman.r,Orman.g,Orman.b,.55f));
+        tint.colorB=new Color(.078f,.157f,.133f,.82f);tint.radius=0;Stretch(tint.rectTransform);
         var rain=Rect("Misket yağmuru",layer);Stretch(rain);
         // Düzen 1080x1900'lük bir kutuda; kısa ekranda (iPad) kutu küçülür, taşmaz.
         var box=Centre(Rect("Geçiş içeriği",layer),0,0,1080,1900);
         Canvas.ForceUpdateCanvases();
+        StartCoroutine(PanPhotos(layer,oldPhoto,newPhoto));
         box.localScale=Vector3.one*Mathf.Min(1f,layer.rect.height/1900f);
         yield return Fade(group,.35f);
 
@@ -784,7 +794,13 @@ public class MahalleUI : MonoBehaviour
         var ringB=Art(box,"Yeni çember",MahalleGraphic.Shape.ChalkRing,0,0,0,0,Amber);Centre(ringB.rectTransform,b.x,b.y,380,380);ringB.SetProgress(0f);
         ringB.transform.SetSiblingIndex(marble.transform.GetSiblingIndex());
         if(SfxPlayer.Instance!=null)SfxPlayer.Instance.PlayChalk(false);
-        for(float t=0;t<.8f;t+=Time.unscaledDeltaTime){ringB.SetProgress(Mathf.SmoothStep(0,1,t/.8f));yield return null;}
+        for(float t=0;t<.8f;t+=Time.unscaledDeltaTime)
+        {
+            float k=Mathf.SmoothStep(0,1,t/.8f);ringB.SetProgress(k);
+            if(newPhoto!=null)newPhoto.color=new Color(1,1,1,k);
+            yield return null;
+        }
+        if(newPhoto!=null)newPhoto.color=Color.white;
         ringB.SetProgress(1f);
         StartCoroutine(PopMarble(marble.transform));
 
@@ -819,6 +835,34 @@ public class MahalleUI : MonoBehaviour
         Centre((RectTransform)later.transform,0,-830,400,80);
         foreach(var t in later.GetComponentsInChildren<TextMeshProUGUI>())t.rectTransform.sizeDelta=new Vector2(376,80);
         yield return Fade(bgroup,.3f);
+    }
+    // Tam ekran harita görseli (ekranı dolduracak kadar kırpılır). Görsel yoksa null.
+    private RawImage Photo(RectTransform parent,Texture2D tex)
+    {
+        if(tex==null)return null;
+        var r=Rect("Harita görseli",parent);Stretch(r);
+        var img=r.gameObject.AddComponent<RawImage>();img.texture=tex;img.raycastTarget=false;
+        return img;
+    }
+    // Eski harita üst uçtan aşağı, yeni harita alt uçta yukarı doğru hafifçe kayar.
+    private IEnumerator PanPhotos(RectTransform layer,RawImage oldPhoto,RawImage newPhoto)
+    {
+        for(float t=0;layer!=null;t+=Time.unscaledDeltaTime)
+        {
+            float k=Mathf.Clamp01(t/7f);
+            if(oldPhoto!=null)Crop(oldPhoto,layer,1f-.06f*k);
+            if(newPhoto!=null)Crop(newPhoto,layer,.06f*k);
+            yield return null;
+        }
+    }
+    // Görseli en-boy oranını bozmadan ekrana doldurur; along 0 = alt uç, 1 = üst uç.
+    private static void Crop(RawImage img,RectTransform layer,float along)
+    {
+        var tex=img.texture;float lw=layer.rect.width,lh=layer.rect.height;
+        if(tex==null||lw<=0||lh<=0)return;
+        float h=Mathf.Clamp01((float)tex.width/tex.height*lh/lw),w=1f;
+        if(h>=1f){h=1f;w=Mathf.Clamp01((float)tex.height/tex.width*lw/lh);}
+        img.uvRect=new Rect((1f-w)*.5f,(1f-h)*Mathf.Clamp01(along),w,h);
     }
     // Yukarıdan düşen renkli misketler; ekranın altından çıkınca silinir.
     private IEnumerator MarbleRain(RectTransform parent,float height)

@@ -33,6 +33,12 @@ public static class MahalleMapView
                                                           "HaritaSahil", "HaritaKoy", "HaritaYayla", "HaritaPazar", "HaritaBayram" };
     private static readonly string[] GroundFiles = { "Apartman", "Okul", "Park", "Toprak", "Meydan", "Sahil", "Koy", "Yayla", "Pazar", "Bayram" };
 
+    // Bölgenin harita görseli (yoksa null). Harita geçişi animasyonu arka plan olarak kullanır.
+    public static Texture2D MapPhoto(int district)
+    {
+        return district >= 0 && district < MapFiles.Length ? Resources.Load<Texture2D>("Mahalle/Map/" + MapFiles[district]) : null;
+    }
+
     // Secim durumu. Ekran her acilista yeniden kurulur.
     private static RectTransform[] nodes = new RectTransform[12];
     private static MahalleGraphic[] marks = new MahalleGraphic[12];
