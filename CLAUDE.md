@@ -299,6 +299,10 @@ bayraklar kapanınca ikisi de kaybolur.
 - Apple Developer Program ($99/yıl) → TestFlight ve IAP. Ücretsiz hesapla
   kendi telefonuna kurulabiliyor (7 günde bir yenilenmesi gerekiyor)
 
+**Sürüm planı (kullanıcı kararı, 2026-09-24):** 1.0 = Mahalle + Memleket (iki harita),
+reklamsız, satın almasız. 1.1 = yeni haritalar (Harita 3+) + ödüllü reklam + boncuk satışı.
+Online (önce arkadaşla oda kodu) 1.1'den sonra.
+
 **Kodda:**
 - Relay taşıyıcısı + oda kur/katıl ekranları (Cloud bağlanınca)
 - ~~Müzik yok~~ EKLENDİ: `Resources/Mahalle/Music/MahalleMuzigi.ogg`, `Audio/MusicPlayer.cs`
