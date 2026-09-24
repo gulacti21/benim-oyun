@@ -50,13 +50,16 @@ public class LevelController : MonoBehaviour
     public ShotController Shooter => shooter;
     public bool WaitingForSettle => waitingForSettle;
     private void Awake() { database = Campaign.Database; }
+    // Oynanan bölümün haritası (LevelIndex global).
+    public int Map => Maps.MapOf(LevelIndex);
 
     public event Action StateChanged;
 
     public LevelState State { get; private set; } = LevelState.Playing;
     public bool IsPaused { get; private set; }
     public int LevelIndex { get; private set; }
-    public bool HasNextLevel => database != null && LevelIndex + 1 < database.Count;
+    // Sonraki bölüm aynı haritada olmalı: haritanın son bölümünden sonrakine otomatik geçilmez.
+    public bool HasNextLevel => Maps.Valid(LevelIndex + 1) && Maps.MapOf(LevelIndex + 1) == Map;
     public LevelData Level => level;
     public int ShotsUsed => shotsUsed;
     public int ShotsLeft => level != null ? Mathf.Max(0, level.shotCount - shotsUsed) : 0;
@@ -152,12 +155,12 @@ public class LevelController : MonoBehaviour
 
     public void RestartLevel()
     {
-        LevelIndex = Mathf.Clamp(GameSession.SelectedLevelIndex, 0, database.Count - 1);
+        LevelIndex = Mathf.Clamp(GameSession.SelectedLevelIndex, 0, Maps.TotalLevels - 1);
+        if (!MahalleProfile.Unlocked(LevelIndex)) LevelIndex = MahalleProfile.NextLevelIn(Maps.MapOf(LevelIndex));
         if (!MahalleProfile.Unlocked(LevelIndex)) LevelIndex = MahalleProfile.NextLevel;
 
-        if (database != null)
         {
-            LevelData fromDatabase = database.Get(LevelIndex);
+            LevelData fromDatabase = Maps.Get(LevelIndex);
 
             if (fromDatabase != null)
             {

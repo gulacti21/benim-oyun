@@ -40,6 +40,20 @@ public class MahalleSave
     public bool notifyAsked;
     public bool reviewAsked;
     public bool haptics = true;
+    // HARİTALAR: Harita 1 (Mahalle) yukarıdaki stars / districtRewards /
+    // districtPlays alanlarında kalır, eski kayıt aynen açılır. Harita 2 ve
+    // sonrası burada, harita başına ayrı. maps[0] = Harita 2 (Memleket).
+    public MapProgress[] maps = new MapProgress[0];
+    // Oyuncunun en son baktığı harita; oyun o haritada açılır.
+    public int lastMap;
+}
+
+[Serializable]
+public class MapProgress
+{
+    public int[] stars = new int[Maps.PerMap];
+    public bool[] districtRewards = new bool[Maps.DistrictsPerMap];
+    public int[] districtPlays = new int[Maps.DistrictsPerMap];
 }
 
 public struct RoundReward
@@ -115,6 +129,20 @@ public static class MahalleProfile
             if(SpecialMarbles.IsSpecial(value.selectedSkin))value.selectedSkin=0;
             value.version=3;
         }
+        if (value.maps == null) value.maps = new MapProgress[0];
+        Array.Resize(ref value.maps, Maps.Count - 1);
+        for (int m = 0; m < value.maps.Length; m++)
+        {
+            var mp = value.maps[m] ?? (value.maps[m] = new MapProgress());
+            if (mp.stars == null) mp.stars = new int[Maps.PerMap];
+            Array.Resize(ref mp.stars, Maps.PerMap);
+            for (int i = 0; i < mp.stars.Length; i++) mp.stars[i] = Mathf.Clamp(mp.stars[i], 0, 3);
+            if (mp.districtRewards == null) mp.districtRewards = new bool[Maps.DistrictsPerMap];
+            Array.Resize(ref mp.districtRewards, Maps.DistrictsPerMap);
+            if (mp.districtPlays == null) mp.districtPlays = new int[Maps.DistrictsPerMap];
+            Array.Resize(ref mp.districtPlays, Maps.DistrictsPerMap);
+        }
+        value.lastMap = Mathf.Clamp(value.lastMap, 0, Maps.Count - 1);
         for(int i=0;i<value.marbleLife.Length;i++)value.marbleLife[i]=Mathf.Clamp(value.marbleLife[i],0,SpecialMarbles.MaxLife);
         value.skins[0] = true;
         value.beads = Mathf.Max(0, value.beads);
@@ -239,9 +267,36 @@ public static class MahalleProfile
         return true;
     }
 
+    // ---------------------------------------------------------------
+    // HARİTA ERİŞİMİ. Bölüm numarası global (Maps): 0-59 Mahalle, 60-119 Memleket.
+    // Harita 1 eski alanlardan (Data.stars), sonrakiler Data.maps'ten okunur.
+    private static int[] StarArray(int map) => map == 0 ? Data.stars : Data.maps[map - 1].stars;
+    private static bool[] RewardArray(int map) => map == 0 ? Data.districtRewards : Data.maps[map - 1].districtRewards;
+    private static int[] PlayArray(int map) => map == 0 ? Data.districtPlays : Data.maps[map - 1].districtPlays;
+    public static int Stars(int index) => Maps.Valid(index) ? StarArray(Maps.MapOf(index))[Maps.Local(index)] : 0;
+    private static void SetStars(int index, int value) { if (Maps.Valid(index)) StarArray(Maps.MapOf(index))[Maps.Local(index)] = Mathf.Clamp(value, 0, 3); }
+    public static int DistrictPlays(int district)
+    {
+        if (district < 0 || district >= Maps.TotalDistricts) return 0;
+        return PlayArray(Maps.MapOfDistrict(district))[district % Maps.DistrictsPerMap];
+    }
+    public static bool DistrictRewarded(int district)
+    {
+        if (district < 0 || district >= Maps.TotalDistricts) return false;
+        return RewardArray(Maps.MapOfDistrict(district))[district % Maps.DistrictsPerMap];
+    }
+    // Harita açık mı: ilk bölümü açıksa açıktır (bir önceki haritanın son bölümü geçilmiş).
+    public static bool MapUnlocked(int map) => map >= 0 && map < Maps.Count && Unlocked(Maps.First(map));
+    public static int MapStars(int map) { int n = 0; if (map >= 0 && map < Maps.Count) foreach (int s in StarArray(map)) n += s; return n; }
+    // Bütün haritalardaki yıldızlar (istatistik, rozet, usta seviyesi hepsini sayar).
+    private static System.Collections.Generic.IEnumerable<int> AllStars()
+    {
+        for (int m = 0; m < Maps.Count; m++) foreach (int s in StarArray(m)) yield return s;
+    }
+
     public static bool Unlocked(int index)
     {
-        if (index < 0 || index >= Campaign.Count) return false;
+        if (index < 0 || index >= Maps.TotalLevels) return false;
 #if UNITY_EDITOR
         // TestMode = dogrulama testleri calisiyor; onlar gercek kilit kuralini olcmeli.
         if (TestUnlockAllLevels && !TestMode) return true;
@@ -249,18 +304,27 @@ public static class MahalleProfile
 #else
         if (TestUnlockAllLevels) return true;
 #endif
-        return index == 0 || Data.stars[index - 1] >= Required(index - 1);
+        // Haritanın ilk bölümü bir önceki haritanın ustalık sınavına bağlı: zincir kesintisiz.
+        return index == 0 || Stars(index - 1) >= Required(index - 1);
     }
 
     // Bu bölümü geçip sonrakini açmak için gereken yıldız.
     public static int Required(int index)
     {
-        if (index < 0 || index >= Campaign.Count) return 1;
-        var level = Campaign.Database.Get(index);
+        if (index < 0 || index >= Maps.TotalLevels) return 1;
+        var level = Maps.Get(index);
         return level != null ? Mathf.Max(1, level.starsToPass) : 1;
     }
-    public static int TotalStars { get { int n = 0; foreach (int s in Data.stars) n += s; return n; } }
-    public static int NextLevel { get { for (int i = 0; i < Campaign.Count; i++) if (Unlocked(i) && Data.stars[i] < Required(i)) return i; return Campaign.Count - 1; } }
+    public static int TotalStars { get { int n = 0; foreach (int s in AllStars()) n += s; return n; } }
+    // Harita 1'in sıradaki bölümü (eski davranış).
+    public static int NextLevel => NextLevelIn(0);
+    public static int NextLevelIn(int map)
+    {
+        map = Mathf.Clamp(map, 0, Maps.Count - 1);
+        int first = Maps.First(map), end = first + Maps.PerMap;
+        for (int i = first; i < end; i++) if (Unlocked(i) && Stars(i) < Required(i)) return i;
+        return end - 1;
+    }
     // Öğreticide güçler bedava: hak da boncuk da harcanmaz.
     public static bool CanUse(MarblePower power) => power != MarblePower.None && (GameSession.TutorialMode || Data.stock[(int)power] > 0 || Beads >= Campaign.PowerPrices[(int)power]);
     // Spend only when a real shot is released. Previewing, cancelling, pausing or leaving never charges.
@@ -297,7 +361,7 @@ public static class MahalleProfile
     {
         get
         {
-            int stars = 0; for (int i = 0; i < Data.stars.Length; i++) stars += Data.stars[i];
+            int stars = TotalStars;
             return stars * 10 + Data.knocked + Data.dailyBestStreak * 15;
         }
     }
@@ -316,22 +380,22 @@ public static class MahalleProfile
     {
         switch (index)
         {
-            case 0: { int n = 0; foreach (int s in Data.stars) if (s > 0) n++; return n; }
-            case 1: { int n = 0; for (int d = 0; d < Campaign.Districts.Length; d++) if (DistrictCompleted(d)) n++; return n; }
+            case 0: { int n = 0; foreach (int s in AllStars()) if (s > 0) n++; return n; }
+            case 1: { int n = 0; for (int d = 0; d < Maps.TotalDistricts; d++) if (DistrictCompleted(d)) n++; return n; }
             case 2: return Data.bestShot;
             case 3: { int n = 0; foreach (bool o in Data.skins) if (o) n++; return n; }
             case 4: return Data.dailyBestStreak;
-            default: { int n = 0; foreach (int s in Data.stars) n += s; return n; }
+            default: return TotalStars;
         }
     }
     public static bool AchievementDone(int index) => AchievementProgress(index) >= AchievementTargets[index];
     public const int DistrictCompletionBonus = 35;
     public static bool DistrictCompleted(int district)
     {
-        if (district < 0 || district >= Campaign.Districts.Length) return false;
-        int start = district * Campaign.PerDistrict;
+        if (district < 0 || district >= Maps.TotalDistricts) return false;
+        int start = district * Campaign.PerDistrict;   // bölge numarası global, 12'şer bölüm
         for (int i = start; i < start + Campaign.PerDistrict; i++)
-            if (Data.stars[i] < Required(i)) return false;
+            if (Stars(i) < Required(i)) return false;
         return true;
     }
 
@@ -371,8 +435,8 @@ public static class MahalleProfile
     public static int FavoriteDistrict()
     {
         int best = -1, most = 0;
-        for (int i = 0; i < Data.districtPlays.Length; i++)
-            if (Data.districtPlays[i] > most) { most = Data.districtPlays[i]; best = i; }
+        for (int i = 0; i < Maps.TotalDistricts; i++)
+            if (DistrictPlays(i) > most) { most = DistrictPlays(i); best = i; }
         return best;
     }
     public static bool DailyDoneToday => Data.dailyDay == DailyLevel.DayIndex;
@@ -426,13 +490,16 @@ public static class MahalleProfile
     public static RoundReward Finish(int levelIndex, int stars, int score)
     {
         var reward = new RoundReward();
-        if (levelIndex < 0 || levelIndex >= Campaign.Count) return reward;
+        if (levelIndex < 0 || levelIndex >= Maps.TotalLevels) return reward;
+        int map = Maps.MapOf(levelIndex);
+        int district = levelIndex / Campaign.PerDistrict;               // global bölge
+        int localDistrict = district % Maps.DistrictsPerMap;
         Data.knocked += Mathf.Max(0, score);
-        Data.districtPlays[levelIndex / Campaign.PerDistrict]++;
+        PlayArray(map)[localDistrict]++;
         stars = Mathf.Clamp(stars, 0, 3);
         if (stars > 0)
         {
-            int old = Data.stars[levelIndex];
+            int old = Stars(levelIndex);
             reward.firstWin = old == 0;
             // EKONOMI DENGESI:
             //   ilk gecis 20 -> 6, yildiz basina 5 -> 3, TEKRAR OYNAMA 3 -> 0.
@@ -440,17 +507,19 @@ public static class MahalleProfile
             // ve 15 saniye suruyor, yani saatte ~700 boncuk farmlanabiliyordu. Artik
             // gecilmis bir bolumu tekrar oynamak sadece YENI yildiz icin oduyor.
             reward.beads = (reward.firstWin ? 6 : 0) + Mathf.Max(0, stars - old) * 3;
-            Data.stars[levelIndex] = Mathf.Max(old, stars);
+            SetStars(levelIndex, Mathf.Max(old, stars));
             Data.wins++;
-            int district = levelIndex / Campaign.PerDistrict;
-            if (!Data.districtRewards[district] && DistrictCompleted(district))
+            var rewards = RewardArray(map);
+            if (!rewards[localDistrict] && DistrictCompleted(district))
             {
-                Data.districtRewards[district] = true;
+                rewards[localDistrict] = true;
                 reward.newBadge = true;
                 reward.districtBonus = DistrictCompletionBonus;
                 reward.beads += reward.districtBonus;
+                // Kaplama hediyesi sadece Harita 1'de (skin 1-5). Memleket bölgeleri
+                // boncuk + rozet verir; kendi kaplamaları mağaza fazında eklenecek.
                 int skin = district + 1;
-                if (!Data.skins[skin]) { Data.skins[skin] = true; reward.newSkin = Campaign.SkinNames[skin]; }
+                if (map == 0 && !Data.skins[skin]) { Data.skins[skin] = true; reward.newSkin = Campaign.SkinNames[skin]; }
             }
             Data.beads += reward.beads;
         }
@@ -460,7 +529,7 @@ public static class MahalleProfile
     {
         if (id == 0) return Data.wins;
         if (id == 1) return Data.knocked;
-        int count = 0; foreach (int s in Data.stars) if (s == 3) count++; return count;
+        int count = 0; foreach (int s in AllStars()) if (s == 3) count++; return count;
     }
     public static readonly int[] MissionTargets = { 10, 150, 8 };
     public static readonly int[] MissionRewards = { 50, 80, 120 };

@@ -50,7 +50,7 @@ public class MahalleUI : MonoBehaviour
         MisketrNotify.Refresh();
         controller=FindFirstObjectByType<LevelController>();
         if(controller!=null)controller.AnchorRefunded+=()=>Toast("Misketin işe yarar bir yerde kalmadı. Hakkın iade edildi.");
-        district=MahalleProfile.NextLevel/Campaign.PerDistrict;
+        district=MahalleProfile.NextLevelIn(CurrentMap())/Campaign.PerDistrict;
         // Harita/başlık sahnesine dönüldüyse öğretici modu kapanmış olmalı.
         if(controller==null){GameSession.TutorialMode=false;GameSession.DailyMode=false;GameSession.EndlessMode=false;}
         if(controller!=null)ShowGame();
@@ -300,7 +300,8 @@ public class MahalleUI : MonoBehaviour
         var menu = Rect("Menü", page); Stretch(menu);
         var menuFade = menu.gameObject.AddComponent<CanvasGroup>(); menuFade.alpha = 0f; menuFade.interactable = false; menuFade.blocksRaycasts = false;
 
-        int next = MahalleProfile.NextLevel;
+        // DEVAM ET: oyuncunun son baktığı haritanın sıradaki bölümü.
+        int next = MahalleProfile.NextLevelIn(CurrentMap());
         bool resume = next > 0 && MahalleProfile.Data.stars[0] > 0;
 
         // AYARLAR sol ustte, boncuk sag ustte. Ikisi de hap seklinde.
@@ -319,7 +320,7 @@ public class MahalleUI : MonoBehaviour
         const float MX = 60f, MW = 960f, HW = 465f, H = 130f;
 
         string playText = resume
-            ? L.T("DEVAM ET") + " · " + L.Up(L.T(Campaign.Districts[next / Campaign.PerDistrict])) + " " + (next % Campaign.PerDistrict + 1).ToString("00")
+            ? L.T("DEVAM ET") + " · " + L.Up(L.T(Maps.DistrictName(next / Campaign.PerDistrict))) + " " + (next % Campaign.PerDistrict + 1).ToString("00")
             : "OYNA";
         var oyna = Button(menu, playText, 0, 0, MW, 150, Gold, () => { tab = 0; district = next / Campaign.PerDistrict; ShowHome(); });
         Bottom((RectTransform)oyna.transform, MX, 500, MW, 150);
@@ -488,6 +489,24 @@ public class MahalleUI : MonoBehaviour
         return inner;
     }
     // Mahalle haritasi. Zemin, yol ve duraklar MahalleMapView icinde cizilir.
+    // HARİTALAR: oyuncunun baktığı harita. Kilitliyse Mahalle'ye düşer.
+    private static int CurrentMap()
+    {
+        int m=MahalleProfile.Data.lastMap;
+        return MahalleProfile.MapUnlocked(m)?m:0;
+    }
+    private static void RememberMap(int map)
+    {
+        if(MahalleProfile.Data.lastMap==map)return;
+        MahalleProfile.Data.lastMap=map;MahalleProfile.Save();
+    }
+    // Oklar haritanın kendi 5 bölgesi içinde döner, başka haritaya geçmez.
+    private int CycleDistrict(int step)
+    {
+        int first=Maps.FirstDistrict(Maps.MapOfDistrict(district));
+        return first+((district-first+step)%Maps.DistrictsPerMap+Maps.DistrictsPerMap)%Maps.DistrictsPerMap;
+    }
+
     private void MapScreen()
     {
         var theme=MahalleTheme.Get(district);
@@ -516,7 +535,7 @@ public class MahalleUI : MonoBehaviour
 
         // Acilista secili bolum: oyuncunun siradaki bolumu, bu mahallede degilse mahallenin ilki.
         int first=district*Campaign.PerDistrict;
-        int next=MahalleProfile.NextLevel;
+        int next=MahalleProfile.NextLevelIn(Maps.MapOfDistrict(district));
         selectedLevel=(next>=first&&next<first+Campaign.PerDistrict)?next:first;
 
         MahalleMapView.Build(content,district,font,SelectLevel,OpenLevel,Toast);
@@ -564,7 +583,7 @@ public class MahalleUI : MonoBehaviour
 
     private string PlayCaption(int index)
     {
-        var lv=Campaign.Database.Get(index);
+        var lv=Maps.Get(index);
         return L.T("OYNA")+"  \u00b7  "+(index%Campaign.PerDistrict+1).ToString("00")+"  "+L.T(lv.levelName);
     }
 
@@ -588,7 +607,7 @@ public class MahalleUI : MonoBehaviour
 
         // Ust siranin ortasinda mahallenin yildiz ilerlemesi.
         int stars=0;
-        for(int i=district*Campaign.PerDistrict;i<(district+1)*Campaign.PerDistrict;i++)stars+=MahalleProfile.Data.stars[i];
+        for(int i=district*Campaign.PerDistrict;i<(district+1)*Campaign.PerDistrict;i++)stars+=MahalleProfile.Stars(i);
         int full=Campaign.PerDistrict*3;
         var meter=Panel(head.transform,"Yildiz ilerlemesi",390,26,396,78,new Color(.906f,.878f,.816f));
         meter.colorB=new Color(.863f,.831f,.757f);meter.radius=39;meter.highlight=false;
@@ -603,11 +622,11 @@ public class MahalleUI : MonoBehaviour
         Art(wallet.transform,"Boncuk simgesi",MahalleGraphic.Shape.Marble,16,17,44,44,Amber);
         beadsLabel=Text(wallet.transform,MahalleProfile.Beads.ToString(),76,0,140,78,36,Krem);
 
-        var prev=Button(head.transform,"Onceki mahalle",48,144,96,96,new Color(.906f,.878f,.816f),()=>{district=(district+4)%5;ShowHome();});
+        var prev=Button(head.transform,"Onceki mahalle",48,144,96,96,new Color(.906f,.878f,.816f),()=>{district=CycleDistrict(-1);ShowHome();});
         prev.GetComponent<MahalleGraphic>().radius=30;prev.gameObject.AddComponent<MahalleTap>();
         Art(prev.transform,"Sol",MahalleGraphic.Shape.Chevron,26,26,44,44,Komur).mirror=true;
 
-        var next=Button(head.transform,"Sonraki mahalle",936,144,96,96,new Color(.906f,.878f,.816f),()=>{district=(district+1)%5;ShowHome();});
+        var next=Button(head.transform,"Sonraki mahalle",936,144,96,96,new Color(.906f,.878f,.816f),()=>{district=CycleDistrict(1);ShowHome();});
         next.GetComponent<MahalleGraphic>().radius=30;next.gameObject.AddComponent<MahalleTap>();
         Art(next.transform,"Sag",MahalleGraphic.Shape.Chevron,26,26,44,44,Komur);
 
@@ -620,7 +639,7 @@ public class MahalleUI : MonoBehaviour
 
         for(int i=0;i<5;i++)
         {
-            bool on=i==district;
+            bool on=i==district%Maps.DistrictsPerMap;
             Art(isim.transform,"Nokta "+i,MahalleGraphic.Shape.Circle,319+i*26,on?126:128,on?14:10,on?14:10,
                 on?Amber:new Color(Komur.r,Komur.g,Komur.b,.24f));
         }
@@ -693,7 +712,7 @@ public class MahalleUI : MonoBehaviour
         string[] values={
             MahalleProfile.Data.knocked.ToString(),
             MahalleProfile.Data.bestShot>0?L.F("{0} MİSKET",MahalleProfile.Data.bestShot):"HENÜZ YOK",
-            fav>=0?L.T(Campaign.Districts[fav]):"HENÜZ YOK"};
+            fav>=0?L.T(Maps.DistrictName(fav)):"HENÜZ YOK"};
         string[] notes={
             "Bitirdiğin bölümlerde çemberden çıkardıkların",
             "Tek bir atışla aynı anda çıkardığın en çok misket",
@@ -754,7 +773,7 @@ public class MahalleUI : MonoBehaviour
         {bool won=MahalleProfile.DistrictCompleted(i);var star=Art(content,"Ustalık rozeti",MahalleGraphic.Shape.Star,75+i*198,1280,116,116,won?Gold:Line);Text(content,Campaign.Districts[i],48+i*198,1410,186,70,24,won?Ink:Muted,TextAlignmentOptions.Center);}
     }
     private void OpenLevel(int index)
-    {if(!MahalleProfile.Unlocked(index))return;if(index==0&&!MahalleProfile.Data.howToPlayDone&&MahalleProfile.Data.stars[0]==0){StartTutorial(false);return;}GameSession.TutorialMode=false;GameSession.DailyMode=false;GameSession.EndlessMode=false;GameSession.SelectedLevelIndex=index;Time.timeScale=1;SceneManager.LoadScene(GameSession.GameSceneName);}
+    {if(!MahalleProfile.Unlocked(index))return;if(index==0&&!MahalleProfile.Data.howToPlayDone&&MahalleProfile.Data.stars[0]==0){StartTutorial(false);return;}GameSession.TutorialMode=false;GameSession.DailyMode=false;GameSession.EndlessMode=false;GameSession.SelectedLevelIndex=index;RememberMap(Maps.MapOf(index));Time.timeScale=1;SceneManager.LoadScene(GameSession.GameSceneName);}
     // OYUN ICI ARAYUZ. Renkler: krem #F5EFE2, komur #2D2B25, amber #EAA640.
     // Ust bolum ekranin ustune, alt panel altina yaslanir; ortadaki oyun alani
     // bos birakilir, uzerine hicbir arayuz konmaz.
@@ -786,7 +805,7 @@ public class MahalleUI : MonoBehaviour
         else if(GameSession.EndlessMode){ ustBaslik=L.T("SONSUZ ÇEMBER"); altBaslik=L.F("KADEME {0}",controller.EndlessStage); }
         else
         {
-            ustBaslik=L.T(Campaign.Districts[controller.Level.district]);
+            ustBaslik=L.T(Maps.DistrictName(controller.Level.district));
             altBaslik=GameSession.TutorialMode ? L.T("NASIL OYNANIR")
                     : L.F("BÖLÜM {0}",(controller.LevelIndex%12+1).ToString("00"));
         }
@@ -1072,7 +1091,7 @@ public class MahalleUI : MonoBehaviour
         int stars=controller.State==LevelController.LevelState.Won?controller.Stars:0;
         var chalk=new Color(1,.98f,.92f,.92f);
         var bg=Panel(card,"Zemin",0,0,1080,1920,new Color(.14f,.12f,.10f));bg.radius=0;
-        Text(card,GameSession.EndlessMode?L.Up(L.T("SONSUZ ÇEMBER")):GameSession.DailyMode?L.Up(L.T("GÜNÜN BÖLÜMÜ")):L.Up(L.T(Campaign.Districts[lv.district]))+" · "+no.ToString("00"),0,150,1080,70,46,new Color(1,.97f,.89f,.7f),TextAlignmentOptions.Center);
+        Text(card,GameSession.EndlessMode?L.Up(L.T("SONSUZ ÇEMBER")):GameSession.DailyMode?L.Up(L.T("GÜNÜN BÖLÜMÜ")):L.Up(L.T(Maps.DistrictName(lv.district)))+" · "+no.ToString("00"),0,150,1080,70,46,new Color(1,.97f,.89f,.7f),TextAlignmentOptions.Center);
         Text(card,GameSession.EndlessMode?L.F("KADEME {0}",controller.EndlessStage):GameSession.DailyMode?DailyLevel.DateLabel:lv.levelName,40,222,1000,100,68,Cream,TextAlignmentOptions.Center);
         var ring=Art(card,"Tebeşir çemberi",MahalleGraphic.Shape.ChalkRing,150,400,780,780,chalk);ring.stroke=10f;ring.progress=1f;
         for(int i=0;i<3;i++)
@@ -1100,7 +1119,7 @@ public class MahalleUI : MonoBehaviour
         if(GameSession.EndlessMode)return L.F("MİSKO · Sonsuz Çember'de {0} misket çıkardım. Sen kaç yaparsın?",controller.EndlessScore);
         if(GameSession.DailyMode)return L.F("MİSKO · Günün bölümünü ({0}) {1} atışta {2} yıldızla bitirdim. Sen kaç atışta bitirirsin?",DailyLevel.DateLabel,controller.ShotsUsed,controller.Stars);
         int no=controller.LevelIndex%Campaign.PerDistrict+1;
-        return L.F("MİSKO · {0} {1} bölümünü {2} atışta {3} yıldızla bitirdim. Sen kaç atışta bitirirsin?",L.T(Campaign.Districts[controller.Level.district]),no.ToString("00"),controller.ShotsUsed,controller.Stars);
+        return L.F("MİSKO · {0} {1} bölümünü {2} atışta {3} yıldızla bitirdim. Sen kaç atışta bitirirsin?",L.T(Maps.DistrictName(controller.Level.district)),no.ToString("00"),controller.ShotsUsed,controller.Stars);
     }
     private IEnumerator CaptureCard(RectTransform card,CanvasGroup buttons)
     {

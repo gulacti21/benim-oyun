@@ -8,7 +8,8 @@ public class MahalleWorld : MonoBehaviour
     // etmeli. Fotograf kullanilirsa o Resources varligidir, yok edilmemeli.
     private Texture2D grainTexture;
     // Mahalle zemin fotograflari: Assets/Resources/Mahalle/Ground/<ad>.png
-    private static readonly string[] GroundFiles={"Apartman","Okul","Park","Toprak","Meydan"};
+    // Harita 2 (Memleket) bölgeleri 5-9: dosya yoksa renkli gürültü zemini çizilir.
+    private static readonly string[] GroundFiles={"Apartman","Okul","Park","Toprak","Meydan","Sahil","Koy","Yayla","Pazar","Bayram"};
 
     // TANI ARACI.
     // "Editorde boyle, telefonda boyle" durumlarini tahminle degil olcumle
@@ -41,7 +42,8 @@ public class MahalleWorld : MonoBehaviour
             : "BOZUK " + bozuk + "/" + toplam + " · " + ilk;
     }
     private GameObject decor;
-    private static readonly Color[] GroundColors={new Color(.57f,.42f,.28f),new Color(.53f,.52f,.44f),new Color(.47f,.49f,.30f),new Color(.64f,.43f,.28f),new Color(.57f,.51f,.40f)};
+    private static readonly Color[] GroundColors={new Color(.57f,.42f,.28f),new Color(.53f,.52f,.44f),new Color(.47f,.49f,.30f),new Color(.64f,.43f,.28f),new Color(.57f,.51f,.40f),
+        new Color(.80f,.70f,.50f),new Color(.50f,.40f,.29f),new Color(.44f,.53f,.32f),new Color(.60f,.54f,.45f),new Color(.55f,.46f,.40f)};
     // KAMERA KIRPMASI DÜZELTMESİ
     // Eskiden görünen yatay alan sabitti (yarı genişlik 3.65), saha yarıçapı
     // 3.65'i geçen bölümlerde çemberin kenarı ekran dışında kalıyordu.
@@ -108,7 +110,7 @@ public class MahalleWorld : MonoBehaviour
             {
                 groundMaterial.SetTexture("_BaseMap",grainTexture);
                 groundMaterial.SetTextureScale("_BaseMap",Vector2.one*12);
-                groundMaterial.SetColor("_BaseColor",parkStudy?ParkCorners.Floors[corner]:GroundColors[district]);
+                groundMaterial.SetColor("_BaseColor",parkStudy?ParkCorners.Floors[corner]:GroundColors[Mathf.Clamp(district,0,GroundColors.Length-1)]);
             }
             ground.GetComponent<Renderer>().sharedMaterial=groundMaterial;
         }

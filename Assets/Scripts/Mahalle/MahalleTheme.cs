@@ -164,6 +164,89 @@ public class MahalleTheme
                     new DecorPlacement(DecorKind.Pigeon,    44, 912, .9f, true),
                     new DecorPlacement(DecorKind.Fountain, 302, 1068, .8f)
                 }
+            },
+
+            // ===== HARİTA 2 — MEMLEKET (bölge 5-9) =====
+            // Görseller sonra gelecek; o zamana kadar bu renklerle çizilen zemin görünür.
+
+            // 5 — Sahil · sabah, ıslak kum
+            new MahalleTheme
+            {
+                title = "Sahil", subtitle = "Sabah serinliği · ıslak kum",
+                groundTop = C("#E2CFA5"), groundMid = C("#D4BD8C"), groundBottom = C("#C2A874"),
+                vignette = C("#23384A", .36f), wash = C("#9CD3E8", .08f),
+                chalk = C("#FFFFFF"), lineAlpha = .62f, lineWidth = 9f, dashOn = 30f, dashOff = 38f, dustAlpha = .14f,
+                pebble = C("#B59C6C"), marks = GroundMarks.None,
+                levelNames = new[]
+                {
+                    "Kumsal Girişi","Havlu Yanı","Kumdan Kale","Şemsiye Altı","Midye Kıyısı","Dalga Çizgisi",
+                    "İskele Başı","Kayık Arkası","Sıcak Kum","Son Dalga","Sahil Buluşması","Ustalık Sınavı"
+                },
+                decor = new DecorPlacement[0]
+            },
+
+            // 6 — Köy Meydanı · yağmur sonrası, toprak ve çamur
+            new MahalleTheme
+            {
+                title = "Köy Meydanı", subtitle = "Yağmur sonrası · toprak ve çamur",
+                groundTop = C("#9C8566"), groundMid = C("#846D51"), groundBottom = C("#6E5942"),
+                vignette = C("#231A10", .44f), wash = C("#000000", 0f),
+                chalk = C("#F4EEDF"), lineAlpha = .52f, lineWidth = 9.5f, dashOn = 30f, dashOff = 40f, dustAlpha = .12f,
+                pebble = C("#6B573F"), marks = GroundMarks.Cracks,
+                levelNames = new[]
+                {
+                    "Çınar Altı","Kahve Önü","Su Birikintisi","Muhtarlık","Çeşme Başı","Tavuk Kümesi",
+                    "Harman Yeri","Samanlık","Dar Sokak","Son Yağmur","Köy Buluşması","Ustalık Sınavı"
+                },
+                decor = new DecorPlacement[0]
+            },
+
+            // 7 — Yayla · serin öğleden sonra, çayır
+            new MahalleTheme
+            {
+                title = "Yayla", subtitle = "Serin rüzgâr · eğimli çayır",
+                groundTop = C("#8FA46A"), groundMid = C("#788E56"), groundBottom = C("#627745"),
+                vignette = C("#18261A", .40f), wash = C("#CFE6F2", .07f),
+                chalk = C("#F6F4EA"), lineAlpha = .58f, lineWidth = 9f, dashOn = 34f, dashOff = 38f, dustAlpha = .12f,
+                pebble = C("#5F7043"), marks = GroundMarks.None,
+                levelNames = new[]
+                {
+                    "Yayla Yolu","Çoban Çeşmesi","Buzlu Pınar","Ahşap Ev","Çam Gölgesi","Serin Çayır",
+                    "Sisli Tepe","Kaya Yanı","Dik Yamaç","Son Tepe","Yayla Şenliği","Ustalık Sınavı"
+                },
+                decor = new DecorPlacement[0]
+            },
+
+            // 8 — Kasaba Pazarı · kalabalık öğle, taş ve tezgâh
+            new MahalleTheme
+            {
+                title = "Kasaba Pazarı", subtitle = "Kalabalık öğle · tezgâh arası",
+                groundTop = C("#B5A48C"), groundMid = C("#9E8D76"), groundBottom = C("#877762"),
+                vignette = C("#2B1D12", .42f), wash = C("#FFB35C", .07f),
+                chalk = C("#FBF6EA"), lineAlpha = .52f, lineWidth = 9f, dashOn = 36f, dashOff = 36f, dustAlpha = .13f,
+                pebble = C("#877660"), marks = GroundMarks.Cobble,
+                levelNames = new[]
+                {
+                    "Pazar Girişi","Karpuz Tezgâhı","Kasa Yığını","Domates Sırası","Terazi Önü","Tezgâh Arası",
+                    "Sepetçi","Bakır Tezgâhı","Kalabalık Köşe","Son Tezgâh","Pazar Buluşması","Ustalık Sınavı"
+                },
+                decor = new DecorPlacement[0]
+            },
+
+            // 9 — Bayram Yeri · akşam ışıkları, final
+            new MahalleTheme
+            {
+                title = "Bayram Yeri", subtitle = "Akşam ışıkları · büyük final",
+                groundTop = C("#A08B7A"), groundMid = C("#877264"), groundBottom = C("#6F5C50"),
+                vignette = C("#2A1430", .48f), wash = C("#FF7A4A", .12f),
+                chalk = C("#FFF6E4"), lineAlpha = .50f, lineWidth = 9.5f, dashOn = 38f, dashOff = 34f, dustAlpha = .14f,
+                pebble = C("#7C6859"), marks = GroundMarks.Cobble,
+                levelNames = new[]
+                {
+                    "Bayram Sabahı","Salıncak Yeri","Pamuk Şeker","Atlıkarınca","Davul Zurna","Bayram Harçlığı",
+                    "Fener Alayı","Lunapark","Gece Çukuru","Son Bayram","Büyük Buluşma","Ustalık Sınavı"
+                },
+                decor = new DecorPlacement[0]
             }
         };
     }

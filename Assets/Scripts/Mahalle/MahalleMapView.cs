@@ -29,8 +29,9 @@ public static class MahalleMapView
     private const float TextGap = 125f;    // cember merkezi ile yazi blogu arasi
 
     // Harita arka planlari. Zemin dokulariyla karismasin diye ayri klasor ve "Harita" oneki.
-    private static readonly string[] MapFiles = { "HaritaApartman", "HaritaOkul", "HaritaPark", "HaritaToprak", "HaritaMeydan" };
-    private static readonly string[] GroundFiles = { "Apartman", "Okul", "Park", "Toprak", "Meydan" };
+    private static readonly string[] MapFiles = { "HaritaApartman", "HaritaOkul", "HaritaPark", "HaritaToprak", "HaritaMeydan",
+                                                          "HaritaSahil", "HaritaKoy", "HaritaYayla", "HaritaPazar", "HaritaBayram" };
+    private static readonly string[] GroundFiles = { "Apartman", "Okul", "Park", "Toprak", "Meydan", "Sahil", "Koy", "Yayla", "Pazar", "Bayram" };
 
     // Secim durumu. Ekran her acilista yeniden kurulur.
     private static RectTransform[] nodes = new RectTransform[12];
@@ -150,13 +151,14 @@ public static class MahalleMapView
         // --- duraklar ---
         for (int local = 0; local < 12; local++)
         {
+            // Global bölüm numarası: bölge numarası globaldir (Memleket 5-9), 12'şer bölüm.
             int index = district * Campaign.PerDistrict + local;
             bool unlocked = MahalleProfile.Unlocked(index);
-            int stars = MahalleProfile.Data.stars[index];
-            bool current = unlocked && index == MahalleProfile.NextLevel;
+            int stars = MahalleProfile.Stars(index);
+            bool current = unlocked && index == MahalleProfile.NextLevelIn(Maps.MapOfDistrict(district));
             bool mastery = local == 11;
             bool left = StopX[local] < 178f;
-            string levelName = Campaign.Database.Get(index).levelName;
+            string levelName = Maps.Get(index).levelName;
 
             float side = left ? SideShift : -SideShift;
             var node = Rect("Durak " + (index + 1), host2, Stop(local) + new Vector2(side, 0f), new Vector2(NodeW, NodeH));
@@ -207,7 +209,9 @@ public static class MahalleMapView
             int slot = local;
             bool open = unlocked;
             int needBefore = index > 0 ? MahalleProfile.Required(index - 1) : 1;
-            string blocked = needBefore > 1
+            bool mapLocked = !unlocked && index == Maps.First(Maps.MapOfDistrict(district)) && index > 0;
+            string blocked = mapLocked ? L.F("{0} haritası, {1} haritasının son bölümünü geçince açılır.", L.T(Maps.Names[Maps.MapOfDistrict(district)]), L.T(Maps.Names[Maps.MapOfDistrict(district) - 1]))
+                : needBefore > 1
                 ? L.F("Bu bölüm için önceki bölümde {0} yıldız almalısın.", needBefore)
                 : "Önce bir önceki bölümü tamamla.";
             var tap = node.gameObject.AddComponent<MahalleStopTap>();
