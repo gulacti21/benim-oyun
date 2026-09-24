@@ -6,6 +6,14 @@ public class MarbleVisual : MonoBehaviour
     private Transform shadow;
     private static Material shadowMaterial;
     private int skin;
+    // Harita 2 özel hedefleri (karpuz) kaplama tablosu dışında kendi materyalini kullanır.
+    private Material overrideMaterial;
+    public void SetOverride(Material material)
+    {
+        overrideMaterial = material;
+        var r = GetComponent<Renderer>();
+        if (r != null && material != null) r.sharedMaterial = material;
+    }
     public void SetSkin(int index)
     {
         skin = Mathf.Clamp(index, 0, Campaign.SkinCount - 1);
@@ -46,7 +54,8 @@ public class MarbleVisual : MonoBehaviour
         }
         var renderer = GetComponent<Renderer>();
         // Null materyal = mor obje. Olmasi gerekmiyor ama olursa sessizce mor birakmayalim.
-        if (renderer != null && materials[skin] != null) renderer.sharedMaterial = materials[skin];
+        if (renderer != null && overrideMaterial != null) renderer.sharedMaterial = overrideMaterial;
+        else if (renderer != null && materials[skin] != null) renderer.sharedMaterial = materials[skin];
         else if (renderer != null) Debug.LogWarning("MISKETR: misket materyali yok, desen "+skin);
     }
     private void Start()
@@ -81,4 +90,7 @@ public class MarbleVisual : MonoBehaviour
         shadow.localScale=Vector3.one*transform.localScale.x*1.6f;
     }
     private void OnDestroy() { if(shadow!=null) Destroy(shadow.gameObject); }
+    // Karpuz bölününce bütün misket gizlenir; gölgesi yerde asılı kalmasın.
+    private void OnDisable() { if(shadow!=null) shadow.gameObject.SetActive(false); }
+    private void OnEnable() { if(shadow!=null) shadow.gameObject.SetActive(true); }
 }

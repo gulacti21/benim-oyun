@@ -51,7 +51,13 @@ public class LevelData : ScriptableObject
     // Bölümdeki toplam misket. Yıldız hedefleri buna göre kontrol edilir.
     public int TotalMarbles()
     {
-        if (marbles != null && marbles.Length > 0) return marbles.Length;
+        if (marbles != null && marbles.Length > 0)
+        {
+            // Karpuz (bölünen) misket 2 değerinde: bütün çıkarsa 2, iki parçası ayrı ayrı 1+1.
+            int worth = 0;
+            foreach (var m in marbles) worth += m.kind == MarbleKind.Split ? 2 : 1;
+            return worth;
+        }
         if (shape == ArenaShape.Triangle) return triangleRows * (triangleRows + 1) / 2;
         int n = 0;
         if (rings != null) foreach (var r in rings) n += Mathf.Max(0, r.count);

@@ -9,8 +9,8 @@ _(iş bitince buraya 10 satırlık özet gelecek)_
 | Faz | Durum | Commit | MahalleVerify |
 |---|---|---|---|
 | 1 Harita altyapısı | ✅ bitti | 47c584e | 5461 kontrol yeşil (Harita 1'in 4291'i + 1170 yeni) |
-| 2 Buzlu misket | ✅ bitti | (aşağıda) | 5481 yeşil (+20 buz) |
-| 3 Bölünen misket | ⏳ | | |
+| 2 Buzlu misket | ✅ bitti | 7d2b35c | 5481 yeşil (+20 buz) |
+| 3 Bölünen misket | ✅ bitti | (aşağıda) | 5498 yeşil (+17 bölünme) |
 | 4 Zemin kuralları | ⏳ | | |
 | 5 60 bölüm dizilimi | ⏳ | | |
 | 6 Zorluk ölçümü | ⏳ | | |
@@ -132,10 +132,61 @@ Freeze/Thaw geri sarılabilir; shader Resources'ta.
 
 ---
 
+## Faz 3 — Bölünen misket (karpuz) (2026-09-24)
+
+**Nasıl çalışıyor** (`Gameplay/SplitMarble.cs`)
+- `MarbleSpot.kind = MarbleKind.Split`. Görünüm: yeşil kabuk + koyu damar
+  (Marble shader'ı, `MarbleVisual.SetOverride`); parçalar kırmızı iç + koyu
+  çekirdek rengi.
+- Başka bir **gövdeyle** (misket) çarpışmada temas hızı ≥ `SplitSpeed` →
+  bütün misket gizlenir, yerine iki parça: ölçek ×0.7, kütle yarı, hızı devralır,
+  çarpma yönünden ±16° iki yana açılır. Zemin darbesi bölmez.
+- **Tek kademe:** parçalar `IsPiece` işaretli, bir daha bölünmez. (Ölçüldü:
+  fizik geri çağrısı içinde `DestroyImmediate` yasak — ilk denemede parçalar
+  bölünmeye devam edip Unity'yi kilitledi. Oyunda bileşen `Destroy` ile
+  ertelenerek silinir.)
+- **Puanlama kararı:** karpuz **2 misket değerindedir**. Bütün çıkarsa 2,
+  bölünürse her parça 1. `LevelData.TotalMarbles()` karpuzu 2 sayar,
+  `MarbleArena` toplamı ve skoru `TargetMarble.Worth` ile tutar. Böylece yıldız
+  hedefleri, "x / toplam" sayacı ve "hepsi çıktı" kontrolü baştan tutarlı;
+  oyuncu bölse de bölmese de aynı değeri alır, bölmek sadece taktik fark yaratır
+  (parçalar daha hafif ve iki yöne dağılır).
+- Ses: `MarbleHit` perdesi 0.72 (kuru "çıt"). Karpuz gizlenince gölgesi de
+  gizlenir (`MarbleVisual.OnDisable`).
+
+**Eşik ölçümü** (`SplitMarbleVerify.Measure`, `Logs/SplitThreshold.txt`),
+karpuz saha ortasında (atıcıdan 4.5 önde):
+
+| güç | temas hızı | bölünürse parça yolu | bütün kalırsa yol |
+|---|---|---|---|
+| %30 | 0.55 | — | 0.30 |
+| %45 | 2.01 | — | 1.20 |
+| %60 | 3.49 | 2.58 / 2.58 | 2.39 |
+| %80 | 6.01 | 4.75 / 4.75 | 4.53 |
+| %100 | 9.01 | 7.68 / 7.68 | 7.54 |
+
+**Seçim: `SplitSpeed = 3.0 m/s`** — buzla aynı. İki mekanik de "sert darbe"
+diye öğretiliyor, oyuncu tek bir his öğrensin. Ortadaki karpuz %55-60 güçte
+bölünür, parçalar sahada kalır (2.6 < 3.5); %80'de parçalar sahadan çıkar.
+
+**Test (`SplitMarbleVerify.RunChecks`, 17 kontrol):** TotalMarbles karpuzu 2
+sayar; zayıf darbe bölmez ama iter; sert darbe tek sefer böler, bütün
+gizlenir, iki canlı parça, yarım kütle, ×0.7 ölçek, aynı fizik sahnesinde, hız
+devralınmış, parçalar arası açı ~32°, ikisi iki yanda, ileri gidiyor; parça
+sert vurulsa da yeni parça çıkmaz; zemine sert düşmek bölmez.
+**Test edilemeyen:** `MarbleArena.OnSplit` (listede bütünün yerine parçaları
+koyma) Play modu istiyor; kod yolu basit ama telefonda bir karpuz bölüp
+sayacın 2 arttığına bakılmalı (aşağıdaki liste).
+
+---
+
 ## Telefonda kontrol edilecek
 - (Faz 7'ye kadar Memleket'e arayüzden girilemiyor; görsel kontrol o zaman.)
 - Buz kabuğu görünümü (saydamlık, kenar parlaklığı), kırılma parçaları ve
   kırılma/tık sesinin perdesi.
+- Karpuz misket görünümü (yeşil/koyu damar), parçaların kırmızı rengi,
+  bölünme sesi. Bir karpuzu bölüp iki parçayı çıkar: sayaç toplam 2 artmalı;
+  bütün çıkarınca da 2.
 
 ## Bekleyen işler (kullanıcıda)
 - Memleket görselleri: `Resources/Mahalle/Map/Harita{Sahil,Koy,Yayla,Pazar,Bayram}.png`

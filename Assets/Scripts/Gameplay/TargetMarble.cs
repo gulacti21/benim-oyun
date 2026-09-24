@@ -17,6 +17,8 @@ public class TargetMarble : MonoBehaviour
     public int Owner { get; set; } = -1;
 
     public bool IsScored { get; private set; }
+    // Kaç misket değerinde: karpuz (bölünen) misket bütünken 2, parçaları 1.
+    public int Worth { get; set; } = 1;
     public Rigidbody Body => body;
 
     private void Awake()

@@ -76,7 +76,7 @@ public class MarbleArena : MonoBehaviour
             marble.MarkScored();
             MahalleFeedback.Score(marble.transform.position);
             activeMarbles.RemoveAt(i);
-            score++;
+            score += marble.Worth;   // karpuz bütün çıkarsa 2
             MarbleLeft?.Invoke(marble);
 
             if (SfxPlayer.Instance != null)
@@ -316,7 +316,8 @@ public class MarbleArena : MonoBehaviour
             SpawnCircleRings();
         }
 
-        totalMarbles = activeMarbles.Count;
+        totalMarbles = 0;
+        foreach (var m in activeMarbles) totalMarbles += m.Worth;
         ScoreChanged?.Invoke(score, totalMarbles);
     }
 
@@ -402,5 +403,29 @@ public class MarbleArena : MonoBehaviour
 
         // HARİTA 2: buzlu misket kabuğu içinde, kıpırdamadan başlar.
         if (kind == MarbleKind.Ice) instance.AddComponent<IceShell>().Freeze(true);
+        // HARİTA 2: karpuz misket sert darbede ikiye bölünür, 2 misket değerinde.
+        if (kind == MarbleKind.Split && marble != null)
+        {
+            marble.Worth = SplitMarble.Worth;
+            visual.SetOverride(SplitMarble.RindMaterial());
+            instance.AddComponent<SplitMarble>().Split += OnSplit;
+        }
+    }
+
+    // Karpuz bölündü: listede bütün misketin yerini iki parça alır. Toplam değer aynı (2).
+    private void OnSplit(SplitMarble whole, Rigidbody a, Rigidbody b)
+    {
+        var parent = whole.GetComponent<TargetMarble>();
+        int at = activeMarbles.IndexOf(parent);
+        if (at < 0) return;   // bölünürken zaten çıkmış sayıldıysa parçalar da sayılmaz
+        activeMarbles.RemoveAt(at);
+        spawnedMarbles.Remove(parent);
+        foreach (var body in new[] { a, b })
+        {
+            var piece = body != null ? body.GetComponent<TargetMarble>() : null;
+            if (piece == null) continue;
+            activeMarbles.Add(piece);
+            spawnedMarbles.Add(piece);
+        }
     }
 }
