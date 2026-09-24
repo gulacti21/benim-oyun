@@ -12,9 +12,9 @@ _(iş bitince buraya 10 satırlık özet gelecek)_
 | 2 Buzlu misket | ✅ bitti | 7d2b35c | 5481 yeşil (+20 buz) |
 | 3 Bölünen misket | ✅ bitti | c8ee5ed | 5498 yeşil (+17 bölünme) |
 | 4 Zemin kuralları | ✅ bitti | f4657df | 5574 yeşil (+76 zemin) |
-| 5 60 bölüm dizilimi | ✅ bitti | (aşağıda) | 15847 yeşil (+10273 yerleşim) |
-| 6 Zorluk ölçümü | ⏳ | | |
-| 7 Harita seçimi, görünüm, dil | ⏳ | | |
+| 5 60 bölüm dizilimi | ✅ bitti | 65b19a1 | 15847 yeşil (+10273 yerleşim) |
+| 6 Zorluk ölçümü | ✅ bitti | (aşağıda) | 16674 yeşil (sıra kuralları dahil) |
+| 7 Harita seçimi, görünüm, dil | ✅ kod bitti | (aşağıda) | aynı koşu; görsel telefonda |
 
 ---
 
@@ -283,6 +283,167 @@ Pazar sınavının labirenti (ince duvar, şeritte misket) yeniden yerleşti.
 
 ---
 
+## Faz 6 — Zorluk ölçümü ve ayar (2026-09-24)
+
+**Araç: `MemleketPhysicsVerify`** (Harita 1'in `ParkPhysicsVerify`'ına
+dokunulmadı). Aynı yöntem — görünmez preview sahne, gerçek misket fiziği,
+açgözlü arama — ama Memleket'in kurallarıyla: oyundaki `IceShell`,
+`SplitMarble` bileşenleri ve `GroundRules.Step` birebir kullanılıyor
+(bölünen karpuzun parçaları ayrı kayıt olarak izleniyor, çukura düşen misket
+kayıp sayılıyor). Aday atışlar: çizgide 7 nokta × her misket × düz/±kesme ×
+4 güç (%100/80/60/45) + engelden bant. Sabit, tekrarlanabilir.
+
+İki ölçü:
+1. **Tavan / temizlenebilirlik** (açgözlü): Harita 1 merdiveninin ölçüsü.
+2. **Sıradan oyuncu** (geçme oranı): her atışta rastgele 10 aday, ±2° nişan
+   hatası, ±%15 güç hatası, en iyisini seçer; 150 oyun, sabit tohum
+   (`1000 + bölüm·7919`). 1/2/3 yıldız oranı, atış başına misket, buz
+   kırma / bölünme / çukur sayısı.
+
+**Aracın doğrulaması (Harita 1'den 6 bölüm, eski araçla karşılaştırma):**
+APT01 3=3, APT06 7=7, OKUL07 9↔8, PARK07 10↔9, TOPRAK09 8=8, MEYDAN12 7↔8.
+Fark en çok 1 misket (arama noktaları biraz farklı). Harita 1'e dokunulmadığı
+için `ParkPhysicsVerify` sonuçları değişmedi (`Campaign`/`LevelBook`
+değişmedi, o araç kendi fiziğini kuruyor).
+
+**İlk tam ölçüm** (`Logs/MemleketPhysicsQuick.txt`, 593.373 simülasyon, 183
+dk, bölüm başına ~10.000): temizlenebilirlik çok dağınıktı — Yayla'nın
+öğretme bölümleri 2 atışta %100, Pazar sınavı %20.
+
+**Atış eğrisi:** açgözlü arama her atışta bir öncekinden bağımsız en iyiyi
+seçtiği için 7 atışlık tek koşu 1..7 atışın hepsinin tavanını veriyor
+(`BatchCurve`, `Logs/MemleketCurve.tsv`, 200.357 simülasyon). Atış hakkı
+buradan seçilir.
+
+**Düzeltmeler (ölçüme göre):**
+- Taban %40'ı 7 atışla bile tutmayan 3 bölüm kolaylaştırıldı: Sıcak Kum
+  (kum 1.8 → 1.15; %36 → %82), Tavuk Kümesi (yan duvarlar arkaya kısaldı;
+  %33 → %56), Pazar sınavı (4 uzun duvar → 3 kısa; %27 → %60).
+- 3 atışta bile hedefin 10+ puan üstünde temizlenen 23 bölüm sertleştirildi:
+  saha 4.0'a büyüdü, bölümün bütünü merkeze ×0.85-0.95 sıkıştı
+  (`MemleketBook.Hardening`). Misketler değebilir ama iç içe geçmez
+  (yerleşim testi ≥0.50). Çeşitlilik ayarı yeniden koşuldu (23 bölüm; en
+  yakın çift yine 0.32).
+- **Eğim hatası bulundu ve düzeltildi:** sabit eğim ivmesi yavaş misketi
+  sürtünmeden hızlı itiyordu; hafifçe dürtülen misket hiç durmadan sahadan
+  akıyordu (Yayla öğretme bölümleri 2 atışta %100). Artık eğim hızla orantılı
+  (0.3 m/s'de 0, 2.3 m/s'de tam): hiçbir hızda sürtünmeyi yenmez, sert atışın
+  sapması aynı. Yeni test: "dürtülen misket eğimde durur".
+- 3 öğretme bölümüne misket eklendi (Kumsal Girişi +3, Çınar Altı +2,
+  Yayla Yolu +3), Davul Zurna'nın iç yayı 5→4, Bayram Harçlığı'nın çukurları
+  büyüdü ve çamura/kuma 3 misket kondu, Bayram'ın tamamı ikinci tur
+  sertleştirildi (ilk ayarda Pazar'dan kolaydı).
+
+**Atış hakkı seçimi** (bir arama, `Logs/MemleketTuning.txt`): her bölüm için
+eğriden 3-7 atış (bölgenin ilk üç öğretme bölümünde 2 de serbest), amaç
+hedefe en yakın temizlenebilirlik, kısıtlar: taban %40; bölge içinde bir
+öncekinden en fazla **bir misket** kolay; bölge başı önceki bölge sonundan en
+fazla ~7 puan (+bir misket) kolay ve bölge başları düşüyor (bir misket payı);
+ustalık sınavı bölgesinin en zoru (bir misket payı).
+**Neden bir misket payı:** ölçü kaba — 9 misketli bölümde bir misket 11 puan;
+daha ince sıra ölçülemez. Bu yüzden 34 bölüm plan merdiveninin ±3 puanı
+dışında (tabloda ⚠) ama sıra kurallarının hepsi tutuyor ve
+`DifficultyOrderVerify.MemleketChecks` bozulursa **CHECK FAILED** veriyor
+(MahalleVerify de çağırıyor).
+
+**Yıldız hedefleri** tavandan türetiliyor (`MemleketBook.Tune`): 1y = tavanın
+%60'ı, 2y = ustalık sınavında tavan / diğerlerinde %85'i, 3y = hepsi. Yani
+"geçilemeyen bölüm yok" ölçümle garanti; 3 yıldız çoğu bölümde güç veya özel
+misket ister (Harita 1'in tasarım kuralı).
+
+**Son tablo** (atış hakkı ve tavan `MemleketBook.Tuning`; temizlenebilirlik = tavan / toplam; hedef = plan merdiveni):
+
+| # | Bölge | Toplam | Atış | Tavan | Temizlenebilirlik | Hedef | 1y/2y/3y |
+|---|---|---|---|---|---|---|---|
+| 60 | Sahil 01 | 10 | 2 | 5 | %50 ⚠ | %62 | 3/4/10 |
+| 61 | Sahil 02 | 7 | 3 | 4 | %57 ⚠ | %61 | 3/3/7 |
+| 62 | Sahil 03 | 9 | 5 | 6 | %67 ⚠ | %61 | 4/5/9 |
+| 63 | Sahil 04 | 9 | 3 | 6 | %67 ⚠ | %60 | 4/5/9 |
+| 64 | Sahil 05 | 9 | 3 | 5 | %56 ⚠ | %59 | 3/4/9 |
+| 65 | Sahil 06 | 9 | 3 | 6 | %67 ⚠ | %59 | 4/5/9 |
+| 66 | Sahil 07 | 9 | 5 | 7 | %78 ⚠ | %58 | 5/6/9 |
+| 67 | Sahil 08 | 9 | 5 | 5 | %56 | %58 | 3/4/9 |
+| 68 | Sahil 09 | 11 | 4 | 6 | %55 | %57 | 4/5/11 |
+| 69 | Sahil 10 | 10 | 3 | 6 | %60 ⚠ | %56 | 4/5/10 |
+| 70 | Sahil 11 | 11 | 3 | 6 | %55 | %56 | 4/5/11 |
+| 71 | Sahil 12 | 12 | 5 | 7 | %58 ⚠ | %55 | 5/7/12 |
+| 72 | Köy Meydanı 01 | 10 | 3 | 6 | %60 | %58 | 4/5/10 |
+| 73 | Köy Meydanı 02 | 8 | 3 | 5 | %62 ⚠ | %57 | 3/4/8 |
+| 74 | Köy Meydanı 03 | 9 | 4 | 6 | %67 ⚠ | %57 | 4/5/9 |
+| 75 | Köy Meydanı 04 | 7 | 5 | 4 | %57 | %56 | 3/3/7 |
+| 76 | Köy Meydanı 05 | 8 | 3 | 4 | %50 ⚠ | %55 | 3/3/8 |
+| 77 | Köy Meydanı 06 | 9 | 6 | 5 | %56 | %55 | 3/4/9 |
+| 78 | Köy Meydanı 07 | 12 | 4 | 7 | %58 ⚠ | %54 | 5/6/12 |
+| 79 | Köy Meydanı 08 | 9 | 4 | 6 | %67 ⚠ | %54 | 4/5/9 |
+| 80 | Köy Meydanı 09 | 10 | 4 | 5 | %50 | %53 | 3/4/10 |
+| 81 | Köy Meydanı 10 | 10 | 3 | 5 | %50 | %52 | 3/4/10 |
+| 82 | Köy Meydanı 11 | 12 | 3 | 7 | %58 ⚠ | %52 | 5/6/12 |
+| 83 | Köy Meydanı 12 | 13 | 6 | 7 | %54 | %51 | 5/7/13 |
+| 84 | Yayla 01 | 10 | 2 | 5 | %50 ⚠ | %55 | 3/4/10 |
+| 85 | Yayla 02 | 8 | 3 | 5 | %62 ⚠ | %54 | 3/4/8 |
+| 86 | Yayla 03 | 8 | 2 | 4 | %50 ⚠ | %54 | 3/3/8 |
+| 87 | Yayla 04 | 9 | 3 | 4 | %44 ⚠ | %53 | 3/3/9 |
+| 88 | Yayla 05 | 10 | 4 | 5 | %50 | %52 | 3/4/10 |
+| 89 | Yayla 06 | 12 | 4 | 6 | %50 | %52 | 4/5/12 |
+| 90 | Yayla 07 | 12 | 4 | 6 | %50 | %51 | 4/5/12 |
+| 91 | Yayla 08 | 11 | 4 | 6 | %55 ⚠ | %51 | 4/5/11 |
+| 92 | Yayla 09 | 10 | 4 | 5 | %50 | %50 | 3/4/10 |
+| 93 | Yayla 10 | 9 | 3 | 5 | %56 ⚠ | %49 | 3/4/9 |
+| 94 | Yayla 11 | 13 | 4 | 6 | %46 | %49 | 4/5/13 |
+| 95 | Yayla 12 | 13 | 6 | 6 | %46 | %48 | 4/6/13 |
+| 96 | Kasaba Pazarı 01 | 9 | 3 | 5 | %56 ⚠ | %52 | 3/4/9 |
+| 97 | Kasaba Pazarı 02 | 10 | 2 | 5 | %50 | %51 | 3/4/10 |
+| 98 | Kasaba Pazarı 03 | 10 | 3 | 4 | %40 ⚠ | %51 | 3/3/10 |
+| 99 | Kasaba Pazarı 04 | 16 | 6 | 7 | %44 ⚠ | %50 | 5/6/16 |
+| 100 | Kasaba Pazarı 05 | 12 | 3 | 6 | %50 | %49 | 4/5/12 |
+| 101 | Kasaba Pazarı 06 | 12 | 5 | 6 | %50 | %49 | 4/5/12 |
+| 102 | Kasaba Pazarı 07 | 10 | 3 | 5 | %50 | %48 | 3/4/10 |
+| 103 | Kasaba Pazarı 08 | 11 | 3 | 6 | %55 ⚠ | %48 | 4/5/11 |
+| 104 | Kasaba Pazarı 09 | 14 | 3 | 7 | %50 ⚠ | %47 | 5/6/14 |
+| 105 | Kasaba Pazarı 10 | 13 | 5 | 6 | %46 | %46 | 4/5/13 |
+| 106 | Kasaba Pazarı 11 | 13 | 3 | 6 | %46 | %46 | 4/5/13 |
+| 107 | Kasaba Pazarı 12 | 15 | 5 | 7 | %47 | %45 | 5/7/15 |
+| 108 | Bayram Yeri 01 | 9 | 3 | 4 | %44 ⚠ | %49 | 3/3/9 |
+| 109 | Bayram Yeri 02 | 9 | 3 | 4 | %44 ⚠ | %48 | 3/3/9 |
+| 110 | Bayram Yeri 03 | 15 | 3 | 6 | %40 ⚠ | %47 | 4/5/15 |
+| 111 | Bayram Yeri 04 | 10 | 3 | 4 | %40 ⚠ | %47 | 3/3/10 |
+| 112 | Bayram Yeri 05 | 13 | 3 | 6 | %46 | %46 | 4/5/13 |
+| 113 | Bayram Yeri 06 | 13 | 3 | 6 | %46 | %45 | 4/5/13 |
+| 114 | Bayram Yeri 07 | 9 | 3 | 5 | %56 ⚠ | %44 | 3/4/9 |
+| 115 | Bayram Yeri 08 | 14 | 5 | 7 | %50 ⚠ | %43 | 5/6/14 |
+| 116 | Bayram Yeri 09 | 12 | 3 | 5 | %42 | %42 | 3/4/12 |
+| 117 | Bayram Yeri 10 | 10 | 3 | 5 | %50 ⚠ | %42 | 3/4/10 |
+| 118 | Bayram Yeri 11 | 17 | 6 | 8 | %47 ⚠ | %41 | 5/7/17 |
+| 119 | Bayram Yeri 12 | 15 | 5 | 6 | %40 | %40 | 4/6/15 |
+
+Bölge ortalamaları: Sahil %60 · Köy Meydanı %57 · Yayla %51 · Kasaba Pazarı %49 · Bayram Yeri %45 · **Memleket %53** (Mahalle %73).
+
+---
+
+## Faz 7 — Harita seçimi, görünüm, dil (2026-09-24)
+
+- **Harita seçimi:** harita ekranının başlığındaki bölge kapsülü artık düğme.
+  Solunda amber etiketle haritanın adı (MAHALLE / MEMLEKET), sağında ok.
+  Dokununca **HARİTALAR** penceresi: her harita bir kart (Orman zemin, Krem
+  yazı): ad, alt başlık, yıldız "x / 180" ve ilerleme çubuğu; bulunulan harita
+  amber çerçeve + "BURADASIN". Kilitli kartta kilit ve "Mahalle haritasını
+  bitir, bu harita açılsın." Açık karta dokunmak o haritanın sıradaki
+  bölümüne götürür; oyuncu son baktığı haritada açılır (`lastMap`).
+  Karar gerekçesi: planın önerdiği iki yoldan "alt sekmede Haritalar sayfası"
+  alt çubuğa altıncı düğme eklemek demekti; kapsül zaten ekranın en okunur
+  yeri ve bölge okları kendi haritası içinde dönüyor — harita değiştirmek bir
+  üst seviye iş, ayrı pencere daha anlaşılır.
+- **Açılış duyurusu:** Memleket ilk açıldığında harita ekranında bir kez
+  "Memleket açıldı! Haritalar'dan geçebilirsin." (`mapsAnnounced` kayıtta).
+  Test yapısı açıkken susar (her şey zaten açık).
+- Harita 2 harita görünümü: görsel yokken temanın renkleriyle çizilen zemin
+  (üç kademeli düşüş aynen çalışıyor). Bütün yeni metinler `L.cs`'te
+  İngilizceleriyle (MapsVerify denetliyor).
+- `CameraFitVerify` 120 bölümü, `MemleketLayoutVerify` yerleşimi ölçüyor.
+  `MapLayoutVerify` durak yerleşimi bölgeden bağımsız (12 durak aynı), değişmedi.
+
+---
+
 ## Telefonda kontrol edilecek
 - (Faz 7'ye kadar Memleket'e arayüzden girilemiyor; görsel kontrol o zaman.)
 - Buz kabuğu görünümü (saydamlık, kenar parlaklığı), kırılma parçaları ve
@@ -292,6 +453,11 @@ Pazar sınavının labirenti (ince duvar, şeritte misket) yeniden yerleşti.
   bütün çıkarınca da 2.
 - Kum/çamur/çukur disklerinin görünümü ve zeminle uyumu; eğim oklarının
   görünürlüğü; çukura düşen misketin soluk görünmesi ve çukur sesi.
+- Harita ekranı başlığı: MAHALLE/MEMLEKET etiketi ile bölge adının
+  sığması (uzun bölge adları: "Mahalle Meydanı", "Kasaba Pazarı"), ok.
+- HARİTALAR penceresi: kart düzeni, kilitli kart, "BURADASIN", geçiş.
+- Memleket'in 5 bölgesinin görsel yokken çizilen zemin renkleri.
+- 4.0 sahaya büyütülen bölümlerde kamera (test ölçüyor ama göz de baksın).
 
 ## Bekleyen işler (kullanıcıda)
 - Memleket görselleri: `Resources/Mahalle/Map/Harita{Sahil,Koy,Yayla,Pazar,Bayram}.png`

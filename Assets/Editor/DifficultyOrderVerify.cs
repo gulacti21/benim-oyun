@@ -46,9 +46,70 @@ public static class DifficultyOrderVerify
                           "Uc yildiz sartinda uc esik de ayri olmali: " + name);
             }
 
+        try { passed += MemleketChecks(); }
+        catch (System.Exception e) { failed++; Debug.LogError("DIFFICULTY_ORDER: " + e.Message); }
+
         Debug.Log(failed == 0
             ? "DIFFICULTY_ORDER_OK: " + passed + " checks passed."
             : "DIFFICULTY_ORDER_FAIL: " + failed + " / " + (passed + failed));
+    }
+
+    // ---------------------------------------------------------------
+    // HARİTA 2 (Memleket) ZORLUK SIRASI. Ölçü: temizlenebilirlik = açgözlü tavan / toplam
+    // (Harita 1 merdiveninin ölçüsü), MemleketBook.Tuning'deki ölçülmüş tavandan.
+    // Bir misket = 100/toplam puan; sıra kuralları bu ÖLÇÜM ADIMI kadar pay tanır, çünkü
+    // 9 misketli bölümde bir misket 11 puan — daha ince ayrım ölçülemez.
+    // Kural bozulursa CHECK FAILED (MahalleVerify de çağırır).
+    public static readonly float[] RegionStart = { .62f, .58f, .55f, .52f, .49f };
+    public static readonly float[] RegionEnd = { .55f, .51f, .48f, .45f, .40f };
+    public const float Floor = .40f;
+    public const float H1Average = (.97f + .85f + .66f + .62f + .57f) / 5f;
+
+    public static float Clear(int local)
+    {
+        var l = MemleketCampaign.Database.Get(local);
+        int c = MemleketBook.MeasuredCeiling(local);
+        return c < 0 ? -1f : c / (float)l.TotalMarbles();
+    }
+    private static float Step(int local) => 1f / MemleketCampaign.Database.Get(local).TotalMarbles();
+
+    public static int MemleketChecks()
+    {
+        int n = 0;
+        void Must(bool ok, string m) { n++; if (!ok) throw new System.Exception("CHECK FAILED: " + m); }
+        var report = new System.Collections.Generic.List<string>();
+        float sum = 0f; int measured = 0;
+        float prevRegionStart = 1f, prevRegionEnd = 1f;
+        for (int r = 0; r < 5; r++)
+        {
+            float regionMin = 1f;
+            for (int k = 0; k < 12; k++)
+            {
+                int i = r * 12 + k;
+                float c = Clear(i);
+                Must(c >= 0f, "Memleket " + i + " measured");
+                sum += c; measured++;
+                regionMin = Mathf.Min(regionMin, c);
+                Must(c >= Floor - 1e-4f, "Memleket " + i + " clearability floor 40% (" + Mathf.RoundToInt(c * 100) + ")");
+                if (k > 0)
+                    Must(c <= Clear(i - 1) + Step(i) + 1e-4f, "Memleket " + i + " not easier than previous by more than one marble (" +
+                         Mathf.RoundToInt(Clear(i - 1) * 100) + " -> " + Mathf.RoundToInt(c * 100) + ")");
+                float want = Mathf.Lerp(RegionStart[r], RegionEnd[r], k / 11f);
+                if (Mathf.Abs(c - want) > .03f)
+                    report.Add("  " + MemleketCampaign.Districts[r] + " " + (k + 1).ToString("00") + ": %" + Mathf.RoundToInt(c * 100) + " (hedef %" + Mathf.RoundToInt(want * 100) + ")");
+            }
+            float start = Clear(r * 12), end = Clear(r * 12 + 11);
+            // Bölge başı bir önceki bölgenin sonundan en fazla ~7 puan (+ bir misket) kolay başlayabilir.
+            if (r > 0) Must(start <= prevRegionEnd + .07f + Step(r * 12) + 1e-4f, "Memleket region " + r + " starts at most ~7 points easier than previous end");
+            if (r > 0) Must(start <= prevRegionStart + Step(r * 12) + 1e-4f, "Memleket region starts fall, within one marble (" + r + ")");
+            Must(end <= regionMin + Step(r * 12 + 11) + 1e-4f, "Memleket region " + r + " mastery is its hardest (within one marble)");
+            prevRegionStart = start; prevRegionEnd = end;
+        }
+        float avg = sum / measured;
+        Must(avg < H1Average - .05f, "Memleket average clearly harder than Mahalle (" + Mathf.RoundToInt(avg * 100) + " vs " + Mathf.RoundToInt(H1Average * 100) + ")");
+        Debug.Log("MEMLEKET_ORDER: ortalama temizlenebilirlik %" + Mathf.RoundToInt(avg * 100) + " (Mahalle %" + Mathf.RoundToInt(H1Average * 100) + "), hedef ±3 dışında " + report.Count + " bölüm");
+        foreach (var line in report) Debug.Log("MEMLEKET_ORDER hedef dışı:" + line);
+        return n;
     }
 
     private static void Check(bool condition, string message)

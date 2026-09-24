@@ -549,6 +549,7 @@ public class MahalleUI : MonoBehaviour
 
         MapHeader(theme);
         MapDock();
+        AnnounceMaps();
     }
 
     // Ust guvenli alan payi (centik / durum cubugu seridi).
@@ -631,8 +632,16 @@ public class MahalleUI : MonoBehaviour
         Art(next.transform,"Sag",MahalleGraphic.Shape.Chevron,26,26,44,44,Komur);
 
         // Mahalle adi kendi krem kapsulunde: her zeminde okunur, blok gibi durmaz.
-        var isim=Panel(head.transform,"Mahalle adı",164,120,752,160,Krem);
-        isim.colorB=new Color(.933f,.906f,.851f);isim.radius=46;isim.shadow=10;isim.raycastTarget=false;
+        // HARİTALAR: kapsüle dokunmak harita seçimini açar. Solda haritanın adı, sağda ok.
+        var isimBtn=Button(head.transform,"Mahalle adı",164,120,752,160,Krem,OpenMaps);
+        var isim=isimBtn.GetComponent<MahalleGraphic>();
+        isim.colorB=new Color(.933f,.906f,.851f);isim.radius=46;isim.shadow=10;isim.highlight=false;
+        isimBtn.gameObject.AddComponent<MahalleTap>();
+        int shownMap=Maps.MapOfDistrict(district);
+        var etiket=Panel(isim.transform,"Harita etiketi",22,56,150,48,Amber);etiket.radius=24;etiket.highlight=false;
+        var etiketYazi=Text(etiket.transform,L.Up(L.T(Maps.Names[shownMap])),0,0,150,48,22,Komur,TextAlignmentOptions.Center);
+        etiketYazi.fontStyle=FontStyles.Bold;etiketYazi.enableAutoSizing=true;etiketYazi.fontSizeMin=14;etiketYazi.fontSizeMax=22;
+        Art(isim.transform,"Harita oku",MahalleGraphic.Shape.Chevron,690,60,40,40,new Color(Komur.r,Komur.g,Komur.b,.55f));
         var baslik=Text(isim.transform,theme.title,0,18,752,64,48,Komur,TextAlignmentOptions.Center);
         baslik.fontStyle=FontStyles.Bold;
         Text(isim.transform,theme.subtitle,0,82,752,44,26,new Color(Komur.r,Komur.g,Komur.b,.62f),TextAlignmentOptions.Center);
@@ -642,6 +651,65 @@ public class MahalleUI : MonoBehaviour
             bool on=i==district%Maps.DistrictsPerMap;
             Art(isim.transform,"Nokta "+i,MahalleGraphic.Shape.Circle,319+i*26,on?126:128,on?14:10,on?14:10,
                 on?Amber:new Color(Komur.r,Komur.g,Komur.b,.24f));
+        }
+    }
+
+    // HARİTALAR: her harita bir kart. Açık olana dokunmak o haritaya geçer, oyuncu
+    // o haritanın sıradaki bölümünde açılır. Kilitli kartta kilit ve ne yapılacağı yazar.
+    private void OpenMaps()
+    {
+        const float CardH=330f,Gap=28f;
+        float h=210+Maps.Count*(CardH+Gap)+140;
+        var box=Modal("Haritalar",h);
+        var face=box.GetComponent<MahalleGraphic>();if(face!=null){face.color=Krem;face.colorB=Krem;face.highlight=false;}
+        var baslik=Text(box,"HARİTALAR",36,40,912,80,52,Komur,TextAlignmentOptions.Center);baslik.fontStyle=FontStyles.Bold;
+        Text(box,"Her haritanın kendi 60 bölümü var. Dokun, geç.",36,118,912,60,26,new Color(Komur.r,Komur.g,Komur.b,.62f),TextAlignmentOptions.Center);
+        int current=Maps.MapOfDistrict(district);
+        for(int m=0;m<Maps.Count;m++)
+        {
+            int map=m;float y=210+m*(CardH+Gap);
+            bool open=MahalleProfile.MapUnlocked(map);
+            var card=Button(box,"Harita "+map,36,y,912,CardH,open?Orman:new Color(Komur.r,Komur.g,Komur.b,.82f),()=>
+            {
+                if(!MahalleProfile.MapUnlocked(map)){Toast(L.F("{0} haritası, {1} haritasının son bölümünü geçince açılır.",L.T(Maps.Names[map]),L.T(Maps.Names[Mathf.Max(0,map-1)])));return;}
+                RememberMap(map);district=MahalleProfile.NextLevelIn(map)/Campaign.PerDistrict;tab=0;CloseModal(false);ShowHome();
+            });
+            var cf=card.GetComponent<MahalleGraphic>();cf.radius=36;cf.shadow=10;cf.highlight=false;
+            if(map==current){var sec=Art(card.transform,"Seçili çerçeve",MahalleGraphic.Shape.Panel,-6,-6,924,CardH+12,Amber);sec.radius=42;sec.transform.SetAsFirstSibling();}
+            card.gameObject.AddComponent<MahalleTap>();
+            var ad=Text(card.transform,L.Up(L.T(Maps.Names[map])),40,34,560,70,50,Krem);ad.fontStyle=FontStyles.Bold;
+            Text(card.transform,Maps.Subtitles[map],40,104,820,50,28,new Color(Krem.r,Krem.g,Krem.b,.72f));
+            if(open)
+            {
+                int stars=MahalleProfile.MapStars(map),full=Maps.PerMap*3;
+                Art(card.transform,"Yıldız",MahalleGraphic.Shape.Star,40,190,44,44,Amber);
+                Text(card.transform,L.F("{0} / {1} yıldız",stars,full),96,188,400,48,30,Krem);
+                var track=Panel(card.transform,"Yol",40,262,832,14,new Color(Krem.r,Krem.g,Krem.b,.18f));track.radius=7;track.highlight=false;
+                var fill=Panel(card.transform,"Dolu",40,262,Mathf.Max(14f,832f*stars/full),14,Amber);fill.radius=7;fill.highlight=false;
+                if(map==current)
+                {
+                    var burada=Panel(card.transform,"Buradasın",672,34,200,52,Amber);burada.radius=26;burada.highlight=false;
+                    var t=Text(burada.transform,"BURADASIN",0,0,200,52,22,Komur,TextAlignmentOptions.Center);t.fontStyle=FontStyles.Bold;
+                }
+            }
+            else
+            {
+                Art(card.transform,"Kilit",MahalleGraphic.Shape.Lock,40,186,52,52,new Color(Krem.r,Krem.g,Krem.b,.8f));
+                Text(card.transform,L.F("{0} haritasını bitir, bu harita açılsın.",L.T(Maps.Names[Mathf.Max(0,map-1)])),108,178,760,70,28,new Color(Krem.r,Krem.g,Krem.b,.85f));
+            }
+        }
+        LabelButton(box,"GERİ",36,h-120,912,88,Komur,Krem,()=>CloseModal(false),29);
+    }
+
+    // Harita yeni açıldıysa bir kez haber ver (kayıtta hangi haritaya kadar söylendiği durur).
+    private void AnnounceMaps()
+    {
+        for(int m=MahalleProfile.Data.mapsAnnounced+1;m<Maps.Count;m++)
+        {
+            if(!MahalleProfile.MapUnlocked(m))break;
+            MahalleProfile.Data.mapsAnnounced=m;MahalleProfile.Save();
+            // Test yapısı her şeyi açık gösterir; orada duyuru gürültü olur.
+            if(!MahalleProfile.TestUnlockAllLevels)Toast(L.F("{0} açıldı! Haritalar'dan geçebilirsin.",L.T(Maps.Names[m])));
         }
     }
 

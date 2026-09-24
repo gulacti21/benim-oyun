@@ -46,6 +46,8 @@ public class MahalleSave
     public MapProgress[] maps = new MapProgress[0];
     // Oyuncunun en son baktığı harita; oyun o haritada açılır.
     public int lastMap;
+    // Oyuncuya "açıldı" diye söylenen en yüksek harita (0 = sadece Mahalle).
+    public int mapsAnnounced;
 }
 
 [Serializable]

@@ -26,7 +26,8 @@ public static class MemleketBook
             // 01 Kumsal Girişi — kumdan geçen atış yavaşlar. Tek kural, tek küme.
             case 0:
                 Set(level, 3.2f, 5);
-                level.marbles = Join(Ring(0f, .8f, .64f, 6, 0f), P(0f, .8f));
+                // Ölçüldü: 7 misketle 3 atışta %86 — hedef %62. Arkaya üç misket eklendi.
+                level.marbles = Join(Ring(0f, .8f, .64f, 6, 0f), P(0f, .8f), P(-1.3f, 2.1f), P(0f, 2.35f), P(1.3f, 2.1f));
                 level.zones = Zones(Sand(0f, -1.3f, .9f));
                 break;
 
@@ -82,11 +83,13 @@ public static class MemleketBook
                 level.zones = Zones(Sand(1.9f, -.9f, .8f));
                 break;
 
-            // 09 Sıcak Kum — her yer kum. Bütün misketler yavaş.
+            // 09 Sıcak Kum — küme kumun içinde: dışarı itmek için önce kumdan çıkarmalı.
+            // (Ölçüldü: kum 1.8 yarıçaplıyken 7 atışta bile tavan %36 — taban %40'ın altı.
+            //  Kum kümeyi saracak kadar küçültüldü.)
             case 8:
                 Set(level, 3.7f, 5);
                 level.marbles = Join(Grid(0f, .9f, 3, 3, .72f, .72f), P(-2.6f, .4f), P(2.6f, .4f));
-                level.zones = Zones(Sand(0f, .9f, 1.8f));
+                level.zones = Zones(Sand(0f, .9f, 1.15f));
                 break;
 
             // 10 Son Dalga — iki yay; arada kum şeridi.
@@ -117,7 +120,8 @@ public static class MemleketBook
             // 01 Çınar Altı — sıranın arkası çamur: iten saplar.
             case 12:
                 Set(level, 3.4f, 5);
-                level.marbles = Join(Row(.55f, -1.55f, 1.55f, 6), P(-.32f, 1.7f), P(.32f, 1.7f));
+                // Ölçüldü: 8 misketle 3 atışta %75. Çamurun iki yanına iki misket eklendi.
+                level.marbles = Join(Row(.55f, -1.55f, 1.55f, 6), P(-.32f, 1.7f), P(.32f, 1.7f), P(-2.3f, 1.25f), P(2.3f, 1.25f));
                 level.zones = Zones(Mud(0f, 1.7f, .7f));
                 break;
 
@@ -156,7 +160,9 @@ public static class MemleketBook
             case 17:
                 Set(level, 3.6f, 5);
                 level.marbles = Join(Grid(0f, .95f, 2, 3, .7f, .58f), P(-2.2f, .4f), P(2.2f, .4f), P(0f, -.8f));
-                level.obstacles = new[] { O(-.95f, 1.1f, .35f, 1.7f), O(.95f, 1.1f, .35f, 1.7f), O(0f, 2.05f, 2.25f, .35f) };
+                // Ölçüldü: yan duvarlar tam boyken tavan 7 atışta %33 (misketler kümeste hapsoluyordu).
+                // Yan duvarlar arkaya kısaltıldı; ön sıra yandan kaçabiliyor.
+                level.obstacles = new[] { O(-.95f, 1.45f, .35f, 1.0f), O(.95f, 1.45f, .35f, 1.0f), O(0f, 2.05f, 2.25f, .35f) };
                 level.zones = Zones(Mud(0f, -.1f, .38f));
                 break;
 
@@ -210,7 +216,8 @@ public static class MemleketBook
             // 01 Yayla Yolu — sağa eğim; çapraz sıra.
             case 24:
                 Set(level, 3.5f, 5); level.slope = new Vector2(.8f, 0f);
-                level.marbles = Line(-1.8f, -.2f, 1.8f, 1.9f, 7);
+                // Ölçüldü: 7 misketle 3 atışta %100. Karşı çaprazda ikinci kısa sıra eklendi.
+                level.marbles = Join(Line(-1.8f, -.2f, 1.8f, 1.9f, 7), Line(-1.6f, 2.0f, -.4f, 2.7f, 3));
                 break;
 
             // 02 Çoban Çeşmesi — sola eğim; çeşmenin çevresi.
@@ -375,7 +382,8 @@ public static class MemleketBook
                 // şeritteki misket duvara değmesin (0.4 boşluk > 0.25 yarıçap + 0.125).
                 level.marbles = Kind(Join(Row(.6f, -1.8f, 1.6f, 4), Row(1.4f, -1.5f, 1.8f, 4), Row(2.2f, -1.6f, 1.7f, 4)),
                                     MarbleKind.Split, 1, 6, 10);
-                level.obstacles = new[] { O(-1.2f, .2f, 1.8f, .25f), O(1.2f, 1.0f, 1.8f, .25f), O(-1.2f, 1.8f, 1.8f, .25f), O(1.2f, 2.6f, 1.8f, .25f) };
+                // Ölçüldü: dört uzun duvarla tavan 7 atışta %27. Duvarlar kısaltıldı, en arkadaki kalktı.
+                level.obstacles = new[] { O(-1.4f, .2f, 1.3f, .25f), O(1.4f, 1.0f, 1.3f, .25f), O(-1.4f, 1.8f, 1.3f, .25f) };
                 break;
 
             // ================= BAYRAM YERİ · çukur + hepsi =================
@@ -413,15 +421,19 @@ public static class MemleketBook
             // 05 Davul Zurna — iki yay, iç yayda karpuz davullar, merkezde çukur.
             case 52:
                 Set(level, 3.8f, 5);
-                level.marbles = Join(Kind(ArcAt(0f, .7f, 1.25f, 40f, 140f, 5), MarbleKind.Split, 1, 3), ArcAt(0f, .7f, 2.3f, 30f, 150f, 7));
+                // Ölçüldü: iç yayda 5 misketle 3 atışta %64 (Bayram için kolay) ve sıkıştırmaya yer yoktu; iç yay 4 misket.
+                level.marbles = Join(Kind(ArcAt(0f, .7f, 1.25f, 40f, 140f, 4), MarbleKind.Split, 1, 3), ArcAt(0f, .7f, 2.3f, 30f, 150f, 7));
                 level.zones = Zones(Pit(0f, .7f, .4f));
                 break;
 
             // 06 Bayram Harçlığı — dağınık çiftler; iki çukur, çamur ve kum.
             case 53:
                 Set(level, 3.8f, 5);
-                level.marbles = Spots(-2.2f, -.3f, -1.7f, .1f, -.5f, .5f, 0f, .9f, .8f, 1.4f, 1.3f, 1.05f, -.3f, 2.1f, .2f, 2.55f, 2.1f, 2.3f, 2.5f, 1.8f);
-                level.zones = Zones(Pit(-1.25f, 2.4f, .4f), Pit(1.45f, .15f, .4f), Mud(-1.65f, .95f, .5f), Sand(1.3f, 2.9f, .5f));
+                // İkisi çamurda, biri kumda: saplanan harçlık (ölçüldü, onlarsız 3 atışta %60).
+                level.marbles = Spots(-2.2f, -.3f, -1.7f, .1f, -.5f, .5f, 0f, .9f, .8f, 1.4f, 1.3f, 1.05f, -.3f, 2.1f, .2f, 2.55f, 2.1f, 2.3f, 2.5f, 1.8f,
+                                      -1.9f, 1.1f, -1.35f, .8f, 1.3f, 2.95f);
+                // Ölçüldü: 0.4 çukurlarla 3 atışta %60 (Bayram için kolay); çukurlar büyüdü.
+                level.zones = Zones(Pit(-1.25f, 2.4f, .55f), Pit(1.45f, .15f, .55f), Mud(-1.65f, .95f, .6f), Sand(1.3f, 2.9f, .5f));
                 break;
 
             // 07 Fener Alayı — uzun yay, üç buz fener, ortada çukur, hafif eğim.
@@ -469,6 +481,7 @@ public static class MemleketBook
                 break;
         }
         Vary(level, index);
+        Harden(level, index);
         Tune(level, index);
     }
 
@@ -479,27 +492,65 @@ public static class MemleketBook
     // bölümlerden en az 0.30 farklı olsun (LevelVarietyVerify ölçüsü).
     // Satır: { derece, dx, dz }
     public static System.Func<int, Vector3> VariationOverride;
+    public static Vector3 VariationOf(int index) => Variation.TryGetValue(index, out var v) ? v : Vector3.zero;
     private static readonly Dictionary<int, Vector3> Variation = new Dictionary<int, Vector3>
     {
-        { 0, new Vector3(0f, 0f, 0.25f) },
-        { 4, new Vector3(-15f, 0f, 0f) },
+        { 0, new Vector3(15f, 0f, 0.25f) },
+        { 2, new Vector3(0f, 0.45f, 0f) },
+        { 4, new Vector3(0f, 0f, 0.25f) },
         { 6, new Vector3(-8f, 0f, 0f) },
         { 8, new Vector3(-8f, 0f, 0f) },
-        { 15, new Vector3(0f, 0.45f, 0f) },
-        { 16, new Vector3(-22f, 0f, 0f) },
-        { 19, new Vector3(-8f, 0.25f, 0f) },
+        { 12, new Vector3(8f, 0f, 0.25f) },
+        { 15, new Vector3(0f, 0f, -0.45f) },
+        { 16, new Vector3(8f, 0f, -0.25f) },
+        { 19, new Vector3(-15f, 0f, 0f) },
         { 22, new Vector3(-8f, 0f, 0f) },
+        { 25, new Vector3(22f, -0.25f, 0f) },
         { 27, new Vector3(0f, 0f, 0.25f) },
-        { 29, new Vector3(30f, 0f, 0f) },
+        { 29, new Vector3(-40f, 0f, -0.25f) },
         { 30, new Vector3(-8f, 0f, 0f) },
-        { 35, new Vector3(-22f, 0f, 0f) },
+        { 34, new Vector3(-8f, 0f, 0f) },
+        { 35, new Vector3(-8f, 0.45f, 0f) },
+        { 40, new Vector3(0f, 0f, 0.25f) },
         { 42, new Vector3(0f, 0f, 0.25f) },
         { 43, new Vector3(-22f, 0f, 0f) },
-        { 50, new Vector3(0f, 0f, 0.25f) },
-        { 52, new Vector3(-8f, 0f, 0f) },
-        { 54, new Vector3(0f, 0f, -0.25f) },
-        { 55, new Vector3(-15f, 0f, 0f) },
+        { 48, new Vector3(-8f, 0f, 0f) },
+        { 50, new Vector3(-15f, 0f, 0f) },
+        { 51, new Vector3(-8f, 0f, 0f) },
+        { 52, new Vector3(-15f, 0f, 0f) },
+        { 54, new Vector3(-22f, 0f, 0f) },
+        { 55, new Vector3(0f, 0f, 0.45f) },
+        { 58, new Vector3(0f, 0.45f, 0.45f) },
     };
+
+    // ---------------------------------------------------------------
+    // SERTLEŞTİRME (Faz 6 ölçümünden): 3 atışta bile hedefin 10+ puan üstünde temizlenen
+    // bölümler. Saha büyür, bölümün bütünü merkeze doğru sıkışır: misketin çıkmak için
+    // gideceği yol uzar, dizilimin biçimi aynı kalır. Satır: { saha, sıkıştırma }
+    private static readonly Dictionary<int, Vector2> Hardening = new Dictionary<int, Vector2>
+    {
+        { 1, new Vector2(4.0f, .9f) },  { 3, new Vector2(4.0f, .9f) },  { 4, new Vector2(4.0f, .85f) },
+        { 12, new Vector2(4.0f, .9f) }, { 14, new Vector2(4.0f, .9f) }, { 16, new Vector2(4.0f, .85f) },
+        { 24, new Vector2(4.0f, .85f) }, { 25, new Vector2(4.0f, .85f) }, { 27, new Vector2(4.0f, .9f) },
+        { 29, new Vector2(4.0f, .9f) }, { 31, new Vector2(4.0f, .9f) }, { 32, new Vector2(4.0f, .9f) },
+        { 33, new Vector2(4.0f, .9f) }, { 34, new Vector2(4.0f, .9f) }, { 35, new Vector2(4.0f, .95f) },
+        { 37, new Vector2(4.0f, .85f) }, { 40, new Vector2(4.0f, .9f) },
+        // Bayram Yeri ikinci tur: ilk ayarda Pazar'dan kolay kalmıştı (ort. %56 / %48).
+        { 48, new Vector2(4.0f, .85f) }, { 49, new Vector2(4.0f, .85f) }, { 50, new Vector2(4.0f, .85f) },
+        { 51, new Vector2(4.0f, .85f) }, { 52, new Vector2(4.0f, .85f) }, { 53, new Vector2(4.0f, .85f) },
+        { 54, new Vector2(4.0f, .85f) }, { 55, new Vector2(4.0f, .85f) }, { 56, new Vector2(4.0f, .85f) },
+        { 57, new Vector2(4.0f, .85f) }, { 58, new Vector2(4.0f, .88f) }, { 59, new Vector2(4.0f, .88f) },
+    };
+
+    private static void Harden(LevelData level, int index)
+    {
+        if (!Hardening.TryGetValue(index, out var h)) return;
+        level.arenaSize = Mathf.Max(level.arenaSize, h.x);
+        float f = h.y;
+        if (level.marbles != null) for (int i = 0; i < level.marbles.Length; i++) { level.marbles[i].x *= f; level.marbles[i].z *= f; }
+        if (level.obstacles != null) for (int i = 0; i < level.obstacles.Length; i++) { level.obstacles[i].x *= f; level.obstacles[i].z *= f; }
+        if (level.zones != null) for (int i = 0; i < level.zones.Length; i++) { level.zones[i].x *= f; level.zones[i].z *= f; }
+    }
 
     private static void Vary(LevelData level, int index)
     {
@@ -523,24 +574,99 @@ public static class MemleketBook
     }
 
     // ---------------------------------------------------------------
-    // ATIŞ HAKKI VE YILDIZ HEDEFLERİ (Faz 6 ölçümünden). Tabloda yoksa taban:
-    // 1 yıldız ≈ %40, 2 yıldız ≈ %60, 3 yıldız = hepsi.
-    // Satır: { atış, 1y, 2y, 3y }  (0 = tabanı kullan)
+    // ATIŞ HAKKI VE YILDIZ HEDEFLERİ — Faz 6 ölçümünden (MemleketPhysicsVerify).
+    // Satır: { atış hakkı, o atış hakkıyla ölçülen TAVAN (normal misket, açgözlü arama) }.
+    // Hedefler tavandan türetilir, böylece "geçilemeyen bölüm yok" kuruluşundan doğru:
+    //   1 yıldız = tavanın %60'ı (yukarı yuvarlanır)  -> normal misketle her zaman mümkün
+    //   2 yıldız = ustalık sınavında TAVAN (kilit normal misketle açılır, pay yok),
+    //              diğerlerinde tavanın %85'i
+    //   3 yıldız = bütün misketler (tavanın üstündeyse güç / özel misket ister)
+    // Tabloda olmayan bölüm formülle (1y %40, 2y %60) kalır.
     private static readonly Dictionary<int, int[]> Tuning = new Dictionary<int, int[]>
     {
+        { 0, new[] { 2, 5 } },
+        { 1, new[] { 3, 4 } },
+        { 2, new[] { 5, 6 } },
+        { 3, new[] { 3, 6 } },
+        { 4, new[] { 3, 5 } },
+        { 5, new[] { 3, 6 } },
+        { 6, new[] { 5, 7 } },
+        { 7, new[] { 5, 5 } },
+        { 8, new[] { 4, 6 } },
+        { 9, new[] { 3, 6 } },
+        { 10, new[] { 3, 6 } },
+        { 11, new[] { 5, 7 } },
+        { 12, new[] { 3, 6 } },
+        { 13, new[] { 3, 5 } },
+        { 14, new[] { 4, 6 } },
+        { 15, new[] { 5, 4 } },
+        { 16, new[] { 3, 4 } },
+        { 17, new[] { 6, 5 } },
+        { 18, new[] { 4, 7 } },
+        { 19, new[] { 4, 6 } },
+        { 20, new[] { 4, 5 } },
+        { 21, new[] { 3, 5 } },
+        { 22, new[] { 3, 7 } },
+        { 23, new[] { 6, 7 } },
+        { 24, new[] { 2, 5 } },
+        { 25, new[] { 3, 5 } },
+        { 26, new[] { 2, 4 } },
+        { 27, new[] { 3, 4 } },
+        { 28, new[] { 4, 5 } },
+        { 29, new[] { 4, 6 } },
+        { 30, new[] { 4, 6 } },
+        { 31, new[] { 4, 6 } },
+        { 32, new[] { 4, 5 } },
+        { 33, new[] { 3, 5 } },
+        { 34, new[] { 4, 6 } },
+        { 35, new[] { 6, 6 } },
+        { 36, new[] { 3, 5 } },
+        { 37, new[] { 2, 5 } },
+        { 38, new[] { 3, 4 } },
+        { 39, new[] { 6, 7 } },
+        { 40, new[] { 3, 6 } },
+        { 41, new[] { 5, 6 } },
+        { 42, new[] { 3, 5 } },
+        { 43, new[] { 3, 6 } },
+        { 44, new[] { 3, 7 } },
+        { 45, new[] { 5, 6 } },
+        { 46, new[] { 3, 6 } },
+        { 47, new[] { 5, 7 } },
+        { 48, new[] { 3, 4 } },
+        { 49, new[] { 3, 4 } },
+        { 50, new[] { 3, 6 } },
+        { 51, new[] { 3, 4 } },
+        { 52, new[] { 3, 6 } },
+        { 53, new[] { 3, 6 } },
+        { 54, new[] { 3, 5 } },
+        { 55, new[] { 5, 7 } },
+        { 56, new[] { 3, 5 } },
+        { 57, new[] { 3, 5 } },
+        { 58, new[] { 6, 8 } },
+        { 59, new[] { 5, 6 } },
     };
+
+    // Ölçülen tavan; ölçülmemişse -1. DifficultyOrderVerify zorluk sırasını bununla denetler.
+    public static int MeasuredCeiling(int index) => Tuning.TryGetValue(index, out var t) ? t[1] : -1;
 
     private static void Tune(LevelData level, int index)
     {
         int total = level.TotalMarbles();
-        level.oneStarTarget = Mathf.Max(1, Mathf.CeilToInt(total * .4f));
-        level.twoStarTarget = Mathf.Max(level.oneStarTarget, Mathf.CeilToInt(total * .6f));
+        if (!Tuning.TryGetValue(index, out var t))
+        {
+            level.oneStarTarget = Mathf.Max(1, Mathf.CeilToInt(total * .4f));
+            level.twoStarTarget = Mathf.Max(level.oneStarTarget, Mathf.CeilToInt(total * .6f));
+            level.threeStarTarget = total;
+            return;
+        }
+        level.shotCount = t[0];
+        int ceiling = Mathf.Clamp(t[1], 1, total);
         level.threeStarTarget = total;
-        if (!Tuning.TryGetValue(index, out var t)) return;
-        if (t[0] > 0) level.shotCount = t[0];
-        if (t[1] > 0) level.oneStarTarget = t[1];
-        if (t[2] > 0) level.twoStarTarget = t[2];
-        if (t[3] > 0) level.threeStarTarget = t[3];
+        level.oneStarTarget = Mathf.Max(1, Mathf.CeilToInt(ceiling * .6f));
+        level.twoStarTarget = level.starsToPass >= 2 ? ceiling : Mathf.Max(level.oneStarTarget, Mathf.RoundToInt(ceiling * .85f));
+        // Kilit ile ustalık ayrı sayı olmalı (DifficultyOrderVerify kuralı).
+        if (level.twoStarTarget >= level.threeStarTarget) level.twoStarTarget = level.threeStarTarget - 1;
+        if (level.oneStarTarget > level.twoStarTarget) level.oneStarTarget = level.twoStarTarget;
     }
 
     // ---------------------------------------------------------------

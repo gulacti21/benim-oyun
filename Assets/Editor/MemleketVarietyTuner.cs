@@ -19,6 +19,12 @@ public static class MemleketVarietyTuner
             if (l.marbles != null && l.marbles.Length >= 6) h1.Add(Points(l));
         }
         var chosen = new Vector3[MemleketCampaign.Count];
+        // -memleketLevels 108,109 : sadece bunları yeniden ayarla, diğerleri tablodaki gibi kalsın
+        // (onların ölçülmüş fiziği değişmesin).
+        var only = new List<int>(); var args = System.Environment.GetCommandLineArgs();
+        for (int a = 0; a < args.Length - 1; a++)
+            if (args[a] == "-memleketLevels") foreach (var p in args[a + 1].Split(',')) only.Add(int.Parse(p) - 60);
+        if (only.Count > 0) for (int i = 0; i < chosen.Length; i++) chosen[i] = MemleketBook.VariationOf(i);
         var pts = new Vector2[MemleketCampaign.Count][];
         MemleketBook.VariationOverride = idx => chosen[idx];
         for (int i = 0; i < pts.Length; i++) pts[i] = Points(Build(i));
@@ -35,6 +41,7 @@ public static class MemleketVarietyTuner
             for (int i = 0; i < pts.Length; i++)
             {
                 if (pts[i].Length < 6) continue;
+                if (only.Count > 0 && !only.Contains(i)) continue;
                 Vector3 best = chosen[i]; float bestMin = -1f;
                 foreach (var c in cands)
                 {
@@ -94,6 +101,9 @@ public static class MemleketVarietyTuner
     private static bool Valid(LevelData l)
     {
         foreach (var s in l.marbles) if (new Vector2(s.x, s.z).magnitude > l.arenaSize - .35f) return false;
+        for (int a = 0; a < l.marbles.Length; a++)
+            for (int b = a + 1; b < l.marbles.Length; b++)
+                if (Vector2.Distance(new Vector2(l.marbles[a].x, l.marbles[a].z), new Vector2(l.marbles[b].x, l.marbles[b].z)) < .499f) return false;
         if (l.obstacles != null) foreach (var o in l.obstacles) if (new Vector2(o.x, o.z).magnitude > l.arenaSize) return false;
         if (l.zones != null)
             foreach (var z in l.zones)

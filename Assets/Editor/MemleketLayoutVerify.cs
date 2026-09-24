@@ -30,7 +30,8 @@ public static class MemleketLayoutVerify
             Check(l.marbles != null && l.marbles.Length >= 5, n + ": hand placed marbles");
             if (l.marbles == null) continue;
             Check(l.shape == ArenaShape.Circle && l.arenaSize >= 3f && l.arenaSize <= 4f, n + ": circle 3-4");
-            Check(l.shotCount >= 3 && l.shotCount <= 6, n + ": 3-6 shots");
+            // Atış hakkı ölçümle seçildi (Faz 6): 3-7; bölgenin ilk üç öğretme bölümünde 2 de olabilir.
+            Check(l.shotCount >= (i % 12 <= 2 ? 2 : 3) && l.shotCount <= 7, n + ": shots 3-7 (teaching 2-7)");
             for (int a = 0; a < l.marbles.Length; a++)
             {
                 var p = new Vector2(l.marbles[a].x, l.marbles[a].z);
@@ -38,7 +39,7 @@ public static class MemleketLayoutVerify
                 for (int b = a + 1; b < l.marbles.Length; b++)
                 {
                     float d = Vector2.Distance(p, new Vector2(l.marbles[b].x, l.marbles[b].z));
-                    Check(d >= .52f, n + ": marbles " + a + "/" + b + " apart (" + d.ToString("F2") + ")");
+                    Check(d >= .499f, n + ": marbles " + a + "/" + b + " do not overlap (" + d.ToString("F2") + ")");   // değebilir, iç içe geçemez
                 }
                 if (l.obstacles != null)
                     foreach (var o in l.obstacles) Check(!InObstacle(o, p, .27f), n + ": marble " + a + " clear of obstacle");

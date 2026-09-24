@@ -175,6 +175,19 @@ public static class GroundRulesVerify
                 Check(Vector3.Distance(rest.position, new Vector3(1, Y, 1)) < .01f, "Ground: slope never moves a resting marble");
             }
             finally { Close(); }
+            // Hafifçe dürtülen misket eğimde durur (eğim sürtünmeyi yenmez).
+            Open();
+            try
+            {
+                level.slope = new Vector2(1.2f, 0);
+                var nudged = Marble(new Vector3(0, Y, 0));
+                nudged.linearVelocity = new Vector3(.8f, 0, 0);
+                var list = new List<Rigidbody> { nudged };
+                for (int f = 0; f < 400; f++) { GroundRules.Step(level, Vector3.zero, list, null, Dt, null); physics.Simulate(Dt); }
+                Check(nudged.linearVelocity.magnitude < .05f, "Ground: a nudged marble stops on the slope");
+                Check(nudged.position.x < 2.5f, "Ground: a nudged marble does not roll off (" + nudged.position.x.ToString("F2") + ")");
+            }
+            finally { Close(); }
 
             // Çukur: yavaş hedef düşer (kinematic, collider kapalı, çukur merkezinde), hızlı geçer.
             level.slope = Vector2.zero;

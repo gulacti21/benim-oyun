@@ -64,6 +64,10 @@ public static class MapsVerify
             foreach (var n in theme.levelNames) Check(L.Has(n), "Maps: EN level name " + n);
         }
         foreach (var t in MemleketCampaign.Descriptions) Check(L.Has(t), "Maps: EN description " + t);
+        foreach (var t in new[] { "HARİTALAR", "BURADASIN", "{0} / {1} yıldız", "Her haritanın kendi 60 bölümü var. Dokun, geç.",
+                                  "{0} haritasını bitir, bu harita açılsın.", "{0} açıldı! Haritalar'dan geçebilirsin.",
+                                  "{0} haritası, {1} haritasının son bölümünü geçince açılır." })
+            Check(L.Has(t), "Maps: EN map screen text " + t);
 
         // --- kayıt: yeni oyuncu ---
         var data = new MahalleSave(); MahalleProfile.SetTestData(data);

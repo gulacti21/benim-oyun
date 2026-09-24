@@ -21,6 +21,7 @@ public static class GroundRules
     public static float SandDrag = 1.5f;         // ek linearDamping (taban .6)
     public static float MudDrag = 14f;           // ek linearDamping
     public static float SlopeMinSpeed = .3f;     // bunun altında eğim etkisiz (duran misket)
+    public static float SlopeFullSpeed = 2.3f;   // eğim bu hızda tam etkili, altında orantılı azalır
     public static float PitCaptureSpeed = 2.2f;  // bundan yavaş geçen hedef çukura düşer
     public const float PitDepth = .22f;          // düşen misketin çökme miktarı (görsel)
 
@@ -77,8 +78,15 @@ public static class GroundRules
             b.angularVelocity *= k;
             v = b.linearVelocity; speed *= k;
         }
+        // Eğim hızla orantılı azalır: sabit ivme yavaş misketi sürtünmeden hızlı iterdi ve
+        // (ölçüldü) hafifçe dürtülen misket hiç durmadan sahadan akıyordu — Yayla'nın
+        // bölümleri 2 atışta %100 temizleniyordu. Böyle hiçbir hızda eğim sürtünmeyi yenemez;
+        // sert atışın sapması (tam etki) aynı kalır.
         if (level.slope.sqrMagnitude > 1e-6f && speed > SlopeMinSpeed)
-            b.linearVelocity = v + new Vector3(level.slope.x, 0f, level.slope.y) * dt;
+        {
+            float f = Mathf.Clamp01((speed - SlopeMinSpeed) / (SlopeFullSpeed - SlopeMinSpeed));
+            b.linearVelocity = v + new Vector3(level.slope.x, 0f, level.slope.y) * (dt * f);
+        }
         return false;
     }
 
