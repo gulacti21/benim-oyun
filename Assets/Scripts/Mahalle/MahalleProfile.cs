@@ -48,6 +48,8 @@ public class MahalleSave
     public int lastMap;
     // Oyuncuya "açıldı" diye söylenen en yüksek harita (0 = sadece Mahalle).
     public int mapsAnnounced;
+    // Oyuncuya anlatılan yeni özellikler (MahalleUI.Mechanics bitleri: kum, çamur, eğim, buz, karpuz, çukur).
+    public int mechanicsSeen;
 }
 
 [Serializable]

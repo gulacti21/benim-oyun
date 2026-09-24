@@ -95,7 +95,9 @@ public class GroundZones : MonoBehaviour
         return go;
     }
 
-    // Eğim: çemberin dışında, eğim yönünü gösteren üç soluk tebeşir oku.
+    // Eğim: çemberin İÇİNDE, eğimin indiği tarafta üç soluk tebeşir oku.
+    // (Önce çemberin dışındaydı: telefonda kadrajın dışında kalıyordu. Ekranın üstünde
+    // ayrıca bir EĞİM rozeti var — MahalleUI.SlopeBadge.)
     private void SlopeArrows(Vector3 center)
     {
         var chalk = arena.GetComponent<LineRenderer>();
@@ -103,7 +105,7 @@ public class GroundZones : MonoBehaviour
         if (mat == null) return;
         Vector3 dir = new Vector3(level.slope.x, 0f, level.slope.y).normalized;
         Vector3 side = Vector3.Cross(Vector3.up, dir);
-        float reach = arena.Size + .55f;
+        float reach = arena.Size * .78f;
         for (int k = -1; k <= 1; k++)
         {
             var go = new GameObject("Eğim oku");
@@ -112,8 +114,8 @@ public class GroundZones : MonoBehaviour
             lr.sharedMaterial = mat;
             lr.useWorldSpace = true;
             lr.widthMultiplier = .06f;
-            var col = new Color(1f, 1f, 1f, .45f); lr.startColor = col; lr.endColor = col;
-            Vector3 tip = center + dir * reach + side * (k * .9f) + Vector3.up * .02f;
+            var col = new Color(1f, 1f, 1f, .38f); lr.startColor = col; lr.endColor = col;
+            Vector3 tip = center + dir * reach + side * (k * .75f) + Vector3.up * .02f;
             lr.positionCount = 3;
             lr.SetPosition(0, tip - dir * .28f + side * .22f);
             lr.SetPosition(1, tip);

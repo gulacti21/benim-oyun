@@ -48,7 +48,7 @@ public static class MemleketPhysicsVerify
     // Bir misketin durumu. Parçalar ayrı kayıt olur.
     private struct Rec
     {
-        public Vector3 pos; public MarbleKind kind; public bool gone, lost, ice; public float scale, mass; public int worth;
+        public Vector3 pos; public MarbleKind kind; public bool gone, lost, ice, whole; public float scale, mass; public int worth, pair;
     }
     private struct Candidate { public Vector3 start, dir; public float power; public string label; }
     private struct Outcome { public List<Rec> state; public int gained; public int iceBreaks, splits; public float value; }
@@ -235,7 +235,7 @@ public static class MemleketPhysicsVerify
     {
         var list = new List<Rec>();
         foreach (var s in level.marbles)
-            list.Add(new Rec { pos = new Vector3(s.x, TargetY, s.z), kind = s.kind, ice = s.kind == MarbleKind.Ice, scale = MarbleScale, mass = MarbleMass, worth = s.kind == MarbleKind.Split ? 2 : 1 });
+            list.Add(new Rec { pos = new Vector3(s.x, TargetY, s.z), kind = s.kind, ice = s.kind == MarbleKind.Ice, whole = s.kind == MarbleKind.Split, scale = MarbleScale, mass = MarbleMass, worth = 1, pair = -1 });
         return list;
     }
 
@@ -298,7 +298,7 @@ public static class MemleketPhysicsVerify
             if (recs[i].gone || recs[i].lost) continue;
             var b = MakeMarble(recs[i].pos, recs[i].scale, recs[i].mass, MarbleDrag, marbleMat);
             if (recs[i].kind == MarbleKind.Ice && recs[i].ice) b.gameObject.AddComponent<IceShell>().Freeze(false);
-            if (recs[i].kind == MarbleKind.Split && recs[i].worth == 2)
+            if (recs[i].kind == MarbleKind.Split && recs[i].whole)
             {
                 int parent = i;
                 b.gameObject.AddComponent<SplitMarble>().Split += (w, a, bb) => { pendingSplits.Add((parent, a, bb)); };
@@ -361,29 +361,40 @@ public static class MemleketPhysicsVerify
             var b = live[k].GetComponent<Rigidbody>();
             var r = recs[ri];
             var sm = live[k].GetComponent<SplitMarble>();
-            if (sm != null && sm.Done && !sm.IsPiece) { recs[ri] = new Rec { gone = true, worth = 0 }; continue; }   // parçalara dönüştü
+            if (sm != null && sm.Done && !sm.IsPiece) { recs[ri] = new Rec { gone = true, worth = 0, pair = -1 }; continue; }   // parçalara dönüştü
             if (lost.Contains(b)) { r.lost = true; }
             else if (gone.ContainsKey(b)) { r.gone = true; gained += r.worth; }
             r.pos = b.position; r.pos.y = r.scale * .5f;
             if (r.kind == MarbleKind.Ice && r.ice) { var ice = live[k].GetComponent<IceShell>(); if (ice != null && !ice.Intact) { r.ice = false; iceBreaks++; } }
             recs[ri] = r;
         }
-        foreach (var r in recs) if (r.gone || r.lost || r.worth > 0) result.Add(r);
-        foreach (var pr in pieceRecs)
+        // Önceki atışlardan kalan yarımlar: çiftin ikisi de çıkınca 1 (bu atışta tamamlandıysa kazanç).
+        var pairWasDone = new Dictionary<int, bool>();
+        foreach (var r in state) if (r.pair >= 0) pairWasDone[r.pair] = (pairWasDone.TryGetValue(r.pair, out var d0) ? d0 : true) && r.gone;
+        foreach (var r in recs) if (r.gone || r.lost || r.worth > 0 || r.pair >= 0) result.Add(r);
+        for (int q = 0; q < pieceRecs.Count; q += 2)
         {
-            var b = pr.body;
-            var r = new Rec { kind = MarbleKind.Normal, scale = b.transform.localScale.x, mass = b.mass, worth = 1, pos = b.position };
-            r.pos.y = r.scale * .5f;
-            if (lost.Contains(b)) r.lost = true;
-            else if (gone.ContainsKey(b)) { r.gone = true; gained += 1; }
-            result.Add(r);
+            int id = ++pairCounter;   // her bölünme kendi çifti
+            for (int h = 0; h < 2 && q + h < pieceRecs.Count; h++)
+            {
+                var b = pieceRecs[q + h].body;
+                var r = new Rec { kind = MarbleKind.Normal, scale = b.transform.localScale.x, mass = b.mass, worth = 0, pair = id, pos = b.position };
+                r.pos.y = r.scale * .5f;
+                if (lost.Contains(b)) r.lost = true;
+                else if (gone.ContainsKey(b)) r.gone = true;
+                result.Add(r);
+            }
         }
+        var pairNowDone = new Dictionary<int, bool>();
+        foreach (var r in result) if (r.pair >= 0) pairNowDone[r.pair] = (pairNowDone.TryGetValue(r.pair, out var d1) ? d1 : true) && r.gone;
+        foreach (var kv in pairNowDone) if (kv.Value && !(pairWasDone.TryGetValue(kv.Key, out var was) && was)) gained += 1;
         // Eşitlikte kalanları kenara yaklaştıranı seç (ParkPhysicsVerify ile aynı).
         float spread = 0f;
         foreach (var r in result) if (!r.gone && !r.lost) spread += new Vector2(r.pos.x, r.pos.z).magnitude;
         return new Outcome { state = result, gained = gained, iceBreaks = iceBreaks, splits = splits, value = gained + spread * .001f - Lost(result) * .01f };
     }
 
+    private static int pairCounter;
     private static int Lost(List<Rec> s) { int n = 0; foreach (var r in s) if (r.lost) n++; return n; }
 
     private static readonly List<(int parent, Rigidbody a, Rigidbody b)> pendingSplits = new List<(int, Rigidbody, Rigidbody)>();

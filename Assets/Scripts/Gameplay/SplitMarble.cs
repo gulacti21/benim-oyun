@@ -6,8 +6,8 @@ using UnityEngine;
 //     iki küçük parça (ölçek x0.7, kütle yarı), parçalar hızı devralır ve çarpma
 //     yönüne dik iki yana hafifçe (±PieceSpread derece) açılır.
 //   - Tek kademe: parçalar tekrar bölünmez (IsPiece; oyunda bileşen parçadan silinir).
-//   - PUAN: karpuz misket 2 misket değerindedir. Bütün çıkarsa 2, bölünürse her parça 1.
-//     Böylece LevelData.TotalMarbles, yıldız hedefleri ve sayaç baştan tutarlı.
+//   - PUAN: karpuz 1 misket değerindedir. Bütün çıkarsa 1; bölünürse İKİ YARISI BİRLİKTE 1
+//     (ikinci yarım da çıkınca sayılır). Kullanıcı kararı, 2026-09-24.
 //
 // [ExecuteAlways]: fizik ölçüm araçları görünmez preview sahnede aynı bileşeni kullanır.
 [ExecuteAlways]
@@ -19,7 +19,7 @@ public class SplitMarble : MonoBehaviour
     public const float PieceScale = .7f;
     public const float PieceMass = .5f;
     public const float PieceSpread = 16f;   // derece, çarpma yönüne dik açılma
-    public const int Worth = 2;
+    public const int Worth = 1;
 
     // (bölünen, parça A, parça B). Arena ve ölçüm aracı listelerini bununla günceller.
     public event Action<SplitMarble, Rigidbody, Rigidbody> Split;
@@ -96,8 +96,9 @@ public class SplitMarble : MonoBehaviour
         Vector3 turned = Quaternion.AngleAxis(PieceSpread * sign, Vector3.up) * dir;
         body.linearVelocity = turned * speed;
         body.angularVelocity = parentBody.angularVelocity;
+        // Yarımlar: tek başına 0, ikizi de çıkmışsa 1 (MarbleArena ikizi bağlar).
         var piece = clone.GetComponent<TargetMarble>();
-        if (piece != null) piece.Worth = 1;
+        if (piece != null) piece.Worth = 0;
         var visual = clone.GetComponent<MarbleVisual>();
         if (visual != null) visual.SetOverride(FleshMaterial());
         return body;

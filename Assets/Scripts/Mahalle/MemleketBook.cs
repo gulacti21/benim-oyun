@@ -336,7 +336,9 @@ public static class MemleketBook
             case 41:
                 Set(level, 3.8f, 5);
                 level.marbles = Join(Row(.85f, -1.8f, 1.8f, 4), Row(1.85f, -1.8f, 1.8f, 4), Kind(Spots(-2.6f, 1.35f, 2.6f, 1.35f), MarbleKind.Split));
-                level.obstacles = new[] { O(-1.0f, .3f, 2.0f, .35f), O(1.0f, 1.35f, 2.0f, .35f), O(-1.0f, 2.4f, 2.0f, .35f) };
+                // Ölçüldü: 2 birimlik uzun tezgâhlarla karpuz 1 sayılınca 7 atışta bile %40,
+                // her atış tek misket (rota). Tezgâhlar kısaldı ve yana çekildi, orta koridor açık.
+                level.obstacles = new[] { O(-1.55f, .3f, 1.2f, .35f), O(1.55f, 1.35f, 1.2f, .35f), O(-1.55f, 2.4f, 1.2f, .35f) };
                 break;
 
             // 07 Sepetçi — üç sepet ağzı, arkalarında üçlüler, ortada karpuz.
@@ -621,29 +623,29 @@ public static class MemleketBook
         { 34, new[] { 4, 6 } },
         { 35, new[] { 6, 6 } },
         { 36, new[] { 3, 5 } },
-        { 37, new[] { 2, 5 } },
+        { 37, new[] { 2, 3 } },
         { 38, new[] { 3, 4 } },
-        { 39, new[] { 6, 7 } },
-        { 40, new[] { 3, 6 } },
-        { 41, new[] { 5, 6 } },
+        { 39, new[] { 6, 6 } },
+        { 40, new[] { 3, 5 } },
+        { 41, new[] { 4, 5 } },
         { 42, new[] { 3, 5 } },
-        { 43, new[] { 3, 6 } },
-        { 44, new[] { 3, 7 } },
-        { 45, new[] { 5, 6 } },
+        { 43, new[] { 3, 5 } },
+        { 44, new[] { 3, 6 } },
+        { 45, new[] { 3, 5 } },
         { 46, new[] { 3, 6 } },
-        { 47, new[] { 5, 7 } },
+        { 47, new[] { 5, 5 } },
         { 48, new[] { 3, 4 } },
         { 49, new[] { 3, 4 } },
-        { 50, new[] { 3, 6 } },
-        { 51, new[] { 3, 4 } },
+        { 50, new[] { 4, 8 } },
+        { 51, new[] { 4, 6 } },
         { 52, new[] { 3, 6 } },
         { 53, new[] { 3, 6 } },
         { 54, new[] { 3, 5 } },
-        { 55, new[] { 5, 7 } },
+        { 55, new[] { 4, 6 } },
         { 56, new[] { 3, 5 } },
-        { 57, new[] { 3, 5 } },
-        { 58, new[] { 6, 8 } },
-        { 59, new[] { 5, 6 } },
+        { 57, new[] { 3, 4 } },
+        { 58, new[] { 6, 6 } },
+        { 59, new[] { 4, 6 } },
     };
 
     // Ölçülen tavan; ölçülmemişse -1. DifficultyOrderVerify zorluk sırasını bununla denetler.

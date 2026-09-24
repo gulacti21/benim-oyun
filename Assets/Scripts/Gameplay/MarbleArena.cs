@@ -76,7 +76,9 @@ public class MarbleArena : MonoBehaviour
             marble.MarkScored();
             MahalleFeedback.Score(marble.transform.position);
             activeMarbles.RemoveAt(i);
-            score += marble.Worth;   // karpuz bütün çıkarsa 2
+            score += marble.Worth;
+            // Karpuzun ikinci yarımı da çıktıysa çift 1 misket sayılır.
+            if (marble.Twin != null && marble.Twin.IsScored) score++;
             MarbleLeft?.Invoke(marble);
 
             if (SfxPlayer.Instance != null)
@@ -406,7 +408,7 @@ public class MarbleArena : MonoBehaviour
         // HARİTA 2: karpuz misket sert darbede ikiye bölünür, 2 misket değerinde.
         if (kind == MarbleKind.Split && marble != null)
         {
-            marble.Worth = SplitMarble.Worth;
+            marble.Worth = SplitMarble.Worth;   // 1
             visual.SetOverride(SplitMarble.RindMaterial());
             instance.AddComponent<SplitMarble>().Split += OnSplit;
         }
@@ -430,9 +432,11 @@ public class MarbleArena : MonoBehaviour
         if (at < 0) return;   // bölünürken zaten çıkmış sayıldıysa parçalar da sayılmaz
         activeMarbles.RemoveAt(at);
         spawnedMarbles.Remove(parent);
-        foreach (var body in new[] { a, b })
+        var pa = a != null ? a.GetComponent<TargetMarble>() : null;
+        var pb = b != null ? b.GetComponent<TargetMarble>() : null;
+        if (pa != null && pb != null) { pa.Twin = pb; pb.Twin = pa; }
+        foreach (var piece in new[] { pa, pb })
         {
-            var piece = body != null ? body.GetComponent<TargetMarble>() : null;
             if (piece == null) continue;
             activeMarbles.Add(piece);
             spawnedMarbles.Add(piece);

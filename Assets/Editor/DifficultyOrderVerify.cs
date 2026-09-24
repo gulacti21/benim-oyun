@@ -92,7 +92,8 @@ public static class DifficultyOrderVerify
                 regionMin = Mathf.Min(regionMin, c);
                 Must(c >= Floor - 1e-4f, "Memleket " + i + " clearability floor 40% (" + Mathf.RoundToInt(c * 100) + ")");
                 if (k > 0)
-                    Must(c <= Clear(i - 1) + Step(i) + 1e-4f, "Memleket " + i + " not easier than previous by more than one marble (" +
+                    // Pay: iki bölümden hangisi daha kaba ölçülüyorsa onun bir misketi.
+                    Must(c <= Clear(i - 1) + Mathf.Max(Step(i), Step(i - 1)) + 1e-4f, "Memleket " + i + " not easier than previous by more than one marble (" +
                          Mathf.RoundToInt(Clear(i - 1) * 100) + " -> " + Mathf.RoundToInt(c * 100) + ")");
                 float want = Mathf.Lerp(RegionStart[r], RegionEnd[r], k / 11f);
                 if (Mathf.Abs(c - want) > .03f)

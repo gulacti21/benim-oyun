@@ -59,10 +59,8 @@ public class LevelData : ScriptableObject
     {
         if (marbles != null && marbles.Length > 0)
         {
-            // Karpuz (bölünen) misket 2 değerinde: bütün çıkarsa 2, iki parçası ayrı ayrı 1+1.
-            int worth = 0;
-            foreach (var m in marbles) worth += m.kind == MarbleKind.Split ? 2 : 1;
-            return worth;
+            // Karpuz 1 misket: bütün ya da iki yarısı birlikte.
+            return marbles.Length;
         }
         if (shape == ArenaShape.Triangle) return triangleRows * (triangleRows + 1) / 2;
         int n = 0;

@@ -991,6 +991,89 @@ public class MahalleUI : MonoBehaviour
                            new Color(Krem.r,Krem.g,Krem.b,.88f),TextAlignmentOptions.Center);
             Bottom(ipucu.rectTransform,48,254,984,44);
         }
+        SlopeBadge();
+        // HARİTA 2: bu bölümde ilk kez karşılaşılan özellik varsa oyun başlamadan anlat.
+        if(!GameSession.TutorialMode&&!GameSession.DailyMode&&!GameSession.EndlessMode)ShowNewMechanics();
+    }
+
+    // HARİTA 2 EĞİM ROZETİ: bilgi panelinin altında, sağda. Ok eğimin indiği yönü
+    // gösterir (dünyada x = ekranda sağ, z = ekranda yukarı; kamera sadece eğik bakıyor).
+    private void SlopeBadge()
+    {
+        if(controller==null||controller.Level==null)return;
+        var s=controller.Level.slope;
+        if(s.sqrMagnitude<1e-6f)return;
+        var rozet=Panel(page,"Eğim rozeti",764,372,268,72,Komur);rozet.radius=36;rozet.highlight=false;rozet.raycastTarget=false;
+        var ok=Art(rozet.transform,"Eğim oku",MahalleGraphic.Shape.Chevron,24,14,44,44,Amber);
+        ok.rectTransform.pivot=new Vector2(.5f,.5f);ok.rectTransform.anchoredPosition=new Vector2(46,-36);
+        ok.rectTransform.localEulerAngles=new Vector3(0,0,Mathf.Atan2(s.y,s.x)*Mathf.Rad2Deg);
+        var yazi=Text(rozet.transform,"EĞİM",86,0,170,72,30,Krem);yazi.fontStyle=FontStyles.Bold;
+    }
+
+    // ---------------------------------------------------------------
+    // YENİ ÖZELLİK KARTLARI. Bir özellik (kum, çamur, eğim, buzlu misket, karpuz,
+    // çukur) oyuncunun karşısına İLK çıktığı bölümde, oyun başlamadan tek tek anlatılır.
+    // Kayıtta bit olarak tutulur; bir kez gösterilir. Test yapısında da gösterilir
+    // (telefonda denenebilsin diye) — Ayarlar'daki sıfırlama tekrar gösterir.
+    public static readonly string[] MechanicTitles = { "KUM", "ÇAMUR", "EĞİM", "BUZLU MİSKET", "KARPUZ MİSKET", "ÇUKUR" };
+    public static readonly string[] MechanicTexts = {
+        "Kumun içinden geçen misket çabuk yavaşlar. Kumun ötesine ulaşmak için sert at.",
+        "Çamura giren misket saplanıp kalır. Hedefleri çamura değil, çemberin dışına it.",
+        "Burası yokuş: yuvarlanan misketler okların gösterdiği yöne kayar. Yavaş misket daha çok kayar.",
+        "Buzlu misket kıpırdamaz. Önce sert bir atışla buzunu kır, sonra dışarı çıkar. Hafif vuruş işe yaramaz.",
+        "Sert vurursan ikiye bölünür. İki yarısı birlikte 1 misket sayılır: ikisini de çemberin dışına çıkar.",
+        "Yavaş yuvarlanan misket çukura düşer ve kaybolur, sayılmaz. Hızlı misket çukurun üstünden geçer." };
+    public static int MechanicsIn(LevelData l)
+    {
+        int m=0;
+        if(l==null)return 0;
+        if(l.zones!=null)foreach(var z in l.zones){if(z.kind==ZoneKind.Sand)m|=1;else if(z.kind==ZoneKind.Mud)m|=2;else if(z.kind==ZoneKind.Pit)m|=32;}
+        if(l.slope.sqrMagnitude>1e-6f)m|=4;
+        if(l.marbles!=null)foreach(var s in l.marbles){if(s.kind==MarbleKind.Ice)m|=8;else if(s.kind==MarbleKind.Split)m|=16;}
+        return m;
+    }
+    private void ShowNewMechanics()
+    {
+        int fresh=MechanicsIn(controller.Level)&~MahalleProfile.Data.mechanicsSeen;
+        if(fresh==0)return;
+        int bit=0;while((fresh&(1<<bit))==0)bit++;
+        controller.SetPaused(true);
+        var box=Modal("Yeni özellik",900);
+        var face=box.GetComponent<MahalleGraphic>();if(face!=null){face.color=Krem;face.colorB=Krem;face.highlight=false;}
+        var etiket=Panel(box,"Yeni etiketi",36,36,200,56,Amber);etiket.radius=28;etiket.highlight=false;
+        var yeni=Text(etiket.transform,"YENİ",0,0,200,56,28,Komur,TextAlignmentOptions.Center);yeni.fontStyle=FontStyles.Bold;
+        var baslik=Text(box,MechanicTitles[bit],36,110,912,80,58,Komur,TextAlignmentOptions.Center);baslik.fontStyle=FontStyles.Bold;
+        MechanicPicture(box,bit);
+        Text(box,MechanicTexts[bit],60,480,864,220,34,new Color(Komur.r,Komur.g,Komur.b,.85f),TextAlignmentOptions.Center);
+        LabelButton(box,"ANLADIM",36,760,912,104,Komur,Krem,()=>
+        {
+            MahalleProfile.Data.mechanicsSeen|=1<<bit;MahalleProfile.Save();
+            CloseModal(false);
+            if((MechanicsIn(controller.Level)&~MahalleProfile.Data.mechanicsSeen)!=0)ShowNewMechanics();   // sıradaki
+            else controller.SetPaused(false);
+        },38);
+    }
+    // Kartın ortasındaki küçük çizim: zemin için renkli disk, misket için misket.
+    private void MechanicPicture(RectTransform box,int bit)
+    {
+        float cx=492,cy=330;
+        Color sand=new Color(.90f,.80f,.58f),mud=new Color(.36f,.26f,.17f),pit=new Color(.2f,.15f,.1f);
+        switch(bit)
+        {
+            case 0: Art(box,"Kum",MahalleGraphic.Shape.Circle,cx-130,cy-110,260,220,sand); Art(box,"Misket",MahalleGraphic.Shape.Marble,cx-40,cy-40,80,80,Campaign.SkinColors[1]); break;
+            case 1: Art(box,"Çamur",MahalleGraphic.Shape.Circle,cx-130,cy-110,260,220,mud); Art(box,"Misket",MahalleGraphic.Shape.Marble,cx-30,cy-10,80,80,Campaign.SkinColors[3]); break;
+            case 2: for(int i=0;i<3;i++)Art(box,"Ok",MahalleGraphic.Shape.Chevron,cx-150+i*110,cy-40,80,80,Amber); break;
+            case 3: Art(box,"Buz",MahalleGraphic.Shape.Circle,cx-80,cy-80,160,160,new Color(.72f,.9f,1f,.7f)); Art(box,"Misket",MahalleGraphic.Shape.Marble,cx-50,cy-50,100,100,Campaign.SkinColors[1]); break;
+            case 4:
+            {
+                var k=Art(box,"Karpuz",MahalleGraphic.Shape.Marble,cx-190,cy-60,120,120,SplitMarble.Rind);k.accent=SplitMarble.Stripe;
+                Art(box,"Ok",MahalleGraphic.Shape.Chevron,cx-50,cy-30,60,60,Komur);
+                var a=Art(box,"Yarım",MahalleGraphic.Shape.Marble,cx+40,cy-75,84,84,SplitMarble.Flesh);a.accent=SplitMarble.Seed;
+                var b=Art(box,"Yarım",MahalleGraphic.Shape.Marble,cx+110,cy+5,84,84,SplitMarble.Flesh);b.accent=SplitMarble.Seed;
+                break;
+            }
+            default: Art(box,"Çukur",MahalleGraphic.Shape.Circle,cx-110,cy-90,220,180,pit); Art(box,"Misket",MahalleGraphic.Shape.Marble,cx-160,cy-110,70,70,Campaign.SkinColors[2]); break;
+        }
     }
 
     private void Update()

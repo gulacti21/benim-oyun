@@ -483,6 +483,22 @@ taktik not, oyuncuya ipucu olabilir.
 
 ---
 
+## Kullanıcı geri bildirimi sonrası (2026-09-24 öğleden sonra)
+
+- **Karpuz artık 1 misket:** bütün çıkarsa 1, bölünürse iki yarısı birlikte 1
+  (`TargetMarble.Twin`, `MarbleArena`). Ölçüm aracı yarımları çift olarak izliyor.
+  Karpuzlu 16 bölüm yeniden ölçüldü, atış hakları/hedefler yeniden seçildi.
+  Tezgâh Arası tezgâhları kısaltıldı (uzun tezgâhlarla %40'ta takılıyordu).
+- **Yeni özellik kartları:** kum, çamur, eğim, buzlu misket, karpuz, çukur ilk
+  karşılaşıldığı bölümde oyun başlamadan anlatılıyor ("YENİ", çizim, açıklama,
+  ANLADIM). Test: her özelliğin ilk çıktığı yer kendi öğretme bölümü; Mahalle'de
+  kart yok; İngilizceler tam.
+- **Eğim göstergesi:** oklar çemberin dışında kaldığı için görünmüyordu. Artık
+  çemberin içinde + ekranın üstünde EĞİM rozeti (ok eğimin yönünü gösterir).
+- Sıra kuralındaki "bir misket payı" iki komşu bölümden kaba ölçülenin
+  misketi (15 misketli bölümde bir misket 6.7 puan, 9'luda 11).
+- MahalleVerify **16747 yeşil**. Memleket ort. temizlenebilirlik %53.
+
 ## Telefonda kontrol edilecek
 - (Faz 7'ye kadar Memleket'e arayüzden girilemiyor; görsel kontrol o zaman.)
 - Buz kabuğu görünümü (saydamlık, kenar parlaklığı), kırılma parçaları ve
@@ -497,6 +513,9 @@ taktik not, oyuncuya ipucu olabilir.
 - HARİTALAR penceresi: kart düzeni, kilitli kart, "BURADASIN", geçiş.
 - Memleket'in 5 bölgesinin görsel yokken çizilen zemin renkleri.
 - 4.0 sahaya büyütülen bölümlerde kamera (test ölçüyor ama göz de baksın).
+- Yeni özellik kartları (çizimler, metin sığıyor mu), EĞİM rozeti (test yapısında
+  üstteki turuncu imza yazısıyla aynı hizada).
+- Karpuz: bir yarımı çıkarınca sayaç artmamalı, ikincisi çıkınca +1.
 
 ## Bekleyen işler (kullanıcıda)
 - Memleket görselleri: `Resources/Mahalle/Map/Harita{Sahil,Koy,Yayla,Pazar,Bayram}.png`

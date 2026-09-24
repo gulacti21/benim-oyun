@@ -69,6 +69,18 @@ public static class MapsVerify
                                   "{0} haritası, {1} haritasının son bölümünü geçince açılır." })
             Check(L.Has(t), "Maps: EN map screen text " + t);
 
+        // --- yeni özellik kartları: her özellik ilk kez kendi öğretme bölümünde çıkar ---
+        int[] firstExpected = { 60, 72, 84, 86, 97, 108 };   // kum, çamur, eğim, buz, karpuz, çukur
+        for (int bit = 0; bit < 6; bit++)
+        {
+            int first = -1;
+            for (int g = 0; g < Maps.TotalLevels && first < 0; g++) if ((MahalleUI.MechanicsIn(Maps.Get(g)) & (1 << bit)) != 0) first = g;
+            Check(first == firstExpected[bit], "Maps: mechanic " + MahalleUI.MechanicTitles[bit] + " first appears in its teaching level (" + first + ")");
+            Check(L.Has(MahalleUI.MechanicTitles[bit]) && L.Has(MahalleUI.MechanicTexts[bit]), "Maps: EN mechanic card " + bit);
+        }
+        for (int g = 0; g < Campaign.Count; g++) Check(MahalleUI.MechanicsIn(Maps.Get(g)) == 0, "Maps: no mechanic cards in Mahalle " + g);
+        Check(L.Has("YENİ"), "Maps: EN new tag");
+
         // --- kayıt: yeni oyuncu ---
         var data = new MahalleSave(); MahalleProfile.SetTestData(data);
         Check(data.maps != null && data.maps.Length == Maps.Count - 1, "Maps: new save has map slots");

@@ -451,7 +451,8 @@ iki haritayı toplar. Memleket bölge ödülü boncuk + rozet, **kaplama vermez*
 - Buzlu misket (`IceShell`): kinematic başlar; temas hızı ≥ **3.0 m/s** kabuğu
   kırar, misket yerinde kalır. Saha ortasında ~%55 güç.
 - Karpuz (`SplitMarble`): temas hızı ≥ **3.0 m/s** ikiye böler (×0.7, yarı kütle,
-  ±16°), tek kademe. **2 misket değerinde** (bütün 2, parça 1+1).
+  ±16°), tek kademe. **1 misket değerinde**: bütün çıkarsa 1, bölünürse İKİ YARISI
+  BİRLİKTE 1 (ikinci yarım çıkınca sayılır) — kullanıcı kararı 2026-09-24.
 - Kum ek drag **1.5**, çamur **14**, çukur yakalama **2.2 m/s**. Eğim: sadece
   hareket edene, hızla orantılı (0.3 → 2.3 m/s arası artar). Sabit eğim yavaş
   misketi sahadan akıtıyordu — ölçüldü, düzeltildi.
@@ -460,11 +461,16 @@ iki haritayı toplar. Memleket bölge ödülü boncuk + rozet, **kaplama vermez*
 Mahalle %73. Atış hakları ve tavan `MemleketBook.Tuning`'de; yıldız hedefleri
 tavandan türer (1y %60, 2y ustalıkta tavan / diğerlerinde %85, 3y hepsi).
 Sıra kuralları `DifficultyOrderVerify.MemleketChecks` (MahalleVerify'da): taban
-%40, bölge içinde bir öncekinden en fazla bir misket kolay, bölge başları düşer,
+%40, bölge içinde bir öncekinden en fazla bir misket kolay (iki bölümden kaba
+ölçülenin bir misketi), bölge başları düşer,
 ustalık sınavı bölgenin en zoru. **Bir bölümü değiştirirsen** onu
 `MemleketPhysicsVerify.BatchCurve -memleketLevels <g>` ile yeniden ölç,
 `Tuning` satırını güncelle; çeşitlilik bozulursa `MemleketVarietyTuner.Run
 -memleketLevels <g>` sadece o bölümü ayarlar (diğerlerinin fiziği değişmesin).
+
+**Yeni özellik kartları:** kum/çamur/eğim/buz/karpuz/çukur ilk çıktığı bölümde oyun
+başlamadan kart (`MahalleUI.ShowNewMechanics`, kayıtta `mechanicsSeen` bitleri).
+Eğimli bölümde ekranın üstünde EĞİM rozeti (ok yönü); zemindeki oklar çemberin içinde.
 
 **Tuzaklar (bu işte öğrenildi):**
 - Preview sahnede `physicsScene.Simulate` normal MonoBehaviour'a

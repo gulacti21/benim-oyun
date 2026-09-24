@@ -78,9 +78,9 @@ public static class SplitMarbleVerify
         // Veri: karpuz 2 değerinde, TotalMarbles buna göre.
         var lvl = ScriptableObject.CreateInstance<LevelData>();
         lvl.marbles = new[] { new MarbleSpot(0, 0), new MarbleSpot(1, 0, MarbleKind.Split), new MarbleSpot(-1, 0, MarbleKind.Ice) };
-        Check(lvl.TotalMarbles() == 4, "Split: counts as two in TotalMarbles");
+        Check(lvl.TotalMarbles() == 3, "Split: counts as one in TotalMarbles");
         UnityEngine.Object.DestroyImmediate(lvl);
-        Check(SplitMarble.Worth == 2, "Split: whole watermelon worth two");
+        Check(SplitMarble.Worth == 1, "Split: whole watermelon worth one");
 
         // Zayıf darbe: bölünmez, normal misket gibi itilir.
         Open();
