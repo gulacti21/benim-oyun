@@ -11,8 +11,8 @@ _(iş bitince buraya 10 satırlık özet gelecek)_
 | 1 Harita altyapısı | ✅ bitti | 47c584e | 5461 kontrol yeşil (Harita 1'in 4291'i + 1170 yeni) |
 | 2 Buzlu misket | ✅ bitti | 7d2b35c | 5481 yeşil (+20 buz) |
 | 3 Bölünen misket | ✅ bitti | c8ee5ed | 5498 yeşil (+17 bölünme) |
-| 4 Zemin kuralları | ✅ bitti | (aşağıda) | 5574 yeşil (+76 zemin) |
-| 5 60 bölüm dizilimi | ⏳ | | |
+| 4 Zemin kuralları | ✅ bitti | f4657df | 5574 yeşil (+76 zemin) |
+| 5 60 bölüm dizilimi | ✅ bitti | (aşağıda) | 15847 yeşil (+10273 yerleşim) |
 | 6 Zorluk ölçümü | ⏳ | | |
 | 7 Harita seçimi, görünüm, dil | ⏳ | | |
 
@@ -242,6 +242,44 @@ misketi içinde durdurur; eğim hareket edeni saptırır, duranı hiç kıpırda
 çukur yavaşı yutar (kinematic, collider kapalı, merkezde), hızlıyı geçirir;
 ölçüm için geri alınabilir; atıcı yutulmaz, durur; bölgeler çember merkezini
 izler; shader Resources'ta.
+
+---
+
+## Faz 5 — 60 bölümün dizilimi (2026-09-24)
+
+`Mahalle/MemleketBook.cs`, Harita 1'deki `LevelBook` biçiminde, her bölüm
+kendi yorumuyla. Hepsi çember (3.2-4.0), elle yerleştirilmiş misket.
+
+| Bölge | Kural | Öğretme | Sonra |
+|---|---|---|---|
+| Sahil 1-12 | kum | 01-02 sadece kum | engel, kaya, kumla çevrili ıstaka (sınav) |
+| Köy 1-12 | çamur (+kum) | 01 sadece çamur | masalar, kümes, sokak, artı + 4 çamur (sınav) |
+| Yayla 1-12 | eğim + **buz** | 01-02 sadece eğim, 03 sadece buz | ikisi birlikte, elmas kafes + 5 buz (sınav) |
+| Pazar 1-12 | tezgâh koridorları + **karpuz** | 01 koridor, 02 sadece karpuz | kasalar, terazi, zikzak, labirent + 3 karpuz (sınav) |
+| Bayram 1-12 | **çukur** + hepsi | 01 sadece çukur | buz, karpuz, çamur, kum, eğim karışık; final sarmal |
+
+Misket sayısı bölgeler boyunca artıyor (Sahil 7-12 → Bayram 9-15, karpuz 2
+sayılır). Ustalık sınavları geçiş için 2 yıldız ister. Atış hakları taban
+değer; yıldız hedefleri **şimdilik formül** (1y %40, 2y %60, 3y hepsi) —
+Faz 6'da ölçümle `MemleketBook.Tuning` tablosuna yazılacak (Harita 1'de de
+hedefler ölçümden sonra konmuştu).
+
+**Çeşitlilik:** ilk dizilimde 21 çift 0.30 sınırının altındaydı (en kötü
+0.15: Dalga Çizgisi ↔ Bakır Tezgâhı). `MemleketVarietyTuner` her bölümü
+en küçük dokunuşla (±8-30° döndürme, 0.25-0.45 kaydırma; misket, engel, bölge
+ve eğim birlikte) ayarladı: 18 bölüm dokunuldu, tablo `MemleketBook.Variation`.
+Sonuç: Memleket'in 6+ misketli her bölümü iki haritadaki bütün bölümlerden en
+az **0.32** farklı (en yakın çift Bakır Tezgâhı ↔ Pamuk Şeker).
+
+**Test (`MemleketLayoutVerify`, 10273 kontrol):** misketler sahada (kenardan
+0.35 içeride), aralar ≥0.52, engel ve çukur içinde misket yok, bölgeler sahada
+ve atıcı çizgisinin altında değil; her bölgede kendi kuralı var, özel
+misket/kural kendi bölgesinden önce yok; öğretme bölümlerinde yeni kural tek
+başına; ustalık sınavı 2 yıldız ve kilit < ustalık; çeşitlilik ≥0.30.
+`CameraFitVerify` artık iki haritanın 120 bölümünü ölçüyor (yeşil).
+Yerleşim düzeltmeleri: Şemsiye Altı yayı 1.75'e açıldı (misketler 0.49
+yakındı), Tavuk Kümesi ızgarası duvardan uzaklaştı, Kaya Yanı kayaları ve
+Pazar sınavının labirenti (ince duvar, şeritte misket) yeniden yerleşti.
 
 ---
 

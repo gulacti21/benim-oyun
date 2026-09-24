@@ -88,7 +88,7 @@ public static class LevelVarietyVerify
         Debug.Log("VARIETY_DONE: Logs/LevelVarietyVerify.txt");
     }
 
-    private static float Similarity(Vector2[] a, Vector2[] b)
+    public static float Similarity(Vector2[] a, Vector2[] b)
     {
         var mirror = new Vector2[b.Length];
         for (int i = 0; i < b.Length; i++) mirror[i] = new Vector2(-b[i].x, b[i].y);

@@ -16,9 +16,10 @@ public static class CameraFitVerify
         var report = new StringBuilder("CAMERA_FIT: ");
         int changed = 0;
         float sin = Mathf.Sin(MahalleWorld.CamPitch * Mathf.Deg2Rad);
-        for (int i = 0; i < 60; i++)
+        // İki harita: 0-59 Mahalle, 60-119 Memleket.
+        for (int i = 0; i < Maps.TotalLevels; i++)
         {
-            var l = Campaign.Database.Get(i);
+            var l = Maps.Get(i);
             for (int a = 0; a < Aspects.Length; a++)
             {
                 float aspect = Aspects[a];
