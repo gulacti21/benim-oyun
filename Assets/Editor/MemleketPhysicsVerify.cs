@@ -64,6 +64,13 @@ public static class MemleketPhysicsVerify
     // ---------------------------------------------------------------- girişler
     public static void BatchAll() { Measure(Range(60, 60), "MemleketPhysics.txt", true); }
     public static void BatchQuick() { Measure(Range(60, 60), "MemleketPhysicsQuick.txt", false); }
+    // SON ÖLÇÜM: son atış hakları/hedeflerle 60 bölüm (geçme oranı) + 5 ustalık sınavı
+    // güç ve özel misketlerle (tavan üst sınırı). Ayrı dosyalar.
+    public static void BatchFinal()
+    {
+        Measure(Range(60, 60), "MemleketPhysicsFinal.txt", false);
+        Measure(new[] { 71, 83, 95, 107, 119 }, "MemleketMasteryVariants.txt", true);
+    }
     public static void Calibrate() { Measure(new[] { 0, 5, 18, 30, 44, 59 }, "MemleketCalibration.txt", false); }
     // Kuyruk/komut satırı: -memleketLevels 60,61,70
     public static void BatchSome()

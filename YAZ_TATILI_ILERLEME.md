@@ -4,7 +4,16 @@ Dal: `codex/yaz-tatili` (codex/mahalle-konsepti'den). Push edilmedi.
 Plan: `YAZ_TATILI_PLANI.md`. Test: `MahalleVerify.Run` (batch, Unity kapalı).
 
 ## Özet
-_(iş bitince buraya 10 satırlık özet gelecek)_
+1. Oyun artık haritalardan oluşuyor: **Mahalle** (değişmedi) + **Memleket** (yeni 60 bölüm). Harita 3 için tek yer `Maps`.
+2. Memleket, Mahalle'nin son ustalık sınavı geçilince açılır; ilerleme ayrı kaydedilir, eski kayıtlar sorunsuz açılır.
+3. Yeni mekanikler: **buzlu misket** (ilk sert vuruş kabuğu kırar), **karpuz** (sert vuruşta ikiye bölünür, 2 misket değerinde).
+4. Yeni zeminler: **kum** (yavaşlatır), **çamur** (saplar), **eğim** (hareket edeni saptırır), **çukur** (yavaşı yutar).
+5. Bütün eşikler ölçülerek seçildi (buz/karpuz 3.0 m/s, kum 1.5, çamur 14, çukur 2.2 m/s).
+6. 5 bölge × 12 bölüm; her bölge kuralını önce tek başına öğretiyor. Her bölüm iki haritadaki hepsinden ≥0.32 farklı.
+7. Zorluk ~1 milyon simülasyonla ölçüldü ve ayarlandı: Memleket ort. %53 (Mahalle %73), final %40, sıra kuralları test altında.
+8. Harita seçimi: harita başlığındaki kapsüle dokun → HARİTALAR penceresi. Bütün yeni metinler İngilizceli.
+9. `MahalleVerify.Run`: **16674 kontrol yeşil** (Mahalle'nin eski 4291 kontrolü aynen geçiyor).
+10. Telefonda bakılacaklar ve bekleyen görseller dosyanın sonunda. Push edilmedi; dal `codex/yaz-tatili`.
 
 | Faz | Durum | Commit | MahalleVerify |
 |---|---|---|---|

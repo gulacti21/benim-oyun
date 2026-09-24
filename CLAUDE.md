@@ -86,7 +86,7 @@ başlatılmalı):
 
 | Komut | Ne yapar |
 |---|---|
-| `MahalleVerify.Run` | **Ana test.** Diğer bütün doğrulamaları da çağırır (~2130 kontrol) |
+| `MahalleVerify.Run` | **Ana test.** Diğer bütün doğrulamaları da çağırır (~16700 kontrol, iki harita) |
 | `DifficultyOrderVerify.Run` | 60 bölümün zorluk sırası |
 | `LevelVarietyVerify.Run` | Bölümler birbirine benziyor mu |
 | `DuelVerify.Run` · `DuelNetVerify.Run` | Düello kuralları ve ağ katmanı |
@@ -131,7 +131,11 @@ Assets/Scripts/
   Gameplay/LevelController.cs  bölüm akışı
   Gameplay/MarbleArena.cs      saha ve hedef misketler
   Gameplay/ShotController.cs   atış
-  Online/                      düello: kurallar, fizik köprüsü, ağ
+  Online/                      düello: kurallar, fizik köprüsü, ağ (ÇIKARILDI, bkz. yukarı)
+  Mahalle/Maps.cs              HARİTALAR: harita sayısı, global bölüm/bölge numarası
+  Mahalle/MemleketCampaign.cs + MemleketBook.cs   Harita 2'nin 60 bölümü
+  Gameplay/IceShell.cs, SplitMarble.cs            buzlu ve karpuz misket
+  Gameplay/GroundRules.cs, GroundZones.cs         kum/çamur/eğim/çukur
 Assets/Editor/              bütün doğrulama araçları
 Assets/Resources/Mahalle/   Marble / Environment / ContactShadow shader'ları
 ```
@@ -290,14 +294,14 @@ bayraklar kapanınca ikisi de kaybolur.
   (Player Settings → Product Name). Oyun içi marka: MİSKO / MISKO.
 - `git push` (biriken commit'ler)
 - Unity Cloud bağlantısı → online oda kurma bunun arkasında
-- Uygulama ikonu yok (1024×1024 PNG, **alpha kanalsız** — Apple `ITMS-90717`
-  ile reddediyor; Preview'da Export → Alpha tikini kaldır)
+- ~~Uygulama ikonu~~ EKLENDİ (2026-09-24, ProjectSettings'te). Alpha kanalsız
+  olduğunu yüklemeden önce kontrol et (Apple `ITMS-90717`).
 - Apple Developer Program ($99/yıl) → TestFlight ve IAP. Ücretsiz hesapla
   kendi telefonuna kurulabiliyor (7 günde bir yenilenmesi gerekiyor)
 
 **Kodda:**
 - Relay taşıyıcısı + oda kur/katıl ekranları (Cloud bağlanınca)
-- Müzik yok, sadece ses efektleri var
+- ~~Müzik yok~~ EKLENDİ: `Resources/Mahalle/Music/MahalleMuzigi.ogg`, `Audio/MusicPlayer.cs`
 - ~~Kamera kırpması~~ DÜZELTİLDİ: `MahalleWorld.CameraSize` çember + çizgi dışı
   payını (yan 0.4, üst 0.35) hem yatayda hem üst başlığın altında gösterecek
   kadar açar, eskisinden asla yakın değil. 40 bölüm etkilendi (MEYDAN 12 %20).
@@ -424,6 +428,53 @@ fırlayacağı yön**. Yön iki kürenin merkezleri arasından hesaplanır. Hede
 değil de duvarsa, kendi misketinin sekme açısı çizilir.
 
 ---
+
+## HARİTA 2 — MEMLEKET (2026-09-24, dal `codex/yaz-tatili`)
+
+Ayrıntı ve ölçüm tabloları: `YAZ_TATILI_ILERLEME.md`. Plan: `YAZ_TATILI_PLANI.md`.
+
+**Numaralandırma.** Bölüm numarası GLOBAL: `harita × 60 + sıra` (0-59 Mahalle,
+60-119 Memleket). Bölge numarası da global (Memleket 5-9). `GameSession.SelectedLevelIndex`
+global, `SelectedMap` ondan türetilir. `Campaign` = Harita 1'in kendisi, hiç
+değişmedi; `Maps.Get(g)` iki haritayı birden görür. Harita 3: `Maps.Names`'e ad,
+`Maps.Database`'e case, `MahalleTheme`'e 5 tema, `MahalleWorld.GroundFiles` ve
+`MahalleMapView.MapFiles/GroundFiles`'a 5 ad.
+
+**Kayıt.** Harita 1 eski alanlarda (`stars`, `districtRewards`, `districtPlays`).
+Harita 2+: `MahalleSave.maps[]` (`MapProgress`), `lastMap`, `mapsAnnounced`.
+Eski kayıt sorunsuz açılır (MapsVerify test ediyor). Yıldız/rozet/görev sayımları
+iki haritayı toplar. Memleket bölge ödülü boncuk + rozet, **kaplama vermez**.
+
+**Kilit.** Memleket'in 1. bölümü = Mahalle'nin son bölümü (Meydan ustalık) geçilince.
+
+**Mekanikler (ölçülmüş sabitler, tahminle değiştirme):**
+- Buzlu misket (`IceShell`): kinematic başlar; temas hızı ≥ **3.0 m/s** kabuğu
+  kırar, misket yerinde kalır. Saha ortasında ~%55 güç.
+- Karpuz (`SplitMarble`): temas hızı ≥ **3.0 m/s** ikiye böler (×0.7, yarı kütle,
+  ±16°), tek kademe. **2 misket değerinde** (bütün 2, parça 1+1).
+- Kum ek drag **1.5**, çamur **14**, çukur yakalama **2.2 m/s**. Eğim: sadece
+  hareket edene, hızla orantılı (0.3 → 2.3 m/s arası artar). Sabit eğim yavaş
+  misketi sahadan akıtıyordu — ölçüldü, düzeltildi.
+
+**Zorluk.** Ölçü = temizlenebilirlik (açgözlü tavan / toplam). Memleket ort. %53,
+Mahalle %73. Atış hakları ve tavan `MemleketBook.Tuning`'de; yıldız hedefleri
+tavandan türer (1y %60, 2y ustalıkta tavan / diğerlerinde %85, 3y hepsi).
+Sıra kuralları `DifficultyOrderVerify.MemleketChecks` (MahalleVerify'da): taban
+%40, bölge içinde bir öncekinden en fazla bir misket kolay, bölge başları düşer,
+ustalık sınavı bölgenin en zoru. **Bir bölümü değiştirirsen** onu
+`MemleketPhysicsVerify.BatchCurve -memleketLevels <g>` ile yeniden ölç,
+`Tuning` satırını güncelle; çeşitlilik bozulursa `MemleketVarietyTuner.Run
+-memleketLevels <g>` sadece o bölümü ayarlar (diğerlerinin fiziği değişmesin).
+
+**Tuzaklar (bu işte öğrenildi):**
+- Preview sahnede `physicsScene.Simulate` normal MonoBehaviour'a
+  `OnCollisionEnter` göndermez; `[ExecuteAlways]` olana gönderir. Ölçüm
+  araçlarının oyunun bileşenini kullanabilmesi bu yüzden.
+- Fizik geri çağrısı içinde `DestroyImmediate` yasak (Unity kilitlendi,
+  parçalar sonsuz bölündü). Bayrakla çöz, oyunda `Destroy` ile ertele.
+- Çarpışma mesajı KAPALI bileşene de gelir; `enabled=false` susturmaz.
+- Batchmode ölçümleri uzun sürer (60 bölüm ~1-3 saat): `nohup … &` ile
+  başlat, log'u izle. Aynı projede ikinci Unity açılamaz.
 
 ## ÇALIŞMA TARZI
 
