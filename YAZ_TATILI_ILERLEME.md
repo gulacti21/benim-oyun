@@ -375,7 +375,7 @@ misket ister (Harita 1'in tasarım kuralı).
 | 68 | Sahil 09 | 11 | 4 | 6 | %55 | %57 | 4/5/11 |
 | 69 | Sahil 10 | 10 | 3 | 6 | %60 ⚠ | %56 | 4/5/10 |
 | 70 | Sahil 11 | 11 | 3 | 6 | %55 | %56 | 4/5/11 |
-| 71 | Sahil 12 | 12 | 5 | 7 | %58 ⚠ | %55 | 5/7/12 |
+| 71 | Sahil 12 | 12 | 5 | 7 | %58 ⚠ | %55 | 5/6/12 (2y elle) |
 | 72 | Köy Meydanı 01 | 10 | 3 | 6 | %60 | %58 | 4/5/10 |
 | 73 | Köy Meydanı 02 | 8 | 3 | 5 | %62 ⚠ | %57 | 3/4/8 |
 | 74 | Köy Meydanı 03 | 9 | 4 | 6 | %67 ⚠ | %57 | 4/5/9 |
@@ -504,12 +504,10 @@ taktik not, oyuncuya ipucu olabilir.
 - MahalleVerify **17107 yeşil**. Memleket ort. temizlenebilirlik %53.
 
 ## Telefonda kontrol edilecek
-- (Faz 7'ye kadar Memleket'e arayüzden girilemiyor; görsel kontrol o zaman.)
 - Buz kabuğu görünümü (saydamlık, kenar parlaklığı), kırılma parçaları ve
   kırılma/tık sesinin perdesi.
 - Karpuz misket görünümü (yeşil/koyu damar), parçaların kırmızı rengi,
-  bölünme sesi. Bir karpuzu bölüp iki parçayı çıkar: sayaç toplam 2 artmalı;
-  bütün çıkarınca da 2.
+  bölünme sesi.
 - Kum/çamur/çukur disklerinin görünümü ve zeminle uyumu; eğim oklarının
   görünürlüğü; çukura düşen misketin soluk görünmesi ve çukur sesi.
 - Harita ekranı başlığı: MAHALLE/MEMLEKET etiketi ile bölge adının

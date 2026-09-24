@@ -583,6 +583,7 @@ public static class MemleketBook
     //   2 yıldız = ustalık sınavında TAVAN (kilit normal misketle açılır, pay yok),
     //              diğerlerinde tavanın %85'i
     //   3 yıldız = bütün misketler (tavanın üstündeyse güç / özel misket ister)
+    // İsteğe bağlı üçüncü sayı: 2 yıldız hedefini elle koyar (telefonda denenip düşürülenler).
     // Tabloda olmayan bölüm formülle (1y %40, 2y %60) kalır.
     private static readonly Dictionary<int, int[]> Tuning = new Dictionary<int, int[]>
     {
@@ -597,7 +598,7 @@ public static class MemleketBook
         { 8, new[] { 4, 6 } },
         { 9, new[] { 3, 6 } },
         { 10, new[] { 3, 6 } },
-        { 11, new[] { 5, 7 } },
+        { 11, new[] { 5, 7, 6 } },   // 2y elle 6: kullanıcı telefonda 7'yi zor buldu (2026-09-24)
         { 12, new[] { 3, 6 } },
         { 13, new[] { 3, 5 } },
         { 14, new[] { 4, 6 } },
@@ -666,6 +667,7 @@ public static class MemleketBook
         level.threeStarTarget = total;
         level.oneStarTarget = Mathf.Max(1, Mathf.CeilToInt(ceiling * .6f));
         level.twoStarTarget = level.starsToPass >= 2 ? ceiling : Mathf.Max(level.oneStarTarget, Mathf.RoundToInt(ceiling * .85f));
+        if (t.Length > 2) level.twoStarTarget = t[2];
         // Kilit ile ustalık ayrı sayı olmalı (DifficultyOrderVerify kuralı).
         if (level.twoStarTarget >= level.threeStarTarget) level.twoStarTarget = level.threeStarTarget - 1;
         if (level.oneStarTarget > level.twoStarTarget) level.oneStarTarget = level.twoStarTarget;
