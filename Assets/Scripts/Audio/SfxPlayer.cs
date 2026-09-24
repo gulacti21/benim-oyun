@@ -98,6 +98,12 @@ public class SfxPlayer : MonoBehaviour
         Play(marbleHitClip, .6f + .35f * Mathf.Clamp01(strength), .72f);
     }
 
+    // ÇUKUR: misket düştü — boğuk, alçak tık.
+    public void PlayPit()
+    {
+        Play(marbleHitClip, .55f, .55f);
+    }
+
     public void PlayMarbleOut()
     {
         Play(marbleOutClip, 0.7f, Random.Range(0.98f, 1.05f));

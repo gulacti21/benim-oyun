@@ -10,8 +10,8 @@ _(iş bitince buraya 10 satırlık özet gelecek)_
 |---|---|---|---|
 | 1 Harita altyapısı | ✅ bitti | 47c584e | 5461 kontrol yeşil (Harita 1'in 4291'i + 1170 yeni) |
 | 2 Buzlu misket | ✅ bitti | 7d2b35c | 5481 yeşil (+20 buz) |
-| 3 Bölünen misket | ✅ bitti | (aşağıda) | 5498 yeşil (+17 bölünme) |
-| 4 Zemin kuralları | ⏳ | | |
+| 3 Bölünen misket | ✅ bitti | c8ee5ed | 5498 yeşil (+17 bölünme) |
+| 4 Zemin kuralları | ✅ bitti | (aşağıda) | 5574 yeşil (+76 zemin) |
 | 5 60 bölüm dizilimi | ⏳ | | |
 | 6 Zorluk ölçümü | ⏳ | | |
 | 7 Harita seçimi, görünüm, dil | ⏳ | | |
@@ -180,6 +180,71 @@ sayacın 2 arttığına bakılmalı (aşağıdaki liste).
 
 ---
 
+## Faz 4 — Zemin kuralları (2026-09-24)
+
+**Nasıl çalışıyor**
+- Veri: `LevelData.zones` (`ZoneSpot`: Sand/Mud/Pit, çember merkezine göre
+  x, z, yarıçap) ve `LevelData.slope` (x, z ivme, m/s²). Harita 1'de ikisi de
+  boş → hiçbir şey kurulmaz (test: 60 bölümün hiçbirinde kural yok).
+- Kurallar tek yerde: `GroundRules.Step` — oyunda `GroundZones.FixedUpdate`,
+  ölçüm araçlarında her `Simulate` adımından önce **aynı fonksiyon**.
+  - **Kum:** bölge içinde ek sürtünme (PhysX damping formülüyle, kararlı).
+  - **Çamur:** çok yüksek ek sürtünme → misket birkaç santimde saplanır.
+  - **Eğim:** yalnız **hareket eden** (>0.3 m/s) misketlere sabit yan ivme.
+    Karar: duran misketi de itseydik PhysX'te yuvarlanan küre hiç durmaz,
+    bütün misketler kendiliğinden sahadan akardı; "çimenin tuttuğu hafif
+    yamaç" gibi davranıyor. (Test: duran misket 200 adımda <1 cm.)
+  - **Çukur (Bayram Yeri):** 2.2 m/s'den yavaş geçen **hedef** misket düşer:
+    kinematic olur, collider kapanır, çukur merkezinde çöker, soluklaşır;
+    **ne sayılır ne kalır** (`MarbleArena.Capture`). Hızlı misket üstünden
+    geçer. Atıcı düşmez, sadece durur (sonraki atışta çizgiye döner).
+    Karar gerekçesi: final bölgesi en zor olmalı; çukur "yavaş misket =
+    kayıp" diye sert ve kontrollü atışı ödüllendiriyor. Yıldız hedefleri Faz
+    6'da çukur hesaba katılarak ölçülecek.
+- Görünüm: `Resources/Mahalle/Zone.shader` (yere yatırılmış Quad üstünde
+  yumuşak, hafif dalgalı kenarlı daire; kum tanecikli, çamur ıslak parlamalı,
+  çukur koyu delik + açık kenar). Cylinder yok, materyal önce, collider
+  hemen siliniyor. Eğim: çemberin dışında eğim yönünde üç soluk tebeşir oku.
+  Çukur sesi: `MarbleHit` perdesi 0.55.
+
+**Ölçüm** (`GroundRulesVerify.Measure`, `Logs/GroundRules.txt`):
+
+Kum (r=1.0, atıcının yolunda): ek drag 1.5 → %60 atış kumun içinde durur,
+%100 atış kumdan hızının %44'üyle çıkar (kumsuz 12.6 → kumlu 8.1 birim).
+Ek drag 3 → %100 bile %14'le çıkıyor (neredeyse çamur); 5 → duvar.
+**Seçim: `SandDrag = 1.5`** — "çabuk yavaşlar" ama geçilebilir; çamurdan ayrı.
+
+Çamur (r=0.6): çamura girdikten sonra alınan yol, ek drag 14 → %45: 0.15,
+%60: 0.29, %80: 0.48, %100: 0.61 (çap 1.2, her güçte içinde saplanıyor).
+Drag 8'de tam güç 0.99'a kadar gidiyor (kenara çok yakın).
+**Seçim: `MudDrag = 14`.**
+
+Eğim (4.5 ilerideki hedef hizasında yana kayma, birim):
+
+| ivme | %45 | %60 | %80 | %100 |
+|---|---|---|---|---|
+| 0.4 | 0.26 | 0.11 | 0.05 | 0.03 |
+| 0.8 | 0.51 | 0.22 | 0.10 | 0.06 |
+| 1.2 | 0.77 | 0.33 | 0.15 | 0.09 |
+
+Sert atış neredeyse etkilenmiyor, yavaş atış ve **çarpışma sonrası
+yuvarlanan misketler** belirgin sapıyor. Eğim bölüm verisi (Yayla'da 0.6-1.2
+arası kullanılacak), kuralın kendisinde sabit yok.
+
+Çukur (r=0.35): 1.2 geriden fırlatılan misket 4.0 m/s'de çukura 2.21 ile
+varıyor → geçer; 3.0 m/s'de 1.48 → düşer. Atıştan sonra saha içinde
+yuvarlanan misketler (0.5-2.5 m/s) düşer, doğrudan atışlar (5-9 m/s) geçer.
+**Seçim: `PitCaptureSpeed = 2.2`.**
+
+**Test (`GroundRulesVerify.RunChecks`, 76 kontrol):** Harita 1'in 60
+bölümünde kural yok; kum tam atışı kısaltır ama geçilir; çamur %60 ve %100'de
+misketi içinde durdurur; eğim hareket edeni saptırır, duranı hiç kıpırdatmaz;
+çukur yavaşı yutar (kinematic, collider kapalı, merkezde), hızlıyı geçirir;
+ölçüm için geri alınabilir; atıcı yutulmaz, durur; bölgeler çember merkezini
+izler; shader Resources'ta.
+
+---
+
 ## Telefonda kontrol edilecek
 - (Faz 7'ye kadar Memleket'e arayüzden girilemiyor; görsel kontrol o zaman.)
 - Buz kabuğu görünümü (saydamlık, kenar parlaklığı), kırılma parçaları ve
@@ -187,6 +252,8 @@ sayacın 2 arttığına bakılmalı (aşağıdaki liste).
 - Karpuz misket görünümü (yeşil/koyu damar), parçaların kırmızı rengi,
   bölünme sesi. Bir karpuzu bölüp iki parçayı çıkar: sayaç toplam 2 artmalı;
   bütün çıkarınca da 2.
+- Kum/çamur/çukur disklerinin görünümü ve zeminle uyumu; eğim oklarının
+  görünürlüğü; çukura düşen misketin soluk görünmesi ve çukur sesi.
 
 ## Bekleyen işler (kullanıcıda)
 - Memleket görselleri: `Resources/Mahalle/Map/Harita{Sahil,Koy,Yayla,Pazar,Bayram}.png`

@@ -412,6 +412,16 @@ public class MarbleArena : MonoBehaviour
         }
     }
 
+    // HARİTA 2 ÇUKUR: hedef çukura düştü. Ne sayılır ne kalır; artık oyunda değil.
+    public void Capture(TargetMarble marble)
+    {
+        if (marble == null) return;
+        activeMarbles.Remove(marble);
+        spawnedMarbles.Remove(marble);
+        marble.MarkLost();
+        ScoreChanged?.Invoke(score, totalMarbles);
+    }
+
     // Karpuz bölündü: listede bütün misketin yerini iki parça alır. Toplam değer aynı (2).
     private void OnSplit(SplitMarble whole, Rigidbody a, Rigidbody b)
     {

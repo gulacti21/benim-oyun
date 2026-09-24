@@ -41,6 +41,12 @@ public class LevelData : ScriptableObject
     [Tooltip("Bölüme özel çarpışan engeller.")]
     public ObstacleSpot[] obstacles;
 
+    [Header("Zemin (Harita 2)")]
+    [Tooltip("Kum, çamur ve çukur bölgeleri.")]
+    public ZoneSpot[] zones;
+    [Tooltip("Yayla eğimi: hareket eden misketlere sabit yan ivme (x, z), m/s².")]
+    public Vector2 slope;
+
     [Header("Shooter")]
     public Vector3 shooterStartPosition = new Vector3(0f, 0.25f, -4f);
     [Tooltip("Atış çizgisinin yarı genişliği. 0 ise ekrana göre otomatik.")]

@@ -38,6 +38,21 @@ public class TargetMarble : MonoBehaviour
         ApplyScoredColor();
     }
 
+    // Çukura düştü: sayılmaz, soluk görünür.
+    public bool IsLost { get; private set; }
+    public void MarkLost()
+    {
+        if (IsLost || IsScored) return;
+        IsLost = true;
+        if (meshRenderer == null) return;
+        if (propertyBlock == null) propertyBlock = new MaterialPropertyBlock();
+        meshRenderer.GetPropertyBlock(propertyBlock);
+        var dim = new Color(.35f, .30f, .26f, 1f);
+        propertyBlock.SetColor(BaseColorId, dim);
+        propertyBlock.SetColor(LegacyColorId, dim);
+        meshRenderer.SetPropertyBlock(propertyBlock);
+    }
+
     private void ApplyScoredColor()
     {
         if (meshRenderer == null)

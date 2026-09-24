@@ -206,6 +206,9 @@ public class LevelController : MonoBehaviour
             shooter.ShootingEnabled = true;
         }
 
+        // HARİTA 2: kum, çamur, çukur ve eğim. Kuralı olmayan bölümde hiçbir şey kurmaz.
+        GroundZones.Setup(arena, shooter != null ? shooter.Body : null, level);
+
         MahalleWorld.Apply(this);
         LastReward = new RoundReward();
         shotsUsed = 0;
