@@ -737,8 +737,9 @@ public class MahalleUI : MonoBehaviour
         var custom=Resources.Load<Texture2D>("Mahalle/Gecis/"+Maps.Names[map]);
         var newPhoto=Photo(layer,custom!=null?custom:MahalleMapView.MapPhoto(Maps.FirstDistrict(map)));
         if(newPhoto!=null)newPhoto.color=new Color(1,1,1,0);
-        var tint=Panel(layer,"Karartma",0,0,1080,2600,new Color(Orman.r,Orman.g,Orman.b,.55f));
-        tint.colorB=new Color(.078f,.157f,.133f,.82f);tint.radius=0;Stretch(tint.rectTransform);
+        // Özel görsel aydınlık ve yazı için boşluklu çizildi: tül daha açık, alt kısım (yazılar) koyu.
+        var tint=Panel(layer,"Karartma",0,0,1080,2600,new Color(Orman.r,Orman.g,Orman.b,custom!=null?.30f:.55f));
+        tint.colorB=new Color(.078f,.157f,.133f,custom!=null?.78f:.82f);tint.radius=0;Stretch(tint.rectTransform);
         var rain=Rect("Misket yağmuru",layer);Stretch(rain);
         // Düzen 1080x1900'lük bir kutuda; kısa ekranda (iPad) kutu küçülür, taşmaz.
         var box=Centre(Rect("Geçiş içeriği",layer),0,0,1080,1900);
