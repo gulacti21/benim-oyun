@@ -7,7 +7,9 @@ using UnityEngine;
 public static class BuildTools
 {
     private const string BundleIdentifier = "com.gulacti.misketr";
-    private const string ProductName = "MISKETR";
+    // Ana ekrandaki ad. Mağaza adı "Misko: Misket Oyunu" (App Store Connect). Bundle ID yayında
+    // com.gulacti.misko olacak; şimdi değiştirme (kayıtlar sıfırlanır).
+    private const string ProductName = "Misko";
     private const string CompanyName = "Gulacti";
 
     private static readonly string[] Scenes =
@@ -30,9 +32,11 @@ public static class BuildTools
         PlayerSettings.allowedAutorotateToLandscapeLeft = false;
         PlayerSettings.allowedAutorotateToLandscapeRight = false;
 
-        PlayerSettings.iOS.targetOSVersionString = "14.0";
+        PlayerSettings.iOS.targetOSVersionString = "15.0";
         PlayerSettings.iOS.appleEnableAutomaticSigning = true;
-        PlayerSettings.iOS.targetDevice = iOSTargetDevice.iPhoneAndiPad;
+        // 1.0 sadece iPhone (2026-09-25): Xcode 26'da UIRequiresFullScreen geçmiyor, iPad'i destekleyen
+        // portre uygulama ITMS-90474 ile yüklenemiyor. iPad'de iPhone uygulaması olarak açılır.
+        PlayerSettings.iOS.targetDevice = iOSTargetDevice.iPhoneOnly;
 
         PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel25;
     }
