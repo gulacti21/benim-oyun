@@ -36,12 +36,18 @@ public class MahalleUI : MonoBehaviour
         font=Resources.Load<TMP_FontAsset>("Mahalle/Nunito SDF");
         var canvas=gameObject.AddComponent<Canvas>();canvas.renderMode=RenderMode.ScreenSpaceOverlay;canvas.sortingOrder=20;
         var scaler=gameObject.AddComponent<CanvasScaler>();scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize;scaler.referenceResolution=new Vector2(1080,1920);scaler.matchWidthOrHeight=0;
+        // iPAD OYUN EKRANI: telefondan geniş ekranda (9:16'dan geniş) arayüz yüksekliğe göre
+        // ölçeklenir ve ortada 1080'lik sütun olur. Genişliğe göre ölçeklenince üst panel
+        // ekranın %25'ini kaplıyor, kamera sahayı ufacık gösteriyordu (simülatörde görüldü).
+        // Kamera aynı sütunu hesaba katar: MahalleWorld.UiCanvasHeight. Telefonlar değişmedi.
+        bool column=MahalleWorld.UiColumn(Screen.width/(float)Mathf.Max(1,Screen.height))&&FindFirstObjectByType<LevelController>()!=null;
+        if(column)scaler.matchWidthOrHeight=1;
         gameObject.AddComponent<GraphicRaycaster>();
         // TAM EKRAN ZEMİN: güvenli alanın dışı (çentik/Dynamic Island ve ev çubuğu
         // şeritleri) ekranın zemin rengiyle boyanır. İçerik güvenli alanda kalır.
         bleedTop=Bleed("Üst taşma",new Vector2(0,.5f),Vector2.one);
         bleedBottom=Bleed("Alt taşma",Vector2.zero,new Vector2(1,.5f));
-        root=Rect("SafeArea",transform);Stretch(root);root.gameObject.AddComponent<SafeAreaFit>();
+        root=Rect("SafeArea",transform);Stretch(root);root.gameObject.AddComponent<SafeAreaFit>().maxWidth=column?1080f:0f;
         Canvas.ForceUpdateCanvases();
         // Sahnede ses dinleyicisi yoksa (LevelSelect) hiçbir ses duyulmaz: kameraya ekle.
         if(FindFirstObjectByType<AudioListener>()==null)
@@ -130,7 +136,7 @@ public class MahalleUI : MonoBehaviour
         bg.colorB=new Color(.918f,.890f,.831f);bg.radius=34;bg.shadow=16;bg.highlight=false;
         Bottom(bg.rectTransform,24,18,1032,132);
         // Dorduncu sekme "MENÜ": acilis ekranina (baslik menusu) doner.
-        string[] names={"MENÜ","MAHALLE","KESEM","İSTATİSTİK","GÖREVLER"};
+        string[] names={"MENÜ","HARİTA","KESEM","İSTATİSTİK","GÖREVLER"};   // "Mahalle" Memleket'te yanlış duruyordu
         string[] files={"Alt/SekmeGeri","Alt/SekmeHarita","Alt/SekmeKese","Alt/SekmeGrafik","Alt/SekmeListe"};
         int[] ids={-1,0,1,3,2};
         var shapes=new[]{MahalleGraphic.Shape.Chevron,MahalleGraphic.Shape.TabMap,MahalleGraphic.Shape.Bag,MahalleGraphic.Shape.Bars,MahalleGraphic.Shape.TabTask};
@@ -254,6 +260,18 @@ public class MahalleUI : MonoBehaviour
         sahne.pivot = new Vector2(.5f, .5f);
         sahne.sizeDelta = new Vector2(1080, 700);
         sahne.anchoredPosition = new Vector2(0, 154);
+        // KISA EKRAN (iPad): başlık (alt kenarı ~540) ile alttaki menü yığını (650) arasına
+        // 700'lük sahne sığmıyor, logo çembere, çember OYNA'ya biniyordu. Sığmazsa küçült ve
+        // aradaki boşluğun ortasına koy. Telefonlarda boşluk yeterli, hiçbir şey değişmez.
+        {
+            Canvas.ForceUpdateCanvases();
+            float h = page.rect.height, top = 545f, bottom = h - 670f, gap = bottom - top;
+            if (h > 0 && gap < 700f)
+            {
+                sahne.localScale = Vector3.one * Mathf.Clamp(gap / 700f, .3f, 1f);
+                sahne.anchoredPosition = new Vector2(0, h * .5f - (top + gap * .5f));
+            }
+        }
 
         var ring = Art(sahne, "Tebeşir çemberi", MahalleGraphic.Shape.ChalkRing, 190, 0, 700, 700, new Color(1, .98f, .92f, .92f));
         ring.stroke = 9f;
@@ -671,13 +689,15 @@ public class MahalleUI : MonoBehaviour
         {
             int map=m;float y=210+m*(CardH+Gap);
             bool open=MahalleProfile.MapUnlocked(map);
+            // Seçili çerçeve kartın ARKASINDA, kardeş olarak: kartın çocuğu olunca kartın
+            // üstüne çiziliyor, kart tamamen turuncu görünüyordu (simülatörde görüldü).
+            if(map==current){var sec=Art(box,"Seçili çerçeve",MahalleGraphic.Shape.Panel,30,y-6,924,CardH+12,Amber);sec.radius=42;sec.highlight=false;}
             var card=Button(box,"Harita "+map,36,y,912,CardH,open?Orman:new Color(Komur.r,Komur.g,Komur.b,.82f),()=>
             {
                 if(!MahalleProfile.MapUnlocked(map)){Toast(L.F("{0} haritası, {1} haritasının son bölümünü geçince açılır.",L.T(Maps.Names[map]),L.T(Maps.Names[Mathf.Max(0,map-1)])));return;}
                 RememberMap(map);district=MahalleProfile.NextLevelIn(map)/Campaign.PerDistrict;tab=0;CloseModal(false);ShowHome();
             });
             var cf=card.GetComponent<MahalleGraphic>();cf.radius=36;cf.shadow=10;cf.highlight=false;
-            if(map==current){var sec=Art(card.transform,"Seçili çerçeve",MahalleGraphic.Shape.Panel,-6,-6,924,CardH+12,Amber);sec.radius=42;sec.transform.SetAsFirstSibling();}
             card.gameObject.AddComponent<MahalleTap>();
             var ad=Text(card.transform,L.Up(L.T(Maps.Names[map])),40,34,560,70,50,Krem);ad.fontStyle=FontStyles.Bold;
             Text(card.transform,Maps.Subtitles[map],40,104,820,50,28,new Color(Krem.r,Krem.g,Krem.b,.72f));
@@ -1330,6 +1350,8 @@ public class MahalleUI : MonoBehaviour
         CloseModal(false);
         modal=Rect(name,root);Stretch(modal);
         var shade=Panel(modal,"Perde",0,0,1080,2600,new Color(.06f,.1f,.08f,.78f),true);shade.radius=0;Stretch(shade.rectTransform);
+        // Güvenli alanın (alt çubuk, çentik) ve iPad sütununun dışını da karart: yoksa altta açık şerit kalıyordu.
+        shade.rectTransform.offsetMin=new Vector2(-2000,-2000);shade.rectTransform.offsetMax=new Vector2(2000,2000);
         var box=Panel(modal,name+" içeriği",48,0,984,height,Paper,true);
         var r=box.rectTransform;r.anchorMin=r.anchorMax=new Vector2(.5f,.5f);r.pivot=new Vector2(.5f,.5f);r.anchoredPosition=Vector2.zero;r.sizeDelta=new Vector2(984,height);
         return r;
@@ -1372,7 +1394,7 @@ public class MahalleUI : MonoBehaviour
             LabelButton(box,L.F("TEKRAR DENE · {0} HAK",MahalleProfile.DailyTriesLeft),36,290,912,100,new Color(.88f,.83f,.69f),Ink,
                         ()=>{if(!MahalleProfile.DailyUseTry()){Toast("Bugünlük hakkın bitti. Yarın yeni bölüm gelir.");return;}CloseModal();controller.RestartLevel();ShowGame();},30);
         else LabelButton(box,"TEKRAR DENE",36,290,912,100,new Color(.88f,.83f,.69f),Ink,()=>{CloseModal();controller.RestartLevel();ShowGame();});
-        LabelButton(box,"MAHALLEYE DÖN",36,416,912,100,new Color(.88f,.83f,.69f),Ink,()=>controller.OpenLevelSelect());
+        LabelButton(box,"HARİTAYA DÖN",36,416,912,100,new Color(.88f,.83f,.69f),Ink,()=>controller.OpenLevelSelect());
         LabelButton(box,"AYARLAR",36,554,912,78,Paper,Muted,Settings,27);
     }
     // Hedef yazısı: sonraki bölümü açmak için gereken misket. Ustalık sınavında 2 yıldız
@@ -1406,8 +1428,8 @@ public class MahalleUI : MonoBehaviour
         else if(won&&!passed)Text(box,L.F("Sonraki bölümü açmak için {0} yıldız gerekiyor.",need),60,552,864,72,29,new Color(.72f,.32f,.24f),TextAlignmentOptions.Center);
         else Text(box,won?"Yeni rekorlar ve görevler daha fazla boncuk kazandırır.":"İpucu: Alt çizgide yer değiştirip kümeye yandan vur.",60,556,864,68,27,Muted,TextAlignmentOptions.Center);
         if(passed&&controller.HasNextLevel)LabelButton(box,"SONRAKİ BÖLÜM",36,669,912,98,Ink,Cream,()=>controller.LoadNextLevel());
-        else LabelButton(box,passed?"MAHALLEYE DÖN":"TEKRAR DENE",36,669,912,98,Ink,Cream,()=>{if(passed)controller.OpenLevelSelect();else{CloseModal();controller.RestartLevel();ShowGame();}});
-        LabelButton(box,passed?"REKORUNU GELİŞTİR":"MAHALLEYE DÖN",36,791,912,86,new Color(.88f,.83f,.69f),Ink,()=>{if(passed){CloseModal();controller.RestartLevel();ShowGame();}else controller.OpenLevelSelect();},30);
+        else LabelButton(box,passed?"HARİTAYA DÖN":"TEKRAR DENE",36,669,912,98,Ink,Cream,()=>{if(passed)controller.OpenLevelSelect();else{CloseModal();controller.RestartLevel();ShowGame();}});
+        LabelButton(box,passed?"REKORUNU GELİŞTİR":"HARİTAYA DÖN",36,791,912,86,new Color(.88f,.83f,.69f),Ink,()=>{if(passed){CloseModal();controller.RestartLevel();ShowGame();}else controller.OpenLevelSelect();},30);
         if(passed&&controller.HasNextLevel)LabelButton(box,"MAHALLE HARİTASI",36,898,912,76,Paper,Muted,()=>controller.OpenLevelSelect(),27);
         // Oyuncu iyi bir anda: ilk kez 3 yıldızla geçtiyse ve yeterince oynadıysa
         // iOS'un kendi puanlama penceresi bir kez açılır.

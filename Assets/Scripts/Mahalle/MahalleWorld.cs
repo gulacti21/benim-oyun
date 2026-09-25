@@ -57,12 +57,15 @@ public class MahalleWorld : MonoBehaviour
     public const float HudTopRef=356f;     // üst bilgi panelinin gerçek alt kenarı (1080 genişlik referansı)
     public const float HudGap=55f;        // çemberin tepesiyle panel arasında kalacak en az boşluk
     public const float SafeTopFraction=.07f;// çentik/Dynamic Island payı (ekran yüksekliğinin oranı)
+    // Oyun ekranı arayüzü 9:16'dan geniş ekranda (iPad) 1080x1920 sütun olur (MahalleUI.Start).
+    public static bool UiColumn(float aspect)=>aspect>9f/16f+.01f;
+    public static float UiCanvasHeight(float aspect)=>UiColumn(aspect)?1920f:1080f/Mathf.Max(.3f,aspect);
     public static float CameraSize(float arenaSize,float aspect)
     {
         aspect=Mathf.Max(.3f,aspect);
         float legacy=Mathf.Max(6.3f,3.65f/aspect);
         float horizontal=(arenaSize+SideMargin)/aspect;
-        float canvasHeight=1080f/aspect;
+        float canvasHeight=UiCanvasHeight(aspect);
         float topCover=(HudTopRef+HudGap)/canvasHeight+SafeTopFraction;          // ekranın üstten örtülen oranı
         float farEdge=(arenaSize+TopMargin-CamFocusZ)*Mathf.Sin(CamPitch*Mathf.Deg2Rad);
         float vertical=farEdge/Mathf.Max(.2f,1f-2f*topCover);

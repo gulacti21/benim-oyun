@@ -126,6 +126,8 @@ public static class L
         {"YENİ HARİTA AÇILDI", "NEW MAP UNLOCKED"},
         {"HADİ GİDELİM", "LET'S GO"},
         {"SONRA", "LATER"},
+        {"HARİTA", "MAP"},
+        {"HARİTAYA DÖN", "BACK TO MAP"},
         {"İlerlemen iCloud'dan yüklendi.", "Your progress was loaded from iCloud."},
         {"GAME CENTER · SIRALAMA", "GAME CENTER · LEADERBOARDS"},
         {"Sahil", "Beach"}, {"Köy Meydanı", "Village Square"}, {"Yayla", "Highlands"},

@@ -140,7 +140,7 @@ public static class ShooterTapVerify
 
                     // Çizgi ekranda nerede? (canvas px, alttan) — raycast alan tek UI "Misket kesesi".
                     Vector3 sp = cam.WorldToScreenPoint(new Vector3(cx, .02f, lz));
-                    float lineCanvasY = sp.y / H * (1080f / aspect);
+                    float lineCanvasY = sp.y / H * MahalleWorld.UiCanvasHeight(aspect);
                     minGapToDock = Mathf.Min(minGapToDock, lineCanvasY - DockTopPx);
 
                     // Yerinde Kal: çizginin uzak ucuna dokun, bir şey olmamalı (tasarım).
