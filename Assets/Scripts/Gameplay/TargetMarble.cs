@@ -12,7 +12,14 @@ public class TargetMarble : MonoBehaviour
     private MeshRenderer meshRenderer;
     private MaterialPropertyBlock propertyBlock;
 
+    // Online duelloda misketin sahibi: 0 veya 1. Kampanyada -1 kalir,
+    // yani tek oyunculu oyun bu alani hic kullanmaz.
+    public int Owner { get; set; } = -1;
+
     public bool IsScored { get; private set; }
+    // Kaç misket değerinde. Karpuz yarımı 0: HERHANGİ iki yarım birlikte 1 (MarbleArena sayar).
+    public int Worth { get; set; } = 1;
+    public bool IsHalf { get; set; }
     public Rigidbody Body => body;
 
     private void Awake()
@@ -30,6 +37,21 @@ public class TargetMarble : MonoBehaviour
 
         IsScored = true;
         ApplyScoredColor();
+    }
+
+    // Çukura düştü: sayılmaz, soluk görünür.
+    public bool IsLost { get; private set; }
+    public void MarkLost()
+    {
+        if (IsLost || IsScored) return;
+        IsLost = true;
+        if (meshRenderer == null) return;
+        if (propertyBlock == null) propertyBlock = new MaterialPropertyBlock();
+        meshRenderer.GetPropertyBlock(propertyBlock);
+        var dim = new Color(.35f, .30f, .26f, 1f);
+        propertyBlock.SetColor(BaseColorId, dim);
+        propertyBlock.SetColor(LegacyColorId, dim);
+        meshRenderer.SetPropertyBlock(propertyBlock);
     }
 
     private void ApplyScoredColor()

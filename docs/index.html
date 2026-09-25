@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Misko: Misket Oyunu</title>
+<meta name="description" content="Tebeşirle çizilmiş çembere nişan al, misketleri dışarı çıkar. Mahalle'den Memleket'e 120 elle tasarlanmış bölüm. Reklamsız.">
+<meta property="og:title" content="Misko: Misket Oyunu">
+<meta property="og:description" content="Mahallenin en iyi nişancısı kim? 120 elle tasarlanmış bölüm, reklamsız.">
+<meta property="og:image" content="img/panorama-memleket.webp">
+<meta name="theme-color" content="#203D34">
+<link rel="stylesheet" href="stil.css?v=4">
+</head>
+<body>
+<header class="ust"><div class="ust-ic">
+  <a class="marka" href="index.html"><span class="misket"></span>MİSKO</a>
+  <nav class="menu"><a class="aktif" href="index.html">Oyun</a><a href="destek.html">Destek</a><a href="gizlilik.html">Gizlilik</a></nav>
+</div></header>
+
+<!-- GİRİŞ -->
+<section class="giris">
+  <div class="giris-ic">
+    <div class="giris-yazi">
+      <img class="giris-logo" src="img/logo.webp" alt="MİSKO" width="1200" height="403">
+      <p class="giris-slogan">mahallenin en iyi nişancısı kim?</p>
+      <p class="giris-metin">Tebeşirle çizilmiş çembere nişan al, misketini fiskele, rakip misketleri çemberin dışına çıkar.
+        Çocukluğunun sokak oyunu, gerçek fizikle cebinde.</p>
+      <ul class="giris-ozet">
+        <li><b>120</b> bölüm</li><li><b>2</b> harita</li><li>Reklamsız</li><li>İnternetsiz</li>
+      </ul>
+      <p class="giris-not">iPhone için App Store'a geliyor</p>
+    </div>
+    <div class="sahne" aria-hidden="true">
+      <svg class="tebesir" viewBox="0 0 400 400">
+        <defs><filter id="tebesir-doku"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" result="g"/>
+          <feDisplacementMap in="SourceGraphic" in2="g" scale="3.2"/></filter></defs>
+        <circle class="cizgi halka" cx="200" cy="200" r="178" pathLength="100"/>
+        <path class="cizgi ucgen" d="M200 92 L312 282 L88 282 Z" pathLength="100"/>
+      </svg>
+      <span class="top t1"></span><span class="top t2"></span><span class="top t3"></span>
+      <span class="top t4"></span><span class="top t5"></span><span class="top t6"></span>
+      <span class="top atici"></span>
+    </div>
+  </div>
+</section>
+
+<!-- İKİ HARİTA -->
+<section class="bolum">
+  <p class="ust-baslik">120 elle tasarlanmış bölüm</p>
+  <h2 class="bolum-baslik">İki harita, on bölge</h2>
+  <div class="haritalar">
+    <article class="harita-kart">
+      <div class="harita-resim" style="background-image:url(img/panorama-mahalle.webp)"></div>
+      <div class="harita-yazi">
+        <span class="etiket">Harita 1</span>
+        <h3>Mahalle</h3>
+        <p>Apartman önünden okul bahçesine, parktan toprak sahaya, oradan mahalle meydanına. 60 bölüm, her bölgenin
+          sonunda bir ustalık sınavı.</p>
+      </div>
+    </article>
+    <article class="harita-kart">
+      <div class="harita-resim" style="background-image:url(img/panorama-memleket.webp)"></div>
+      <div class="harita-yazi">
+        <span class="etiket">Harita 2</span>
+        <h3>Memleket</h3>
+        <p>Yaz tatili başladı! Sahilden köy meydanına, yayladan kasaba pazarına ve bayram yerine. 60 bölüm daha,
+          yepyeni zeminler ve misketlerle.</p>
+      </div>
+    </article>
+  </div>
+
+  <div class="serit" tabindex="0" aria-label="Bölgeler">
+    <figure><img src="img/harita-apartman.webp" alt="" loading="lazy"><figcaption>Apartman Önü</figcaption></figure>
+    <figure><img src="img/harita-okul.webp" alt="" loading="lazy"><figcaption>Okul Bahçesi</figcaption></figure>
+    <figure><img src="img/harita-park.webp" alt="" loading="lazy"><figcaption>Park</figcaption></figure>
+    <figure><img src="img/harita-toprak.webp" alt="" loading="lazy"><figcaption>Toprak Saha</figcaption></figure>
+    <figure><img src="img/harita-meydan.webp" alt="" loading="lazy"><figcaption>Mahalle Meydanı</figcaption></figure>
+    <figure><img src="img/harita-sahil.webp" alt="" loading="lazy"><figcaption>Sahil</figcaption></figure>
+    <figure><img src="img/harita-koy.webp" alt="" loading="lazy"><figcaption>Köy Meydanı</figcaption></figure>
+    <figure><img src="img/harita-yayla.webp" alt="" loading="lazy"><figcaption>Yayla</figcaption></figure>
+    <figure><img src="img/harita-pazar.webp" alt="" loading="lazy"><figcaption>Kasaba Pazarı</figcaption></figure>
+    <figure><img src="img/harita-bayram.webp" alt="" loading="lazy"><figcaption>Bayram Yeri</figcaption></figure>
+  </div>
+</section>
+
+<!-- MEKANİKLER -->
+<section class="bolum koyu">
+  <p class="ust-baslik">Memleket'te seni bekleyenler</p>
+  <h2 class="bolum-baslik">Her bölge yeni bir numara</h2>
+  <div class="mekanikler">
+    <div class="mekanik"><span class="ikon buz"></span><b>Buzlu misket</b><span>Önce kabuğunu kır, sonra çıkar.</span></div>
+    <div class="mekanik"><span class="ikon karpuz"></span><b>Karpuz misket</b><span>Sert vur, ikiye bölünsün.</span></div>
+    <div class="mekanik"><span class="ikon kum"></span><b>Kum</b><span>İçinden geçen misket çabuk yavaşlar.</span></div>
+    <div class="mekanik"><span class="ikon camur"></span><b>Çamur</b><span>Giren misket olduğu yere saplanır.</span></div>
+    <div class="mekanik"><span class="ikon egim"></span><b>Eğim</b><span>Yamaç, yuvarlanan misketin yolunu büker.</span></div>
+    <div class="mekanik"><span class="ikon cukur"></span><b>Çukur</b><span>Yavaş giden misketi yutar.</span></div>
+  </div>
+</section>
+
+<!-- YOLCULUK -->
+<section class="yolculuk" style="background-image:url(img/yolculuk.webp)">
+  <div class="yolculuk-ic">
+    <p class="ust-baslik">Yaz tatili</p>
+    <h2>Mahalleyi bitir,<br>memlekete yola çık.</h2>
+    <p>Mahalle'nin son ustalık sınavını geçtiğinde yol açılır. Tebeşirle çizilmiş bir çemberden diğerine.</p>
+  </div>
+</section>
+
+<!-- ÖZELLİKLER -->
+<section class="bolum">
+  <p class="ust-baslik">Neden Misko?</p>
+  <h2 class="bolum-baslik">Kolay öğrenilir, ustalaşması zaman ister</h2>
+  <div class="ozellik-izgara">
+    <div class="ozellik"><span class="no">01</span><b>Gerçek fizik</b><span>Açıyı ve gücü sen seçersin; misketler çarpışır, saçılır. Doğru açıyla tek atışta birden fazlasını çıkar.</span></div>
+    <div class="ozellik"><span class="no">02</span><b>Koleksiyon ve güçler</b><span>Bal Köpüğü'nden Galaksi'ye misket kaplamaları; Baş Misket, Usta Gözü gibi güçler.</span></div>
+    <div class="ozellik"><span class="no">03</span><b>Her gün yeni bölüm</b><span>Günün bölümünü bitir, serini sürdür, ödülün büyüsün. Bir de süreye karşı Sonsuz mod.</span></div>
+    <div class="ozellik"><span class="no">04</span><b>Reklamsız, internetsiz</b><span>Reklam yok, gerçek parayla satın alma yok, veri toplama yok. İnternet gerekmez.</span></div>
+  </div>
+</section>
+
+<!-- SON ÇAĞRI -->
+<section class="cagri">
+  <img src="img/logo.webp" alt="MİSKO" width="1200" height="403" loading="lazy">
+  <p>Yakında iPhone için App Store'da.</p>
+  <p class="en">Coming soon to the App Store for iPhone. · <a href="destek.html#en">Support</a> · <a href="gizlilik.html#en">Privacy</a></p>
+</section>
+
+<footer class="alt"><div class="alt-ic">
+  <span>© 2026 Ahmet Furkan Gülaçtı</span>
+  <a href="destek.html">Destek / Support</a><a href="gizlilik.html">Gizlilik / Privacy</a>
+  <a class="sag" href="mailto:ahmetfurkangulacti@gmail.com">ahmetfurkangulacti@gmail.com</a>
+</div></footer>
+</body>
+</html>

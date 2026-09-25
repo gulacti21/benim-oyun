@@ -1,12 +1,15 @@
 using System.IO;
 using UnityEditor;
 using UnityEditor.Build;
+using UnityEditor.Build.Reporting;
 using UnityEngine;
 
 public static class BuildTools
 {
     private const string BundleIdentifier = "com.gulacti.misketr";
-    private const string ProductName = "MISKETR";
+    // Ana ekrandaki ad. Mağaza adı "Misko: Misket Oyunu" (App Store Connect). Bundle ID yayında
+    // com.gulacti.misko olacak; şimdi değiştirme (kayıtlar sıfırlanır).
+    private const string ProductName = "Misko";
     private const string CompanyName = "Gulacti";
 
     private static readonly string[] Scenes =
@@ -29,11 +32,13 @@ public static class BuildTools
         PlayerSettings.allowedAutorotateToLandscapeLeft = false;
         PlayerSettings.allowedAutorotateToLandscapeRight = false;
 
-        PlayerSettings.iOS.targetOSVersionString = "14.0";
+        PlayerSettings.iOS.targetOSVersionString = "15.0";
         PlayerSettings.iOS.appleEnableAutomaticSigning = true;
-        PlayerSettings.iOS.targetDevice = iOSTargetDevice.iPhoneAndiPad;
+        // 1.0 sadece iPhone (2026-09-25): Xcode 26'da UIRequiresFullScreen geçmiyor, iPad'i destekleyen
+        // portre uygulama ITMS-90474 ile yüklenemiyor. iPad'de iPhone uygulaması olarak açılır.
+        PlayerSettings.iOS.targetDevice = iOSTargetDevice.iPhoneOnly;
 
-        PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel24;
+        PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel25;
     }
 
     [MenuItem("MISKETR/Build iOS Xcode Project")]
@@ -51,7 +56,7 @@ public static class BuildTools
         ApplyPlayerSettings();
 
         string projectRoot = Directory.GetParent(Application.dataPath).FullName;
-        string outputPath = Path.Combine(Directory.GetParent(projectRoot).FullName, "MISKETR-iOS");
+        string outputPath = Path.Combine(projectRoot, "Builds", "iOS");
 
         BuildPlayerOptions options = new BuildPlayerOptions
         {
@@ -62,7 +67,12 @@ public static class BuildTools
             options = BuildOptions.None
         };
 
-        BuildPipeline.BuildPlayer(options);
+        BuildReport report = BuildPipeline.BuildPlayer(options);
+        if (report.summary.result != BuildResult.Succeeded)
+        {
+            Debug.LogError("[MISKETR] iOS export failed: " + report.summary.result + ". See Console for build errors.");
+            return;
+        }
 
         Debug.Log("[MISKETR] Xcode project written to: " + outputPath);
         EditorUtility.RevealInFinder(outputPath);

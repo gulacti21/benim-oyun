@@ -34,10 +34,17 @@ public class MarbleArena : MonoBehaviour
     private readonly Vector3[] triangleCorners = new Vector3[3];
     private LineRenderer outline;
     private int score;
+    private int halvesOut;   // sahadan çıkan karpuz yarımı sayısı (her iki yarım = 1 misket)
     private int totalMarbles;
 
     public event Action<int, int> ScoreChanged;
+    // Cemberi terk eden misketin kendisi. Duello hangi oyuncunun misketinin
+    // ciktigini bilmek zorunda; kampanya sadece sayiyla ilgilendigi icin
+    // bu olaya abone olmaz.
+    public event Action<TargetMarble> MarbleLeft;
 
+    // Kaç hızdan sonra "durdu" sayılır. Bekleme süresini kısaltmak için dışarıdan ayarlanır.
+    public float RestThreshold { get => restSpeedThreshold; set => restSpeedThreshold = Mathf.Max(.05f, value); }
     public int Score => score;
     public int TotalMarbles => totalMarbles;
     public int RemainingMarbles => activeMarbles.Count;
@@ -68,8 +75,12 @@ public class MarbleArena : MonoBehaviour
             }
 
             marble.MarkScored();
+            MahalleFeedback.Score(marble.transform.position);
             activeMarbles.RemoveAt(i);
-            score++;
+            score += marble.Worth;
+            // Karpuz yarımları: çıkan her iki yarım (hangi karpuzdan olursa olsun) 1 misket.
+            if (marble.IsHalf && ++halvesOut % 2 == 0) score++;
+            MarbleLeft?.Invoke(marble);
 
             if (SfxPlayer.Instance != null)
             {
@@ -80,8 +91,11 @@ public class MarbleArena : MonoBehaviour
         }
     }
 
-    public void Configure(ArenaShape newShape, float newSize, MarbleRing[] rings, int rows)
+    private MarbleSpot[] handPlaced;
+
+    public void Configure(ArenaShape newShape, float newSize, MarbleRing[] rings, int rows, MarbleSpot[] spots = null)
     {
+        handPlaced = spots;
         shape = newShape;
         size = Mathf.Max(0.5f, newSize);
 
@@ -103,6 +117,9 @@ public class MarbleArena : MonoBehaviour
         ClearMarbles();
         SpawnMarbles();
     }
+
+    // Duello, misketleri dizilis sirasina gore sahiplendirmek icin listeye bakar.
+    public IReadOnlyList<TargetMarble> SpawnedMarbles => spawnedMarbles;
 
     public bool AllMarblesAtRest()
     {
@@ -126,6 +143,17 @@ public class MarbleArena : MonoBehaviour
 
     public bool IsOutside(Vector3 worldPosition)
     {
+        // DIZI modunda "disari cikma" diye bir sey yok: kazanma kosulu
+        // misketi kipirdatmak, cikarmak degil. Yine de dunyadan kacan bir
+        // misket elenebilsin diye cok genis bir sinir birakiliyor.
+        if (shape == ArenaShape.Line)
+        {
+            Vector3 c = transform.position;
+            float dx = worldPosition.x - c.x, dz = worldPosition.z - c.z;
+            float limit = (size + exitMargin) * 4f;
+            return (dx * dx) + (dz * dz) > limit * limit;
+        }
+
         return shape == ArenaShape.Triangle
             ? IsOutsideTriangle(worldPosition)
             : IsOutsideCircle(worldPosition);
@@ -199,14 +227,33 @@ public class MarbleArena : MonoBehaviour
         outline.startColor = outlineColor;
         outline.endColor = outlineColor;
 
+        // DIZI: tebesirle cekilmis tek duz cizgi. Misketler bunun uzerine
+        // dizilir. Kapali bir alan olmadigi icin halka cizilmez.
+        if (shape == ArenaShape.Line)
+        {
+            outline.loop = false;
+            const int n = 48;
+            outline.positionCount = n;
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)(n - 1);
+                float x = Mathf.Lerp(-size, size, t);
+                outline.SetPosition(i, new Vector3(x, outlineHeight, Mathf.Sin(i * 5.1f) * .012f));
+            }
+            return;
+        }
+
         if (shape == ArenaShape.Triangle)
         {
-            outline.positionCount = 3;
-
-            for (int i = 0; i < 3; i++)
+            outline.positionCount = 72;
+            for (int i = 0; i < 72; i++)
             {
-                float angle = (270f + (i * 120f)) * Mathf.Deg2Rad;
-                outline.SetPosition(i, new Vector3(Mathf.Cos(angle) * size, outlineHeight, Mathf.Sin(angle) * size));
+                int edge = i / 24; float t = (i % 24) / 24f;
+                float a = (270f + edge * 120f) * Mathf.Deg2Rad;
+                float b = (270f + (edge + 1) * 120f) * Mathf.Deg2Rad;
+                var p = Vector3.Lerp(new Vector3(Mathf.Cos(a)*size, outlineHeight, Mathf.Sin(a)*size), new Vector3(Mathf.Cos(b)*size, outlineHeight, Mathf.Sin(b)*size), t);
+                p.x += Mathf.Sin(i * 5.7f) * .014f; p.z += Mathf.Cos(i * 4.3f) * .014f;
+                outline.SetPosition(i, p);
             }
 
             return;
@@ -218,7 +265,8 @@ public class MarbleArena : MonoBehaviour
         for (int i = 0; i < segments; i++)
         {
             float angle = (i / (float)segments) * Mathf.PI * 2f;
-            outline.SetPosition(i, new Vector3(Mathf.Cos(angle) * size, outlineHeight, Mathf.Sin(angle) * size));
+            float chalkSize = size + Mathf.Sin(i * 5.7f) * .014f;
+            outline.SetPosition(i, new Vector3(Mathf.Cos(angle) * chalkSize, outlineHeight, Mathf.Sin(angle) * chalkSize));
         }
     }
 
@@ -228,6 +276,7 @@ public class MarbleArena : MonoBehaviour
         {
             if (spawnedMarbles[i] != null)
             {
+                spawnedMarbles[i].gameObject.SetActive(false);
                 Destroy(spawnedMarbles[i].gameObject);
             }
         }
@@ -236,6 +285,18 @@ public class MarbleArena : MonoBehaviour
         activeMarbles.Clear();
         score = 0;
         totalMarbles = 0;
+        halvesOut = 0;
+    }
+
+    // SONSUZ ÇEMBER: sahayı sıfırlamadan yeni misket ekler. Puan ve çıkanlar korunur.
+    public void AddMarbles(MarbleSpot[] spots)
+    {
+        if (spots == null || targetMarblePrefab == null) return;
+        Vector3 center = transform.position;
+        foreach (var spot in spots)
+            SpawnMarbleAt(new Vector3(center.x + spot.x, spawnHeight, center.z + spot.z), "TargetMarble_e" + spawnedMarbles.Count);
+        totalMarbles += spots.Length;
+        ScoreChanged?.Invoke(score, totalMarbles);
     }
 
     private void SpawnMarbles()
@@ -246,7 +307,11 @@ public class MarbleArena : MonoBehaviour
             return;
         }
 
-        if (shape == ArenaShape.Triangle)
+        if (handPlaced != null && handPlaced.Length > 0)
+        {
+            SpawnHandPlaced();
+        }
+        else if (shape == ArenaShape.Triangle)
         {
             SpawnTriangleRack();
         }
@@ -255,8 +320,21 @@ public class MarbleArena : MonoBehaviour
             SpawnCircleRings();
         }
 
-        totalMarbles = activeMarbles.Count;
+        totalMarbles = 0;
+        foreach (var m in activeMarbles) totalMarbles += m.Worth;
         ScoreChanged?.Invoke(score, totalMarbles);
+    }
+
+    // Tasarımcının elle koyduğu yerleşim. Formül yok, her misket bilerek oraya konmuştur.
+    private void SpawnHandPlaced()
+    {
+        Vector3 center = transform.position;
+        for (int i = 0; i < handPlaced.Length; i++)
+        {
+            MarbleSpot spot = handPlaced[i];
+            Vector3 position = new Vector3(center.x + spot.x, spawnHeight, center.z + spot.z);
+            SpawnMarbleAt(position, "TargetMarble_h" + i, spot.kind);
+        }
     }
 
     private void SpawnTriangleRack()
@@ -312,17 +390,57 @@ public class MarbleArena : MonoBehaviour
         }
     }
 
-    private void SpawnMarbleAt(Vector3 position, string instanceName)
+    private void SpawnMarbleAt(Vector3 position, string instanceName, MarbleKind kind = MarbleKind.Normal)
     {
         GameObject instance = Instantiate(targetMarblePrefab, position, Quaternion.identity, transform);
         instance.name = instanceName;
 
+        var visual = instance.AddComponent<MarbleVisual>();
+        visual.SetSkin(1 + spawnedMarbles.Count % 4);
         TargetMarble marble = instance.GetComponent<TargetMarble>();
 
         if (marble != null)
         {
             spawnedMarbles.Add(marble);
             activeMarbles.Add(marble);
+        }
+
+        // HARİTA 2: buzlu misket kabuğu içinde, kıpırdamadan başlar.
+        if (kind == MarbleKind.Ice) instance.AddComponent<IceShell>().Freeze(true);
+        // HARİTA 2: karpuz misket sert darbede ikiye bölünür, 2 misket değerinde.
+        if (kind == MarbleKind.Split && marble != null)
+        {
+            marble.Worth = SplitMarble.Worth;   // 1
+            visual.SetOverride(SplitMarble.RindMaterial());
+            instance.AddComponent<SplitMarble>().Split += OnSplit;
+        }
+    }
+
+    // HARİTA 2 ÇUKUR: hedef çukura düştü. Ne sayılır ne kalır; artık oyunda değil.
+    public void Capture(TargetMarble marble)
+    {
+        if (marble == null) return;
+        activeMarbles.Remove(marble);
+        spawnedMarbles.Remove(marble);
+        marble.MarkLost();
+        ScoreChanged?.Invoke(score, totalMarbles);
+    }
+
+    // Karpuz bölündü: listede bütün misketin yerini iki parça alır. Toplam değer aynı (2).
+    private void OnSplit(SplitMarble whole, Rigidbody a, Rigidbody b)
+    {
+        var parent = whole.GetComponent<TargetMarble>();
+        int at = activeMarbles.IndexOf(parent);
+        if (at < 0) return;   // bölünürken zaten çıkmış sayıldıysa parçalar da sayılmaz
+        activeMarbles.RemoveAt(at);
+        spawnedMarbles.Remove(parent);
+        var pa = a != null ? a.GetComponent<TargetMarble>() : null;
+        var pb = b != null ? b.GetComponent<TargetMarble>() : null;
+        foreach (var piece in new[] { pa, pb })
+        {
+            if (piece == null) continue;
+            activeMarbles.Add(piece);
+            spawnedMarbles.Add(piece);
         }
     }
 }

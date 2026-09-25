@@ -43,7 +43,7 @@ public class SfxPlayer : MonoBehaviour
 
     public void Play(AudioClip clip, float volume, float pitch)
     {
-        if (clip == null || voices == null)
+        if (!MahalleProfile.Data.sound || clip == null || voices == null)
         {
             return;
         }
@@ -57,6 +57,18 @@ public class SfxPlayer : MonoBehaviour
         source.Play();
     }
 
+    // AÇILIŞ: tebeşir çizme sesleri (Resources/Mahalle/Sfx) ve misket tıkları.
+    private AudioClip chalkRing, chalkTriangle;
+    public void PlayChalk(bool triangle)
+    {
+        if (triangle) { if (chalkTriangle == null) chalkTriangle = Resources.Load<AudioClip>("Mahalle/Sfx/ChalkTriangle"); Play(chalkTriangle, .75f, 1f); }
+        else { if (chalkRing == null) chalkRing = Resources.Load<AudioClip>("Mahalle/Sfx/ChalkRing"); Play(chalkRing, .8f, 1f); }
+    }
+    public void PlayMarbleTick(int index)
+    {
+        Play(marbleHitClip, .35f, 1.05f + index * .06f);
+    }
+
     public void PlayShot(float power)
     {
         Play(shotClip, 0.45f + (0.5f * Mathf.Clamp01(power)), 0.92f + (0.2f * Mathf.Clamp01(power)));
@@ -65,6 +77,31 @@ public class SfxPlayer : MonoBehaviour
     public void PlayMarbleHit(float strength)
     {
         Play(marbleHitClip, 0.25f + (0.7f * Mathf.Clamp01(strength)), Random.Range(0.9f, 1.15f));
+    }
+
+    // BUZLU MİSKET: kırılma = yüksek perdeli sert tık üst üste, zayıf darbe = ince kısa tık.
+    // Ayrı ses dosyası yok; misket çarpma sesinin perdesi yükseltilerek üretilir.
+    public void PlayIceBreak(float strength)
+    {
+        Play(marbleHitClip, .7f + .3f * Mathf.Clamp01(strength), 1.75f);
+        Play(marbleHitClip, .45f, 2.3f);
+    }
+
+    public void PlayIceTick(float strength)
+    {
+        Play(marbleHitClip, .18f + .25f * Mathf.Clamp01(strength), 2.6f);
+    }
+
+    // BÖLÜNEN MİSKET: kısa "çıt" — alçak ve kuru.
+    public void PlaySplit(float strength)
+    {
+        Play(marbleHitClip, .6f + .35f * Mathf.Clamp01(strength), .72f);
+    }
+
+    // ÇUKUR: misket düştü — boğuk, alçak tık.
+    public void PlayPit()
+    {
+        Play(marbleHitClip, .55f, .55f);
     }
 
     public void PlayMarbleOut()

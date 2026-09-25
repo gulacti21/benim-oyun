@@ -2610,7 +2610,7 @@ MonoBehaviour:
   grabRadius: 2
   minPullDistance: 0.2
   maxPullDistance: 3.5
-  maxShotImpulse: 0.5
+  maxShotImpulse: 0.65
   restSpeedThreshold: 0.2
   gameCamera: {fileID: 330585545}
   aimIndicator: {fileID: 1540277648}

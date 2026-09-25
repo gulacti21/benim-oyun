@@ -1,0 +1,208 @@
+using UnityEngine;
+using UnityEngine.Rendering;
+
+public class MahalleWorld : MonoBehaviour
+{
+    private Material groundMaterial, stoneMaterial;
+    // Kodla uretilen gurultu dokusu ayri tutuluyor: OnDestroy sadece BUNU yok
+    // etmeli. Fotograf kullanilirsa o Resources varligidir, yok edilmemeli.
+    private Texture2D grainTexture;
+    // Mahalle zemin fotograflari: Assets/Resources/Mahalle/Ground/<ad>.png
+    // Harita 2 (Memleket) bölgeleri 5-9: dosya yoksa renkli gürültü zemini çizilir.
+    private static readonly string[] GroundFiles={"Apartman","Okul","Park","Toprak","Meydan","Sahil","Koy","Yayla","Pazar","Bayram"};
+
+    // TANI ARACI.
+    // "Editorde boyle, telefonda boyle" durumlarini tahminle degil olcumle
+    // ayirt etmek icin. Sahnedeki butun cizilen nesneleri tarar, materyali
+    // ya da shader'i bozuk olani ADIYLA ve BOYUTUYLA bildirir. Mor cizilen
+    // nesnenin ne oldugu boylece ekranda yaziyor.
+    public static int BuiltObstacles { get; private set; }
+
+    public static string Diagnose()
+    {
+        int toplam = 0, bozuk = 0;
+        string ilk = null;
+        foreach (var r in FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+        {
+            if (r == null) continue;
+            toplam++;
+            var m = r.sharedMaterial;
+            bool kotu = m == null || m.shader == null || m.shader.name.Contains("InternalError");
+            if (!kotu) continue;
+            bozuk++;
+            if (ilk != null) continue;
+            var b = r.bounds.size;
+            var p = r.transform.position;
+            ilk = r.name + " " + b.x.ToString("0.0") + "x" + b.z.ToString("0.0")
+                + " @" + p.x.ToString("0.0") + "," + p.z.ToString("0.0")
+                + " · " + (m == null ? "mat yok" : m.shader == null ? "shader yok" : "shader hata");
+        }
+        return bozuk == 0
+            ? "cizim ok · " + toplam + " nesne · " + BuiltObstacles + " engel"
+            : "BOZUK " + bozuk + "/" + toplam + " · " + ilk;
+    }
+    private GameObject decor;
+    public const float GroundGrow=2f;
+    private static readonly Color[] GroundColors={new Color(.57f,.42f,.28f),new Color(.53f,.52f,.44f),new Color(.47f,.49f,.30f),new Color(.64f,.43f,.28f),new Color(.57f,.51f,.40f),
+        new Color(.80f,.70f,.50f),new Color(.50f,.40f,.29f),new Color(.44f,.53f,.32f),new Color(.60f,.54f,.45f),new Color(.55f,.46f,.40f)};
+    // KAMERA KIRPMASI DÜZELTMESİ
+    // Eskiden görünen yatay alan sabitti (yarı genişlik 3.65), saha yarıçapı
+    // 3.65'i geçen bölümlerde çemberin kenarı ekran dışında kalıyordu.
+    // Artık kamera, çemberin + çizgi dışı payının hem yatayda hem de üst
+    // başlığın altında dikeyde görünmesine yetecek kadar açılır. Eski değerden
+    // asla daha yakın olmaz, küçük sahalı bölümler aynen kalır.
+    public const float CamPitch=72f, CamFocusZ=-.5f;
+    public const float SideMargin=.4f;      // çemberin yanında görünecek çizgi dışı alan (dünya birimi)
+    public const float TopMargin=.35f;      // çemberin üstünde görünecek alan
+    public const float HudTopRef=356f;     // üst bilgi panelinin gerçek alt kenarı (1080 genişlik referansı)
+    public const float HudGap=55f;        // çemberin tepesiyle panel arasında kalacak en az boşluk
+    public const float SafeTopFraction=.07f;// çentik/Dynamic Island payı (ekran yüksekliğinin oranı)
+    // Oyun ekranı arayüzü 9:16'dan geniş ekranda (iPad) 1080x1920 sütun olur (MahalleUI.Start).
+    public static bool UiColumn(float aspect)=>aspect>9f/16f+.01f;
+    public static float UiCanvasHeight(float aspect)=>UiColumn(aspect)?1920f:1080f/Mathf.Max(.3f,aspect);
+    public static float CameraSize(float arenaSize,float aspect)
+    {
+        aspect=Mathf.Max(.3f,aspect);
+        float legacy=Mathf.Max(6.3f,3.65f/aspect);
+        float horizontal=(arenaSize+SideMargin)/aspect;
+        float canvasHeight=UiCanvasHeight(aspect);
+        float topCover=(HudTopRef+HudGap)/canvasHeight+SafeTopFraction;          // ekranın üstten örtülen oranı
+        float farEdge=(arenaSize+TopMargin-CamFocusZ)*Mathf.Sin(CamPitch*Mathf.Deg2Rad);
+        float vertical=farEdge/Mathf.Max(.2f,1f-2f*topCover);
+        return Mathf.Max(legacy,horizontal,vertical);
+    }
+    public static void Apply(LevelController controller)
+    {
+        var world=FindFirstObjectByType<MahalleWorld>();
+        if(world==null) world=new GameObject("Mahalle ortamı").AddComponent<MahalleWorld>();
+        world.Build(controller);
+    }
+    private void Build(LevelController controller)
+    {
+        if(decor!=null) {decor.SetActive(false);Destroy(decor);}
+        decor=new GameObject("Çevre ve engeller"); decor.transform.SetParent(transform);
+        int district=controller.Level.district;
+        int corner=controller.LevelIndex%12;
+        // Bir mahalledeki bütün bölümler AYNI görünür. (Park 1-3'te ayrı bir ortam
+        // denemesi vardı, diğer Park bölümlerinden farklı duruyordu; kapatıldı.)
+        bool parkStudy=false;
+        var ground=GameObject.Find("Ground");
+        if(ground!=null)
+        {
+            if(groundMaterial==null)
+            {
+                groundMaterial=new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                groundMaterial.hideFlags=HideFlags.HideAndDontSave;
+                var texture=new Texture2D(128,128,TextureFormat.RGBA32,true);
+                for(int y=0;y<128;y++) for(int x=0;x<128;x++)
+                {float grain=.82f+Mathf.PerlinNoise(x*.38f,y*.38f)*.28f; texture.SetPixel(x,y,new Color(grain,grain,grain,1));}
+                texture.wrapMode=TextureWrapMode.Repeat; texture.Apply();
+                grainTexture=texture;
+                groundMaterial.SetFloat("_Smoothness",.04f);
+            }
+            // Mahallenin kendi zemin fotografi varsa onu kullan; yoksa kodla
+            // uretilen gurultuyu mahalle rengiyle boya (eski davranis).
+            var foto = district>=0 && district<GroundFiles.Length
+                     ? Resources.Load<Texture2D>("Mahalle/Ground/"+GroundFiles[district]) : null;
+            if(foto!=null)
+            {
+                groundMaterial.SetTexture("_BaseMap",foto);
+                groundMaterial.SetTextureScale("_BaseMap",Vector2.one*5f*GroundGrow);
+                groundMaterial.SetColor("_BaseColor",Color.white);
+            }
+            else
+            {
+                groundMaterial.SetTexture("_BaseMap",grainTexture);
+                groundMaterial.SetTextureScale("_BaseMap",Vector2.one*12*GroundGrow);
+                groundMaterial.SetColor("_BaseColor",parkStudy?ParkCorners.Floors[corner]:GroundColors[Mathf.Clamp(district,0,GroundColors.Length-1)]);
+            }
+            ground.GetComponent<Renderer>().sharedMaterial=groundMaterial;
+            // ZEMİN KAPSAMI: sahnedeki zemin 20x20 (Plane x2). 4.0'lık sahada uzun ekranlı
+            // telefonda kamera ~9.5 açılıyor ve ekranın altı z=-10.5'e iniyordu: zeminin dışı,
+            // kameranın kahverengi arka planı görünüyordu. Zemin 2 kat büyür, doku ölçeği de 2 kat:
+            // desen aynı sıklıkta kalır, sadece her yeri örter.
+            ground.transform.localScale=new Vector3(2f*GroundGrow,1f,2f*GroundGrow);
+        }
+        var camera=Camera.main;
+        if(camera!=null)
+        {
+            camera.orthographic=true; camera.orthographicSize=CameraSize(controller.Level.arenaSize,camera.aspect);
+            // Eski kameraya göre ne kadar uzaklaştıysak parmak hareketi de o kadar ölçeklenir.
+            float inputScale=camera.orthographicSize/Mathf.Max(6.3f,3.65f/camera.aspect);
+            controller.Shooter.SetInputScale(inputScale);
+            var scaledLine=FindFirstObjectByType<ShooterLine>();if(scaledLine!=null)scaledLine.SetInputScale(inputScale);
+            camera.transform.rotation=Quaternion.Euler(72,0,0);
+            camera.transform.position=new Vector3(0,0,CamFocusZ)-camera.transform.forward*18;
+            camera.backgroundColor=new Color(.18f,.16f,.12f);
+        }
+        var light=FindFirstObjectByType<Light>();
+        if(light!=null) {light.color=new Color(1,.94f,.82f);light.intensity=1.4f;light.transform.rotation=Quaternion.Euler(52,-30,0);light.shadows=LightShadows.Soft;}
+        RenderSettings.ambientMode=AmbientMode.Flat;RenderSettings.ambientLight=new Color(.6f,.65f,.69f);
+        if(parkStudy)
+        {
+            decor.AddComponent<ParkCorners>().Build(corner);
+            if(light!=null)light.color=corner==1?new Color(1,.84f,.65f):corner==2?new Color(.89f,.95f,.85f):new Color(1,.97f,.88f);
+        }
+        if(controller.Shooter.GetComponent<MarbleVisual>()==null) controller.Shooter.gameObject.AddComponent<MarbleVisual>();
+        controller.Shooter.GetComponent<MarbleVisual>().SetSkin(MahalleProfile.EffectiveSkin);
+        var line=FindFirstObjectByType<ShooterLine>();
+        if(line!=null)
+        {
+            // Bölüm hattı daraltabilir veya yana kaydırabilir.
+            line.ApplyLevel(controller.Level.shooterHalfWidth,controller.Level.shooterOffsetX);
+            line.SetPosition(controller.Level.shooterStartPosition);
+            // Kenarda parmak payı: misketi geri çekmek için ekranda yer kalsın.
+            line.FitToCamera(camera,1.05f);
+        }
+        if(stoneMaterial==null)
+        {
+            // ENGELLER TELEFONDA GORUNMUYORDU.
+            // Shader.Find calisma aninda arar ve build'e dahil edilmemis bir
+            // shader icin null doner; null shader'li materyal mor cizilir ya
+            // da hic cizilmez. Projede build'de hayatta kaldigi bilinen kendi
+            // shader'imiz var (ParkCorners onu kullaniyor), engeller de artik
+            // once onu deniyor. URP/Lit sadece yedek.
+            var sh=Resources.Load<Shader>("Mahalle/Environment");
+            if(sh==null||!sh.isSupported) sh=Shader.Find("Universal Render Pipeline/Lit");
+            stoneMaterial=new Material(sh);
+            // Unity'nin kullanilmayan varlik temizligi bu materyale dokunmasin.
+            stoneMaterial.hideFlags=HideFlags.HideAndDontSave;
+            stoneMaterial.SetColor("_BaseColor",new Color(.3f,.32f,.28f));
+        }
+        var arena=FindFirstObjectByType<MarbleArena>();
+        Vector3 centre=arena!=null?arena.transform.position:Vector3.zero;
+        var designed=controller.Level.obstacles;
+        if(designed!=null && designed.Length>0)
+        {
+            // Bölüme özel engeller. Bunlar dekor değil: misket çarpar ve seker.
+            for(int i=0;i<designed.Length;i++)
+            {
+                var spot=designed[i];
+                var stone=GameObject.CreatePrimitive(PrimitiveType.Cube);stone.name="Engel "+(i+1);
+                stone.transform.SetParent(decor.transform);
+                stone.transform.position=new Vector3(centre.x+spot.x,.22f,centre.z+spot.z);
+                stone.transform.localScale=new Vector3(Mathf.Max(.2f,spot.width),.44f,Mathf.Max(.2f,spot.depth));
+                stone.transform.rotation=Quaternion.Euler(0,spot.angle,0);
+                stone.GetComponent<Renderer>().sharedMaterial=stoneMaterial;
+            }
+        }
+        else for(int i=0;i<controller.Level.obstacleCount;i++)
+        {
+            var stone=GameObject.CreatePrimitive(PrimitiveType.Cube);stone.name="Park taşı";stone.transform.SetParent(decor.transform);
+            stone.transform.position=new Vector3(centre.x+(i==0?-1.4f:1.4f),.22f,centre.z-2.5f);
+            stone.transform.localScale=new Vector3(.65f,.44f,.42f); stone.transform.rotation=Quaternion.Euler(0,i==0?12:-8,0);
+            stone.GetComponent<Renderer>().sharedMaterial=stoneMaterial;
+        }
+        BuiltObstacles=decor.transform.childCount;
+
+        // Small pebbles live outside the aiming corridor and have no colliders.
+        for(int i=0;i<(parkStudy?0:18);i++)
+        {
+            var pebble=GameObject.CreatePrimitive(PrimitiveType.Sphere);pebble.name="Çevre taşı";Destroy(pebble.GetComponent<Collider>());
+            pebble.transform.SetParent(decor.transform);float z=-3.5f+(i%9)*.85f;
+            pebble.transform.position=new Vector3((i<9?-1:1)*(3.45f+.12f*Mathf.Sin(i)),.035f,z);
+            pebble.transform.localScale=new Vector3(.08f+.06f*(i%3),.07f,.13f);pebble.GetComponent<Renderer>().sharedMaterial=stoneMaterial;
+        }
+    }
+    private void OnDestroy() {if(grainTexture!=null)Destroy(grainTexture);if(groundMaterial!=null)Destroy(groundMaterial);if(stoneMaterial!=null)Destroy(stoneMaterial);}
+}

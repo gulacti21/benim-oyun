@@ -29,7 +29,7 @@ public static class SceneBootstrapper
 
     static SceneBootstrapper()
     {
-        EditorApplication.delayCall += AutoBuild;
+        // Explicit rebuild only: opening the project must not overwrite authored scenes.
     }
 
     private static void AutoBuild()
