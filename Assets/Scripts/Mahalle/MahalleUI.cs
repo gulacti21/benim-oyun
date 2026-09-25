@@ -689,15 +689,14 @@ public class MahalleUI : MonoBehaviour
         {
             int map=m;float y=210+m*(CardH+Gap);
             bool open=MahalleProfile.MapUnlocked(map);
-            // Seçili çerçeve kartın ARKASINDA, kardeş olarak: kartın çocuğu olunca kartın
-            // üstüne çiziliyor, kart tamamen turuncu görünüyordu (simülatörde görüldü).
-            if(map==current){var sec=Art(box,"Seçili çerçeve",MahalleGraphic.Shape.Panel,30,y-6,924,CardH+12,Amber);sec.radius=42;sec.highlight=false;}
             var card=Button(box,"Harita "+map,36,y,912,CardH,open?Orman:new Color(Komur.r,Komur.g,Komur.b,.82f),()=>
             {
                 if(!MahalleProfile.MapUnlocked(map)){Toast(L.F("{0} haritası, {1} haritasının son bölümünü geçince açılır.",L.T(Maps.Names[map]),L.T(Maps.Names[Mathf.Max(0,map-1)])));return;}
                 RememberMap(map);district=MahalleProfile.NextLevelIn(map)/Campaign.PerDistrict;tab=0;CloseModal(false);ShowHome();
             });
             var cf=card.GetComponent<MahalleGraphic>();cf.radius=36;cf.shadow=10;cf.highlight=false;
+            // Seçili harita kartı tamamen turuncu görünür (kullanıcı bu hali istedi, 2026-09-25).
+            if(map==current){var sec=Art(card.transform,"Seçili çerçeve",MahalleGraphic.Shape.Panel,-6,-6,924,CardH+12,Amber);sec.radius=42;sec.transform.SetAsFirstSibling();}
             card.gameObject.AddComponent<MahalleTap>();
             var ad=Text(card.transform,L.Up(L.T(Maps.Names[map])),40,34,560,70,50,Krem);ad.fontStyle=FontStyles.Bold;
             Text(card.transform,Maps.Subtitles[map],40,104,820,50,28,new Color(Krem.r,Krem.g,Krem.b,.72f));
