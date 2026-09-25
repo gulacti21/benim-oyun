@@ -126,8 +126,34 @@ marbles,flick,ring,aim,physics,puzzle,retro,street game,nostalgia,chalk,casual,v
 - [ ] Destek ve gizlilik linkleri tarayıcıda açılıyor (GitHub Pages).
 - [ ] App Privacy: "Data Not Collected". iCloud/Game Center açıldıysa da değişmez (Apple hizmetleri).
 - [ ] Uygulama ikonu 1024×1024, **şeffaflık (alpha) yok** (ITMS-90717).
-- [ ] Ekran görüntüleri: iPhone 6.9" (1320×2868) ve oyun iPad'i de desteklediği için iPad 13" (2064×2752).
+- [ ] Ekran görüntüleri: iPhone 6.9" (1320×2868); çoğu oyun içi (2.3.3). iPad yerel desteklenirse iPad 13" (2064×2752) da.
       Simülatörden alınabilir; TEST yazısı olmayan sürümle çek.
+- [ ] Product Name "Misko" (ana ekranda MISKETR yazmasın, 2.3.8).
+- [ ] iPad kararı verildi (aşağıya bak) ve Xcode'dan yükleme hatasız geçti (ITMS-90474).
+- [ ] Yeni yaş derecelendirmesi soruları dolduruldu.
 - [ ] Açıklamada olmayan özellik yazma, olan özelliği abartma (kural 2.3). Metinler şu anki oyuna göre yazıldı.
 - [ ] Kategori "Kids" SEÇME (çocuk kategorisi ek kurallar getirir); yaş 4+ yeterli.
 - [ ] App Review notu (isteğe bağlı): "Hesap gerekmez. Memleket haritası Mahalle'nin son bölümü geçilince açılır."
+
+## İnternet araştırması: gerçek ret sebepleri (2026-09-25)
+
+Kaynaklar: QAwerk, OpenSpace, Superapp 2026 ret derlemeleri; Apple Developer Forums (4.0 iPad, 2.3.3);
+Apple haberleri (yaş derecelendirmesi); hop-tales PR #75 (ITMS-90474).
+
+| Sebep | Ne oluyor | Misko'da durum |
+|---|---|---|
+| **2.1 Tamamlanmamış uygulama** (retlerin %40'ından fazlası) | Çökme, "Çok yakında" ekranı, çalışmayan düğme, TEST/beta yazısı | ONLİNE gizlendi. **Test bayrakları kapatılacak.** Yayın derlemesi telefonda denenmeli. |
+| **4.0 Tasarım, iPad** | İncelemeci iPad Air/Pro'da açar; sıkışık ya da ekranın bir kısmını kullanan arayüz reddedilir | iPad düzeltmeleri yapıldı; aşağıdaki iPad kararına bak. |
+| **ITMS-90474 (yükleme hatası)** | Xcode 26 / iOS 26 SDK'da `UIRequiresFullScreen` artık geçmiyor; iPad destekleyen uygulama 4 yönü de listelemeli. Portre oyunlar yüklenirken reddediliyor | **Misko portre + UIRequiresFullScreen: risk var.** Karar gerekiyor (aşağıda). |
+| **2.3.3 Ekran görüntüleri** | Sadece açılış/menü ekranı gösteren görüntüler reddediliyor; oyunun oynanışı görünmeli | Görüntülerin çoğu oyun içi olacak (atış, harita, buz/karpuz). |
+| **2.3.7 / 2.3.8 Ad tutarlılığı** | Mağaza adı ile telefondaki ad farklıysa | Ana ekrandaki ad hâlâ **MISKETR**: Product Name → **Misko** yapılmalı. |
+| **Yaş derecelendirmesi** | Eylül 2026'dan beri yeni sorular (sosyal medya, kontroller) zorunlu; boş bırakınca gönderilemiyor | Hepsine "Hayır/Yok" → 4+. Sosyal özellik yok. |
+| **ITMS-91053 gizlilik manifesti** | Gerekçe istenen API'ler beyan edilmemişse | Unity 6 kendi manifestini ekliyor (UserDefaults, disk, zaman); eklentilerimiz bu API'leri kullanmıyor. **Sorun yok.** |
+| **5.1.1 Gizlilik linki / hesap silme** | Link yoksa ya da hesap silinemiyorsa | Link mağazada + oyunda var. Hesap yok. **Sorun yok.** |
+
+### iPad kararı (ITMS-90474)
+
+- **A) 1.0'ı sadece iPhone için yayınla (önerim).** Target Device → iPhone Only. iPad'de "iPhone uygulaması"
+  olarak açılır (ortada telefon boyunda), yön kuralı uygulanmaz, iPad ekran görüntüsü de gerekmez. En güvenli yol.
+- **B) iPad'i yerel destekle.** 4 yön (yatay dahil) desteklenmeli: bütün ekranların yatay düzeni gerekir, büyük iş.
+  1.1'e bırakılabilir.
