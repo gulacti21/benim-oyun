@@ -130,7 +130,18 @@ public class IceShell : MonoBehaviour
         r.sharedMaterial = shellMaterial;
         r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         var c = shell.GetComponent<Collider>();
-        if (c != null) DestroyImmediate(c);   // hemen: kabuk gövdenin bileşik collider'ı olmasın
+        DropCollider(c);   // hemen: kabuk gövdenin bileşik collider'ı olmasın
+    }
+
+    // Collider'ı hemen devre dışı bırakır, silmeyi erteler. Fizik geri çağrısı içinde
+    // (kırılma OnCollisionEnter'da) DestroyImmediate yasak: Unity reddediyor, parça
+    // collider'ıyla kalıyor, geçen misket görünmez kutuya takılıyordu (simülatör konsolunda
+    // görüldü, 2026-09-25).
+    private static void DropCollider(Collider c)
+    {
+        if (c == null) return;
+        c.enabled = false;
+        if (Application.isPlaying) Destroy(c); else DestroyImmediate(c);
     }
 
     private void Shards()
@@ -146,7 +157,7 @@ public class IceShell : MonoBehaviour
             go.transform.position = transform.position + new Vector3(Mathf.Cos(a), .4f, Mathf.Sin(a)) * .18f;
             go.transform.rotation = UnityEngine.Random.rotation;
             go.transform.localScale = Vector3.one * UnityEngine.Random.Range(.06f, .11f);
-            var col = go.GetComponent<Collider>(); if (col != null) DestroyImmediate(col);
+            DropCollider(go.GetComponent<Collider>());
             go.AddComponent<IceShard>().velocity = new Vector3(Mathf.Cos(a) * 1.6f, 2.2f, Mathf.Sin(a) * 1.6f);
         }
     }
