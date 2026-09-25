@@ -1,0 +1,85 @@
+/* Misko web sitesi: oyunun tasarım dili (Krem / Kömür / Amber / Orman, Nunito). */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800;900&display=swap');
+
+:root {
+  --krem: #F5EFE2; --krem-2: #EDE4D0; --komur: #2D2B25; --soluk: #6B675C;
+  --amber: #F4AE42; --amber-koyu: #D98C1F; --orman: #203D34; --orman-koyu: #142822;
+  --kart: #FFFaF0; --golge: 0 10px 30px rgba(32, 61, 52, .12);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--krem); color: var(--komur);
+       font: 17px/1.65 "Nunito", -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+a { color: var(--orman); text-underline-offset: 3px; }
+a:hover { color: var(--amber-koyu); }
+
+/* Üst çubuk */
+.ust { position: sticky; top: 0; z-index: 10; background: rgba(32, 61, 52, .96); backdrop-filter: blur(8px); }
+.ust-ic { max-width: 960px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 16px; }
+.marka { display: flex; align-items: center; gap: 10px; color: var(--krem); text-decoration: none;
+         font-weight: 900; font-size: 22px; letter-spacing: 2px; }
+.marka:hover { color: var(--krem); }
+.misket { width: 26px; height: 26px; border-radius: 50%; flex: none;
+          background: radial-gradient(circle at 35% 30%, #fff8 0 12%, transparent 13%),
+                      radial-gradient(circle at 50% 50%, #F4AE42 0 58%, #C77A12 100%);
+          box-shadow: 0 2px 4px #0005; }
+.menu { margin-left: auto; display: flex; gap: 4px; flex-wrap: wrap; }
+.menu a { color: var(--krem); opacity: .82; text-decoration: none; font-weight: 700; font-size: 15px;
+          padding: 6px 12px; border-radius: 20px; }
+.menu a:hover, .menu a.aktif { opacity: 1; background: rgba(245, 239, 226, .12); color: var(--krem); }
+
+/* Sayfa */
+.sayfa { max-width: 760px; margin: 0 auto; padding: 40px 16px 72px; }
+.etiket { display: inline-block; background: var(--amber); color: var(--komur); font-weight: 800; font-size: 13px;
+          letter-spacing: 1.5px; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; }
+h1 { color: var(--orman); font-weight: 900; font-size: clamp(30px, 6vw, 42px); line-height: 1.15; margin: 14px 0 6px; }
+h2 { color: var(--orman); font-weight: 800; font-size: 21px; margin: 36px 0 8px; }
+.tarih { color: var(--soluk); font-size: 14px; }
+.ozet { background: var(--kart); border-left: 5px solid var(--amber); padding: 16px 20px; border-radius: 12px;
+        box-shadow: var(--golge); margin: 24px 0; }
+.dil { display: flex; gap: 8px; margin: 18px 0 8px; }
+.dil a { text-decoration: none; font-weight: 800; font-size: 14px; padding: 6px 14px; border-radius: 20px;
+         background: var(--krem-2); color: var(--komur); }
+.dil a:hover { background: var(--amber); color: var(--komur); }
+.ayrac { border: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--amber), transparent); margin: 64px 0; }
+
+/* Destek: iletişim kartı + SSS */
+.iletisim { background: var(--orman); color: var(--krem); border-radius: 20px; padding: 24px; box-shadow: var(--golge); margin: 24px 0 8px; }
+.iletisim p { margin: 0 0 12px; opacity: .9; }
+.dugme { display: inline-block; background: var(--amber); color: var(--komur); text-decoration: none; font-weight: 800;
+         padding: 12px 24px; border-radius: 28px; box-shadow: 0 4px 0 var(--amber-koyu); }
+.dugme:hover { color: var(--komur); transform: translateY(1px); box-shadow: 0 3px 0 var(--amber-koyu); }
+.ince { font-size: 14px; opacity: .75; margin-top: 12px !important; }
+details { background: var(--kart); border-radius: 14px; margin: 10px 0; box-shadow: 0 2px 10px rgba(32, 61, 52, .07); }
+summary { cursor: pointer; font-weight: 800; color: var(--orman); padding: 16px 20px; list-style: none; position: relative; padding-right: 48px; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; position: absolute; right: 20px; top: 12px; font-size: 24px; color: var(--amber-koyu); }
+details[open] summary::after { content: "–"; }
+details p { margin: 0; padding: 0 20px 18px; }
+
+/* Ana sayfa */
+.kahraman { background: radial-gradient(ellipse at 50% 0%, #2d5446 0%, var(--orman) 55%, var(--orman-koyu) 100%);
+            color: var(--krem); text-align: center; padding: 72px 16px 88px; position: relative; overflow: hidden; }
+.cember { width: 220px; height: 220px; margin: 0 auto 28px; border: 5px dashed rgba(245, 239, 226, .85);
+          border-radius: 50%; position: relative; }
+.cember .misket { position: absolute; width: 44px; height: 44px; }
+.cember .m1 { left: 88px; top: 60px; }
+.cember .m2 { left: 64px; top: 100px; background: radial-gradient(circle at 35% 30%, #fff8 0 12%, transparent 13%), radial-gradient(#1CB5C0 0 58%, #0F7E86 100%); }
+.cember .m3 { left: 112px; top: 100px; background: radial-gradient(circle at 35% 30%, #fff8 0 12%, transparent 13%), radial-gradient(#E9524A 0 58%, #A8322B 100%); }
+.cember .m4 { left: -10px; top: 190px; width: 36px; height: 36px; background: radial-gradient(circle at 35% 30%, #fff8 0 12%, transparent 13%), radial-gradient(#5BB04A 0 58%, #3A7A2E 100%); }
+.logo { font-weight: 900; font-size: clamp(56px, 14vw, 96px); letter-spacing: 6px; margin: 0; line-height: 1; }
+.slogan { font-style: italic; font-weight: 700; font-size: 20px; opacity: .88; margin: 12px 0 28px; }
+.rozet { display: inline-block; border: 2px solid rgba(245, 239, 226, .6); border-radius: 12px; padding: 10px 22px;
+         font-weight: 800; letter-spacing: .5px; }
+.ozellikler { max-width: 960px; margin: -48px auto 0; padding: 0 16px 64px; display: grid; gap: 16px;
+              grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); position: relative; }
+.ozellik { background: var(--kart); border-radius: 18px; padding: 22px; box-shadow: var(--golge); }
+.ozellik b { display: block; color: var(--orman); font-size: 18px; font-weight: 900; margin-bottom: 4px; }
+.ozellik span { color: var(--soluk); font-size: 15px; }
+
+/* Alt bilgi */
+.alt { background: var(--orman-koyu); color: rgba(245, 239, 226, .7); font-size: 14px; }
+.alt-ic { max-width: 960px; margin: 0 auto; padding: 24px 16px; display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; }
+.alt a { color: rgba(245, 239, 226, .85); text-decoration: none; }
+.alt a:hover { color: var(--amber); }
+.alt .sag { margin-left: auto; }
