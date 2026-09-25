@@ -3,9 +3,10 @@
 App Store Connect → uygulama → Dağıtım → iOS Uygulaması 1.0. Her dil için ayrı alanlar.
 Karakter sınırları parantez içinde; hepsi sınırın altında.
 
-Gizlilik Politikası URL'si: GitHub Pages açılınca
-`https://gulacti21.github.io/benim-oyun/gizlilik.html` (bkz. en alttaki adımlar).
-`docs/gizlilik.html` içindeki `[E-POSTA ADRESİN]` iki yerde değiştirilmeli.
+Gizlilik Politikası URL'si: `https://gulacti21.github.io/benim-oyun/gizlilik.html`
+Destek URL'si: `https://gulacti21.github.io/benim-oyun/destek.html`
+Pazarlama URL'si (isteğe bağlı): `https://gulacti21.github.io/benim-oyun/`
+(GitHub Pages açılınca çalışır, bkz. en alttaki adımlar.)
 
 ---
 
@@ -108,12 +109,25 @@ marbles,flick,ring,aim,physics,puzzle,retro,street game,nostalgia,chalk,casual,v
 - **App Privacy (Uygulama Gizliliği):** "Veri toplamıyoruz" (Data Not Collected).
   iCloud ve Game Center Apple'ın kendi hizmeti sayılır, geliştiricinin veri toplaması değildir.
 - **Telif hakkı:** 2026 Ahmet Furkan Gülaçtı
-- **Destek URL'si:** zorunlu. En kolayı gizlilik sayfasıyla aynı site (ör. `.../gizlilik.html`
-  ya da ayrı bir `destek.html`).
+- **Destek URL'si:** `docs/destek.html` (SSS + e-posta).
 
 ## Gizlilik sayfasını yayına alma (GitHub Pages, ücretsiz)
 
-1. `docs/gizlilik.html` içindeki `[E-POSTA ADRESİN]` iki yeri doldur, commit + push
-   (dosya ana dalda olmalı: yaz-tatili dalını birleştirdikten sonra).
+1. Dalı ana dala birleştir, push et (`docs/` ana dalda olmalı).
 2. GitHub → repo → Settings → Pages → Source: "Deploy from a branch" → Branch: `main`, klasör `/docs` → Save.
 3. Birkaç dakika sonra: `https://gulacti21.github.io/benim-oyun/gizlilik.html`
+
+## Ret yememek için kontrol listesi (yüklemeden önce)
+
+- [ ] **Test bayrakları kapalı** (`TestUnlockAllLevels`, `TestInfiniteBeads` → false). Açıkken ekranda
+      turuncu "TEST" yazısı çıkar, bu tek başına ret sebebidir (kural 2.1).
+- [ ] Menüde basılamayan "ONLİNE · Çok yakında" düğmesi gizli (`MahalleUI.ShowOnlineTeaser = false`, yapıldı).
+- [ ] Gizlilik politikası oyunun içinden açılıyor (Ayarlar → GİZLİLİK POLİTİKASI, yapıldı) ve link çalışıyor.
+- [ ] Destek ve gizlilik linkleri tarayıcıda açılıyor (GitHub Pages).
+- [ ] App Privacy: "Data Not Collected". iCloud/Game Center açıldıysa da değişmez (Apple hizmetleri).
+- [ ] Uygulama ikonu 1024×1024, **şeffaflık (alpha) yok** (ITMS-90717).
+- [ ] Ekran görüntüleri: iPhone 6.9" (1320×2868) ve oyun iPad'i de desteklediği için iPad 13" (2064×2752).
+      Simülatörden alınabilir; TEST yazısı olmayan sürümle çek.
+- [ ] Açıklamada olmayan özellik yazma, olan özelliği abartma (kural 2.3). Metinler şu anki oyuna göre yazıldı.
+- [ ] Kategori "Kids" SEÇME (çocuk kategorisi ek kurallar getirir); yaş 4+ yeterli.
+- [ ] App Review notu (isteğe bağlı): "Hesap gerekmez. Memleket haritası Mahalle'nin son bölümü geçilince açılır."

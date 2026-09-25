@@ -243,6 +243,11 @@ public class MahalleUI : MonoBehaviour
         return char.ToUpper(metin[0], kultur) + metin.Substring(1);
     }
 
+    // Menüdeki basılamayan ONLİNE · Çok yakında düğmesi. Online gelince true (ya da düğmeyi aç).
+    public static readonly bool ShowOnlineTeaser = false;
+    // Gizlilik politikası (App Store kural 5.1.1: uygulama içinden de erişilebilir olmalı).
+    public const string PrivacyUrl = "https://gulacti21.github.io/benim-oyun/gizlilik.html";
+
     private void ShowTitle() { ShowTitle(false); }
 
     private void ShowTitle(bool instant)
@@ -372,12 +377,16 @@ public class MahalleUI : MonoBehaviour
 
         string sonsuzAlt = MahalleProfile.Data.endlessBest > 0
                          ? L.F("REKOR {0}", MahalleProfile.Data.endlessBest) : L.T("Süre yarışı");
-        MenuCard(menu, "SONSUZ", sonsuzAlt, MahalleGraphic.Shape.Clock, MX, 64, HW, H, CardBg, Cream, StartEndless, "Sonsuz");
+        MenuCard(menu, "SONSUZ", sonsuzAlt, MahalleGraphic.Shape.Clock, MX, 64, ShowOnlineTeaser ? HW : MW, H, CardBg, Cream, StartEndless, "Sonsuz");
 
-        // ONLINE: bu surumde yok. Buton duruyor ama basilamiyor.
-        var online = MenuCard(menu, "ONLİNE", L.T("Çok yakında"), MahalleGraphic.Shape.People,
-                              MX + 495, 64, HW, H, new Color(.18f, .19f, .18f), new Color(1, .97f, .89f, .42f), () => { }, "Online");
-        online.interactable = false;
+        // ONLINE: bu surumde yok. Basilamayan "ÇOK YAKINDA" dugmesi App Store'da
+        // "tamamlanmamis ozellik" (kural 2.1) diye ret sebebi olabiliyor; yayinda gizli.
+        if (ShowOnlineTeaser)
+        {
+            var online = MenuCard(menu, "ONLİNE", L.T("Çok yakında"), MahalleGraphic.Shape.People,
+                                  MX + 495, 64, HW, H, new Color(.18f, .19f, .18f), new Color(1, .97f, .89f, .42f), () => { }, "Online");
+            online.interactable = false;
+        }
 
         if (instant)
         {
@@ -1820,7 +1829,7 @@ public class MahalleUI : MonoBehaviour
     }
     private void Settings()
     {
-        var box=Modal("Ayarlar",1208);Text(box,"Ayarlar",36,30,912,77,52,Ink);
+        var box=Modal("Ayarlar",1320);Text(box,"Ayarlar",36,30,912,77,52,Ink);
         LabelButton(box,L.F("SES: {0}",L.T(MahalleProfile.Data.sound?"AÇIK":"KAPALI")),36,158,912,100,Ink,Cream,()=>{MahalleProfile.Data.sound=!MahalleProfile.Data.sound;MahalleProfile.Save();Settings();});
         LabelButton(box,L.F("MÜZİK: {0}",L.T(MahalleProfile.Data.music?"AÇIK":"KAPALI")),36,406,912,100,Ink,Cream,()=>{MahalleProfile.Data.music=!MahalleProfile.Data.music;MahalleProfile.Save();MusicPlayer.Refresh();Settings();});
         LabelButton(box,L.F("TİTREŞİM: {0}",L.T(MahalleProfile.Data.haptics?"AÇIK":"KAPALI")),36,282,912,100,Ink,Cream,()=>{MahalleProfile.Data.haptics=!MahalleProfile.Data.haptics;MahalleProfile.Save();Settings();});
@@ -1831,8 +1840,9 @@ public class MahalleUI : MonoBehaviour
         LabelButton(box,L.F("DİL: {0}",L.English?"ENGLISH":"TÜRKÇE"),36,649,912,89,new Color(.88f,.83f,.69f),Ink,ToggleLanguage,29);
         LabelButton(box,"NASIL OYNANIR",36,761,912,89,new Color(.88f,.83f,.69f),Ink,()=>StartTutorial(true),29);
         LabelButton(box,"İLERLEMEYİ SIFIRLA",36,873,912,89,new Color(.88f,.83f,.69f),Ink,ResetPrompt,29);
-        Text(box,"Boncuklar oyun içinden kazanılır. Gerçek para işlemi yoktur.",36,985,912,64,25,Muted,TextAlignmentOptions.Center);
-        LabelButton(box,"GERİ",36,1083,912,87,Ink,Cream,()=>{if(controller!=null)Pause();else CloseModal();},29);
+        LabelButton(box,"GİZLİLİK POLİTİKASI",36,985,912,89,new Color(.88f,.83f,.69f),Ink,()=>Application.OpenURL(PrivacyUrl),29);
+        Text(box,"Boncuklar oyun içinden kazanılır. Gerçek para işlemi yoktur.",36,1097,912,64,25,Muted,TextAlignmentOptions.Center);
+        LabelButton(box,"GERİ",36,1195,912,87,Ink,Cream,()=>{if(controller!=null)Pause();else CloseModal();},29);
     }
     // Dil değişince ekran yeni dille baştan kurulur. Oyundaysa bölüm yeniden başlar.
     private void ToggleLanguage()
