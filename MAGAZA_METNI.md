@@ -129,7 +129,7 @@ marbles,flick,ring,aim,physics,puzzle,retro,street game,nostalgia,chalk,casual,v
 - [ ] Ekran görüntüleri: iPhone 6.9" (1320×2868); çoğu oyun içi (2.3.3). iPad yerel desteklenirse iPad 13" (2064×2752) da.
       Simülatörden alınabilir; TEST yazısı olmayan sürümle çek.
 - [ ] Product Name "Misko" (ana ekranda MISKETR yazmasın, 2.3.8).
-- [ ] iPad kararı verildi (aşağıya bak) ve Xcode'dan yükleme hatasız geçti (ITMS-90474).
+- [ ] Target Device = **iPhone Only** (karar A) ve Xcode'dan yükleme hatasız geçti (ITMS-90474).
 - [ ] Yeni yaş derecelendirmesi soruları dolduruldu.
 - [ ] Açıklamada olmayan özellik yazma, olan özelliği abartma (kural 2.3). Metinler şu anki oyuna göre yazıldı.
 - [ ] Kategori "Kids" SEÇME (çocuk kategorisi ek kurallar getirir); yaş 4+ yeterli.
@@ -153,7 +153,7 @@ Apple haberleri (yaş derecelendirmesi); hop-tales PR #75 (ITMS-90474).
 
 ### iPad kararı (ITMS-90474)
 
-- **A) 1.0'ı sadece iPhone için yayınla (önerim).** Target Device → iPhone Only. iPad'de "iPhone uygulaması"
+- **A) 1.0'ı sadece iPhone için yayınla — SEÇİLDİ (kullanıcı kararı 2026-09-25).** Target Device → iPhone Only. iPad'de "iPhone uygulaması"
   olarak açılır (ortada telefon boyunda), yön kuralı uygulanmaz, iPad ekran görüntüsü de gerekmez. En güvenli yol.
 - **B) iPad'i yerel destekle.** 4 yön (yatay dahil) desteklenmeli: bütün ekranların yatay düzeni gerekir, büyük iş.
   1.1'e bırakılabilir.

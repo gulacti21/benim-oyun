@@ -303,6 +303,11 @@ bayraklar kapanınca ikisi de kaybolur.
 reklamsız, satın almasız. 1.1 = yeni haritalar (Harita 3+) + ödüllü reklam + boncuk satışı.
 Online (önce arkadaşla oda kodu) 1.1'den sonra.
 
+**iPad kararı (2026-09-25):** 1.0 **sadece iPhone** (Target Device: iPhone Only). Xcode 26'da
+`UIRequiresFullScreen` geçmiyor, iPad destekleyen portre uygulama ITMS-90474 ile yüklenemiyor. iPad'de
+iPhone uygulaması olarak açılır. Yerel iPad (4 yön, yatay düzen) sonraya. iPad için yazılan kod
+(`MahalleWorld.UiColumn`, başlık küçültme) duruyor, zararsız. Ayrıntı: `MAGAZA_METNI.md`.
+
 **Kodda:**
 - Relay taşıyıcısı + oda kur/katıl ekranları (Cloud bağlanınca)
 - ~~Müzik yok~~ EKLENDİ: `Resources/Mahalle/Music/MahalleMuzigi.ogg`, `Audio/MusicPlayer.cs`
