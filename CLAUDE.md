@@ -1,7 +1,7 @@
 # MİSKETR
 
 Geleneksel Türk misket oyunundan yola çıkan, üstten görünümlü 3D mobil oyun.
-Unity 6.3 LTS (6000.3.23f1) · URP · iOS · `com.gulacti.misketr` · sürüm 0.1.0
+Unity 6.3 LTS (6000.3.23f1) · URP · iOS · `com.gulacti.misko` (Team 69W6P52PA2) · sürüm 0.1.0
 Dal: `codex/mahalle-konsepti`
 
 Oyuncu bir çizgiden misket atar, hedefleri tebeşirle çizilmiş sahadan çıkarır.
@@ -270,13 +270,13 @@ demesini bekle. Bir günde üç kez boşa denendi.
 sayısal kuralları ölçer. Görsel değişiklikleri kullanıcı telefonda görmeden
 "tamam" deme. Claude oyunu çalıştıramaz, ekran görüntüsü alamaz.
 
-## AÇIK TEST BAYRAKLARI — YAYINDAN ÖNCE KAPAT
+## TEST BAYRAKLARI — 2026-09-30'DA KAPATILDI (dal `yayin/1.0`)
 
 `Assets/Scripts/Mahalle/MahalleProfile.cs`:
 
 ```csharp
-public static readonly bool TestUnlockAllLevels = true;  // → false
-public static readonly bool TestInfiniteBeads   = true;  // → false
+public static readonly bool TestUnlockAllLevels = false;  // telefonda denemek için geçici true
+public static readonly bool TestInfiniteBeads   = false;
 ```
 
 İkisi de açıkken oyunun altında turuncu "TEST" şeridi var ve `MahalleVerify`
@@ -328,8 +328,10 @@ iPhone uygulaması olarak açılır. Yerel iPad (4 yön, yatay düzen) sonraya. 
   `SekmeGeri`, `SekmeHarita`, `SekmeKese`, `SekmeGrafik`, `SekmeListe` —
   512×512, şeffaf, **beyaz çizgi** (kod renklendiriyor). Gelene kadar kodla
   çizilen şekiller çalışıyor.
-- Bundle ID yayında `com.gulacti.misko` olacak; **şimdi değiştirme**, kayıtları
-  sıfırlar.
+- ~~Bundle ID~~ 2026-09-30: `com.gulacti.misko` + Team `69W6P52PA2`, `BuildTools.cs`'te.
+  **MISKETR → Build iOS Xcode Project** derlerken ProjectSettings'e yazar (batch ile
+  ProjectSettings değiştirmek ortam tarafından engellendi). Eski test uygulaması
+  (`com.gulacti.misketr`) telefonda ayrı kalır.
 - Android: Google Play kişisel hesapta 12 test kullanıcısı × 14 gün kesintisiz
   şartı var, Apple'dan uzun sürer. Önce iOS, Android sonra.
 
@@ -499,10 +501,10 @@ Eğimli bölümde ekranın üstünde EĞİM rozeti (ok yönü); zemindeki oklar 
 - Batchmode ölçümleri uzun sürer (60 bölüm ~1-3 saat): `nohup … &` ile
   başlat, log'u izle. Aynı projede ikinci Unity açılamaz.
 
-## iCLOUD KAYDI + GAME CENTER (2026-09-24, KAPALI — ücretli hesap bekliyor)
+## iCLOUD KAYDI + GAME CENTER (2026-09-24; 2026-09-30'da AÇILDI, TestFlight'ta denenecek)
 
 `Scripts/Mahalle/MisketrCloud.cs` + `Plugins/iOS/MisketrCloud.mm`. Tek anahtar:
-`MisketrCloud.Enabled` (şimdi **false**). Ücretsiz Apple hesabıyla bu yetkiler varken
+`MisketrCloud.Enabled` (şimdi **true**; TestFlight'ta sorun çıkarsa false yap). Ücretsiz Apple hesabıyla bu yetkiler varken
 Xcode imzalayamaz; false iken oyun bugünkü gibi derlenir, hiçbir çağrı yapılmaz.
 
 - **iCloud:** kayıt JSON'u NSUbiquitousKeyValueStore'a da yazılır. `MahalleSave.saveCount`

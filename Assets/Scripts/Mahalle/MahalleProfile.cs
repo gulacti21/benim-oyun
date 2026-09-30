@@ -246,14 +246,14 @@ public static class MahalleProfile
     // YAYINDAN ONCE false YAPILACAK. Acikken oyunun ustunde "TEST" yazar
     // ve MISKETR/Verify Mahalle Systems yuksek sesle uyarir.
     // ---------------------------------------------------------------
-    public static readonly bool TestUnlockAllLevels = true;
+    public static readonly bool TestUnlockAllLevels = false;   // 2026-09-30: yayın için kapatıldı
 
     // Telefonda deneme yaparken boncuk biriktirmekle ugrasilmasin diye:
     // acikken kese hep dolu gorunur ve harcamalar keseden dusmez.
     // TestUnlockAllLevels ile AYNI anahtara bagli degil ama ayni kural
     // gecerli: YAYINDAN ONCE false YAPILACAK. Acikken oyunun altinda
     // "TEST" serididir ve MahalleVerify yuksek sesle uyarir.
-    public static readonly bool TestInfiniteBeads = true;
+    public static readonly bool TestInfiniteBeads = false;     // 2026-09-30: yayın için kapatıldı
 
     // Test kesesi. Gercek bir sayi, cunku arayuzun her yerinde boncuk
     // sayisi yaziliyor; "sonsuz" diye bir deger koyarsak metinler bozulur.
