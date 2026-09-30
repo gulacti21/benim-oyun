@@ -246,6 +246,11 @@ public static class L
         {"Atıcıyı taşımak için çizgiye dokun.", "Tap the line to move your shooter."},
         {"Süre yarışı", "Race the clock"},
         {"Çok yakında", "Coming soon"},
+        // ---- Sonsuz boncuğu ----
+        {"+{0} BONCUK · BUGÜN {1}/{2}", "+{0} BEADS · TODAY {1}/{2}"},
+        {"Bugünlük boncuk doldu, yarın yine gel.", "Today's beads are maxed out. Come back tomorrow."},
+        {"Her {0} misket 1 boncuk kazandırır.", "Every {0} marbles earn 1 bead."},
+        {"{0} misket = 1 boncuk", "{0} marbles = 1 bead"},
         // ---- Devam teklifi ve yardım boncuğu ----
         {"ATIŞLARIN BİTTİ", "OUT OF SHOTS"},
         {"Geçmek için {0} misket gerekiyor.", "You need {0} marbles to pass."},

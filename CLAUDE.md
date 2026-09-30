@@ -179,9 +179,14 @@ Tek seferlik toplam gelir ~1365 + günlük akış.
 **Devam teklifi + yardım boncuğu (2026-09-30, kullanıcı kararı, build 2):** atışlar
 bitip bölüm geçilemezse "+2 atış · 30 boncuk" (`LevelController.ContinueShots/Price`),
 kaldığı yerden sürer; kampanyada, günün bölümünde yok. Geçilmemiş bir bölüm üst üste 4
-kez kaybedilirse bölüm başına bir kez 50 boncuk (`MahalleProfile.HelpAfterFails/HelpBeads`).
-Farm'lanabilir olduğu biliniyor (teorik tavan 120×50); kullanıcı 1.1'de reklam/satın
-alma gelince yardım boncuğunu kaldıracak. **Bölüm ödülleri bilerek
+kez kaybedilirse bölüm başına bir kez 50 boncuk (`MahalleProfile.HelpAfterFails/HelpBeads`),
+10. kayıpta bir kez daha 70 (`BigHelp*`, build 3). Kayıp bölüm başına TOPLAM sayılır
+(`failCounts`); geçilmiş bölümde sayılmaz. Kullanıcı 1.1'de reklam/satın alma gelince
+yardım boncuğunu kaldıracak.
+**Sonsuz boncuğu (build 3):** Sonsuz'da her 5 misket 1 boncuk, günde en fazla 100
+(`MahalleProfile.EndlessMarblesPerBead/EndlessDailyBeadCap`). Oyun ekranında sağda,
+sonuç ekranında kazanç yazar; menüde yazmaz (kullanıcı isteği).
+**Kese dolumu ve yıldız sandığı denendi, kullanıcı beğenmedi, kaldırıldı (2026-09-30).** **Bölüm ödülleri bilerek
 artırılmadı**: kampanya gelirini şişirmek boncuğu anlamsızlaştırır ve 1.1'deki
 satın almaya satacak bir şey bırakmaz.
 

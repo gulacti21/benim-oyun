@@ -1131,6 +1131,9 @@ public class MahalleUI : MonoBehaviour
         Panel(bilgi.transform,"Hedef ayırıcı",40,132,904,2,new Color(Krem.r,Krem.g,Krem.b,.16f)).radius=1;
         Art(bilgi.transform,"Hedef noktası",MahalleGraphic.Shape.Circle,44,158,18,18,Amber).radius=9;
         Text(bilgi.transform,hedef,76,144,840,48,25,new Color(Krem.r,Krem.g,Krem.b,.92f));
+        // SONSUZ BONCUĞU: aynı satırın sağ ucunda, amber.
+        if(GameSession.EndlessMode)
+            Text(bilgi.transform,L.F("{0} misket = 1 boncuk",MahalleProfile.EndlessMarblesPerBead),480,144,460,48,25,Amber,TextAlignmentOptions.Right);
 
         // BOLUM IMZASI (sadece test yapisi acikken). Editor ile telefon ayni
         // bolumu mu oynuyor, onu karsilastirmak icin.
@@ -1776,16 +1779,22 @@ public class MahalleUI : MonoBehaviour
     private void EndlessResults()
     {
         bool rekor=controller.LastEndlessRecord;
-        var box=Modal("Sonsuz sonucu",900);
+        var box=Modal("Sonsuz sonucu",990);
         Text(box,rekor?"YENİ REKOR!":"SÜRE BİTTİ",30,34,924,77,rekor?52:48,Ink,TextAlignmentOptions.Center);
         Text(box,L.F("KADEME {0}",controller.EndlessStage),30,114,924,47,29,Muted,TextAlignmentOptions.Center);
         Art(box,"Büyük yıldız",MahalleGraphic.Shape.Star,412,180,160,160,rekor?Gold:Line);
         Text(box,controller.EndlessScore.ToString(),30,346,924,120,92,Ink,TextAlignmentOptions.Center);
         Text(box,"misket çıkardın",30,462,924,50,30,Muted,TextAlignmentOptions.Center);
         Text(box,L.F("REKOR: {0}",MahalleProfile.Data.endlessBest),30,516,924,50,30,rekor?Gold:Muted,TextAlignmentOptions.Center);
-        LabelButton(box,"TEKRAR DENE",36,586,912,98,Ink,Cream,()=>{CloseModal();controller.RestartLevel();ShowGame();});
-        LabelButton(box,"PAYLAŞ",36,700,912,90,Gold,Ink,ShareCard,32);
-        LabelButton(box,"ANA MENÜ",36,806,912,86,new Color(.88f,.83f,.69f),Ink,LeaveEndless,30);
+        // SONSUZ BONCUĞU: kazanılan boncuk ya da günlük tavan uyarısı.
+        int kazanc=MahalleProfile.LastEndlessBeads,bugun=MahalleProfile.EndlessBeadsToday,tavan=MahalleProfile.EndlessDailyBeadCap;
+        string boncukYazi=kazanc>0?L.F("+{0} BONCUK · BUGÜN {1}/{2}",kazanc,bugun,tavan)
+                        :bugun>=tavan?L.T("Bugünlük boncuk doldu, yarın yine gel.")
+                        :L.F("Her {0} misket 1 boncuk kazandırır.",MahalleProfile.EndlessMarblesPerBead);
+        Text(box,boncukYazi,30,576,924,56,kazanc>0?36:28,kazanc>0?new Color(.72f,.45f,.08f):Muted,TextAlignmentOptions.Center);
+        LabelButton(box,"TEKRAR DENE",36,660,912,98,Ink,Cream,()=>{CloseModal();controller.RestartLevel();ShowGame();});
+        LabelButton(box,"PAYLAŞ",36,774,912,90,Gold,Ink,ShareCard,32);
+        LabelButton(box,"ANA MENÜ",36,880,912,86,new Color(.88f,.83f,.69f),Ink,LeaveEndless,30);
     }
     private void StartDaily()
     {
