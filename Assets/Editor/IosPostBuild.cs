@@ -33,7 +33,9 @@ public static class IosPostBuild
         if (MisketrCloud.Enabled)
         {
             var caps = new ProjectCapabilityManager(projPath, "Unity-iPhone/misko.entitlements", null, main);
-            caps.AddiCloud(true, false, null);
+            // Sadece anahtar-değer deposu. 3 parametreli sürüm CloudKit + konteyner de ekliyordu,
+            // App ID'de CloudKit yok → imzalama sorun çıkarır (2026-09-30).
+            caps.AddiCloud(true, false, false, false, null);
             caps.AddGameCenter();
             caps.WriteToFile();
         }
