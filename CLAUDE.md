@@ -191,9 +191,9 @@ Günün ödülü `25 + min(50, (seri-1)*7)` → 25'ten 75'e. Görevler 50/80/120
 Tek seferlik toplam gelir ~1365 + günlük akış.
 **Devam teklifi + yardım boncuğu (2026-09-30, kullanıcı kararı, build 2):** atışlar
 bitip bölüm geçilemezse "+2 atış · 30 boncuk" (`LevelController.ContinueShots/Price`),
-kaldığı yerden sürer; kampanyada, günün bölümünde yok. Geçilmemiş bir bölüm üst üste 4
-kez kaybedilirse bölüm başına bir kez 50 boncuk (`MahalleProfile.HelpAfterFails/HelpBeads`),
-10. kayıpta bir kez daha 70 (`BigHelp*`, build 3). Kayıp bölüm başına TOPLAM sayılır
+kaldığı yerden sürer; kampanyada, günün bölümünde yok. Geçilmemiş bir bölümde toplam 5
+kayıpta bölüm başına bir kez 24 boncuk (`MahalleProfile.HelpAfterFails/HelpBeads`;
+2026-10-01: 4 kayıp/50'den 5 kayıp/24'e, 10 kayıpta +70 kaldırıldı). Kayıp bölüm başına TOPLAM sayılır
 (`failCounts`); geçilmiş bölümde sayılmaz. Kullanıcı 1.1'de reklam/satın alma gelince
 yardım boncuğunu kaldıracak.
 **Sonsuz boncuğu (build 3):** Sonsuz'da her 5 misket 1 boncuk, günde en fazla 100

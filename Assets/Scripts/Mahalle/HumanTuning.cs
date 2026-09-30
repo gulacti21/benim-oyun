@@ -46,25 +46,25 @@ public static class HumanTuning
         ( 34, 4, 5, 'N' ),   // Park 11 · sıradan oyuncu %0 -> %72
         ( 35, 5, 9, 'U' ),   // Park 12 · sıradan oyuncu %0 -> %33
         ( 37, 6, 3, 'N' ),   // Toprak 02 · sıradan oyuncu %0 -> %48
-        ( 38, 6, 3, 'N' ),   // Toprak 03 · sıradan oyuncu %0 -> %62
-        ( 39, 4, 4, 'N' ),   // Toprak 04 · sıradan oyuncu %0 -> %63
-        ( 40, 5, 4, 'N' ),   // Toprak 05 · sıradan oyuncu %0 -> %68
-        ( 41, 6, 3, 'N' ),   // Toprak 06 · sıradan oyuncu %0 -> %50
-        ( 43, 4, 3, 'N' ),   // Toprak 08 · sıradan oyuncu %22 -> %53
-        ( 44, 5, 5, 'N' ),   // Toprak 09 · sıradan oyuncu %2 -> %48
-        ( 45, 4, 4, 'N' ),   // Toprak 10 · sıradan oyuncu %0 -> %62
-        ( 46, 4, 4, 'N' ),   // Toprak 11 · sıradan oyuncu %2 -> %53
+        ( 38, 6, 4, 'N' ),   // Toprak 03 · sıradan oyuncu %0 -> %33 · kullanıcı ayarı 2026-10-01
+        ( 39, 4, 5, 'N' ),   // Toprak 04 · sıradan oyuncu %0 -> %25 · kullanıcı ayarı 2026-10-01
+        ( 40, 5, 5, 'N' ),   // Toprak 05 · sıradan oyuncu %0 -> %33 · kullanıcı ayarı 2026-10-01
+        ( 41, 6, 4, 'N' ),   // Toprak 06 · sıradan oyuncu %0 -> %28 · kullanıcı ayarı 2026-10-01
+        ( 43, 4, 4, 'N' ),   // Toprak 08 · sıradan oyuncu %22 -> %22 · kullanıcı ayarı 2026-10-01
+        ( 44, 5, 6, 'N' ),   // Toprak 09 · sıradan oyuncu %2 -> %32 · kullanıcı ayarı 2026-10-01
+        ( 45, 4, 5, 'N' ),   // Toprak 10 · sıradan oyuncu %0 -> %32 · kullanıcı ayarı 2026-10-01
+        ( 46, 4, 5, 'N' ),   // Toprak 11 · sıradan oyuncu %2 -> %27 · kullanıcı ayarı 2026-10-01
         ( 47, 5, 7, 'U' ),   // Toprak 12 · sıradan oyuncu %0 -> %17
-        ( 48, 4, 4, 'N' ),   // Meydan 01 · sıradan oyuncu %13 -> %68
-        ( 49, 4, 4, 'N' ),   // Meydan 02 · sıradan oyuncu %10 -> %65
-        ( 50, 5, 3, 'N' ),   // Meydan 03 · sıradan oyuncu %5 -> %52
+        ( 48, 4, 5, 'N' ),   // Meydan 01 · sıradan oyuncu %13 -> %40 · kullanıcı ayarı 2026-10-01
+        ( 49, 4, 5, 'N' ),   // Meydan 02 · sıradan oyuncu %10 -> %32 · kullanıcı ayarı 2026-10-01
+        ( 50, 5, 4, 'N' ),   // Meydan 03 · sıradan oyuncu %5 -> %23 · kullanıcı ayarı 2026-10-01
         ( 51, 5, 6, 'N' ),   // Meydan 04 · sıradan oyuncu %10 -> %45
-        ( 52, 4, 3, 'N' ),   // Meydan 05 · sıradan oyuncu %0 -> %65
+        ( 52, 4, 4, 'N' ),   // Meydan 05 · sıradan oyuncu %0 -> %27 · kullanıcı ayarı 2026-10-01
         ( 53, 5, 4, 'N' ),   // Meydan 06 · sıradan oyuncu %5 -> %62
-        ( 54, 6, 3, 'N' ),   // Meydan 07 · sıradan oyuncu %0 -> %38
+        ( 54, 6, 4, 'N' ),   // Meydan 07 · sıradan oyuncu %0 -> %23 · kullanıcı ayarı 2026-10-01
         ( 55, 4, 5, 'N' ),   // Meydan 08 · sıradan oyuncu %8 -> %45
-        ( 57, 4, 4, 'N' ),   // Meydan 10 · sıradan oyuncu %15 -> %43
-        ( 58, 4, 3, 'N' ),   // Meydan 11 · sıradan oyuncu %0 -> %42
+        ( 57, 4, 5, 'N' ),   // Meydan 10 · sıradan oyuncu %15 -> %13 · kullanıcı ayarı 2026-10-01
+        ( 58, 5, 4, 'N' ),   // Meydan 11 · sıradan oyuncu %0 -> %30 · kullanıcı ayarı 2026-10-01
         ( 59, 4, 3, 'U' ),   // Meydan 12 · sıradan oyuncu %2 -> %28
         ( 60, 2, 2, 'N' ),   // Sahil 01 · sıradan oyuncu %22 -> %73
         ( 62, 6, 4, 'N' ),   // Sahil 03 · sıradan oyuncu %37 -> %70

@@ -53,9 +53,8 @@ public class MahalleSave
     // iCLOUD: her kayıtta bir artar. İki kayıttan sayısı büyük olan daha yenidir
     // (yeni telefon / yeniden kurulum buluttakini alır). Sıfırlamada sayı korunur.
     public int saveCount;
-    // YARDIM BONCUĞU: bölüm başına bir kez verildi mi (4 kayıp / 10 kayıp) ve toplam kayıp sayısı.
+    // YARDIM BONCUĞU: bölüm başına bir kez verildi mi ve toplam kayıp sayısı.
     public bool[] helpGiven = new bool[0];
-    public bool[] bigHelpGiven = new bool[0];
     public int[] failCounts = new int[0];   // bölüm başına toplam kayıp (geçilmemiş bölümlerde)
     // SONSUZ BONCUĞU: bugün Sonsuz'dan kazanılan boncuk (DailyLevel.DayIndex ile gün değişince sıfırlanır).
     public int endlessBeadDay = -9999;
@@ -181,8 +180,6 @@ public static class MahalleProfile
         value.lastMap = Mathf.Clamp(value.lastMap, 0, Maps.Count - 1);
         if (value.helpGiven == null) value.helpGiven = new bool[0];
         Array.Resize(ref value.helpGiven, Maps.TotalLevels);
-        if (value.bigHelpGiven == null) value.bigHelpGiven = new bool[0];
-        Array.Resize(ref value.bigHelpGiven, Maps.TotalLevels);
         if (value.failCounts == null) value.failCounts = new int[0];
         Array.Resize(ref value.failCounts, Maps.TotalLevels);
         for(int i=0;i<value.marbleLife.Length;i++)value.marbleLife[i]=Mathf.Clamp(value.marbleLife[i],0,SpecialMarbles.MaxLife);
@@ -548,22 +545,19 @@ public static class MahalleProfile
         if (record) Data.endlessBest = score;
         Save(); return record;
     }
-    // YARDIM BONCUĞU (2026-09-30, kullanıcı kararı; 1.1'de reklam/satın alma gelince kaldırılacak):
-    // henüz geçilmemiş bir bölümde toplam HelpAfterFails kayıpta HelpBeads, BigHelpAfterFails
-    // kayıpta BigHelpBeads boncuk; her biri bölüm başına bir kez. Kayıplar bölüm başına TOPLAM
+    // YARDIM BONCUĞU (kullanıcı kararı; 1.1'de reklam/satın alma gelince kaldırılacak):
+    // henüz geçilmemiş bir bölümde toplam HelpAfterFails kayıpta bölüm başına bir kez HelpBeads
+    // boncuk (2026-10-01: 4 kayıp/50 -> 5 kayıp/24; 10 kayıpta +70 kaldırıldı). Kayıplar bölüm başına TOPLAM
     // sayılır (arada başka bölüm oynamak sıfırlamaz). Geçilmiş bölümde hiç sayılmaz, farm olmaz.
-    public const int HelpAfterFails = 4, HelpBeads = 50;
-    public const int BigHelpAfterFails = 10, BigHelpBeads = 70;
+    public const int HelpAfterFails = 5, HelpBeads = 24;
     private static void TrackHelp(int levelIndex, int stars, ref RoundReward reward)
     {
         if (stars >= Required(levelIndex) || Stars(levelIndex) >= Required(levelIndex)) return;
         int fails = ++Data.failCounts[levelIndex];
-        int give = 0;
-        if (fails >= HelpAfterFails && !Data.helpGiven[levelIndex]) { Data.helpGiven[levelIndex] = true; give += HelpBeads; }
-        if (fails >= BigHelpAfterFails && !Data.bigHelpGiven[levelIndex]) { Data.bigHelpGiven[levelIndex] = true; give += BigHelpBeads; }
-        if (give <= 0) return;
-        reward.helpBeads = give;
-        RefundBeads(give);
+        if (fails < HelpAfterFails || Data.helpGiven[levelIndex]) return;
+        Data.helpGiven[levelIndex] = true;
+        reward.helpBeads = HelpBeads;
+        RefundBeads(HelpBeads);
     }
 
     public static RoundReward Finish(int levelIndex, int stars, int score)
