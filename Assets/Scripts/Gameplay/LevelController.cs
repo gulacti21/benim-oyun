@@ -62,7 +62,15 @@ public class LevelController : MonoBehaviour
     public bool HasNextLevel => Maps.Valid(LevelIndex + 1) && Maps.MapOf(LevelIndex + 1) == Map;
     public LevelData Level => level;
     public int ShotsUsed => shotsUsed;
-    public int ShotsLeft => level != null ? Mathf.Max(0, level.shotCount - shotsUsed) : 0;
+    public int ShotsLeft => level != null ? Mathf.Max(0, level.shotCount + bonusShots - shotsUsed) : 0;
+
+    // DEVAM TEKLİFİ (2026-09-30, kullanıcı kararı): atışlar bitti ve bölüm geçilemediyse
+    // sonuç hemen yazılmaz; oyuncuya "+2 atış, 30 boncuk" teklif edilir, kaldığı yerden sürer.
+    // Sadece kampanyada (günün bölümü, sonsuz mod ve öğreticide yok).
+    public const int ContinueShots = 2;
+    public const int ContinuePrice = 30;
+    private int bonusShots;
+    public bool ContinueOffered { get; private set; }
     public int Score => arena != null ? arena.Score : 0;
     public int TotalMarbles => arena != null ? arena.TotalMarbles : 0;
     public int Stars => level != null ? level.GetStars(Score) : 0;
@@ -117,7 +125,7 @@ public class LevelController : MonoBehaviour
 
         if (shooter != null)
         {
-            shooter.ShootingEnabled = !paused && !waitingForSettle && State == LevelState.Playing;
+            shooter.ShootingEnabled = !paused && !waitingForSettle && !ContinueOffered && State == LevelState.Playing;
         }
 
         StateChanged?.Invoke();
@@ -212,6 +220,8 @@ public class LevelController : MonoBehaviour
         MahalleWorld.Apply(this);
         LastReward = new RoundReward();
         shotsUsed = 0;
+        bonusShots = 0;
+        ContinueOffered = false;
         waitingForSettle = false;
         scoredTimes.Clear();
         shooterOutsideTime = 0f;
@@ -343,35 +353,16 @@ public class LevelController : MonoBehaviour
 
         if (allMarblesOut || outOfShots)
         {
-            State = Score >= level.oneStarTarget ? LevelState.Won : LevelState.Lost;
-
-            if (State == LevelState.Won)
+            // Saha boşalmadı, atış bitti ve bölüm geçilemiyor: önce devam teklifi.
+            bool passes = Score >= level.oneStarTarget && Stars >= MahalleProfile.Required(LevelIndex);
+            if (!allMarblesOut && !passes && !GameSession.DailyMode)
             {
-                // Rewards and unlocks are persisted together by the campaign profile.
+                ContinueOffered = true;
+                if (shooter != null) shooter.ShootingEnabled = false;
+                StateChanged?.Invoke();
+                return;
             }
-
-            LastReward = GameSession.DailyMode
-                ? MahalleProfile.FinishDaily(State == LevelState.Won ? Stars : 0, Score)
-                : MahalleProfile.Finish(LevelIndex, State == LevelState.Won ? Stars : 0, Score);
-
-            if (SfxPlayer.Instance != null)
-            {
-                if (State == LevelState.Won)
-                {
-                    SfxPlayer.Instance.PlayWin();
-                }
-                else
-                {
-                    SfxPlayer.Instance.PlayLose();
-                }
-            }
-
-            if (shooter != null)
-            {
-                shooter.ShootingEnabled = false;
-            }
-
-            StateChanged?.Invoke();
+            FinishRound();
             return;
         }
 
@@ -381,6 +372,48 @@ public class LevelController : MonoBehaviour
             shooter.ShootingEnabled = true;
         }
         StateChanged?.Invoke();
+    }
+
+    private void FinishRound()
+    {
+        ContinueOffered = false;
+        State = Score >= level.oneStarTarget ? LevelState.Won : LevelState.Lost;
+
+        LastReward = GameSession.DailyMode
+            ? MahalleProfile.FinishDaily(State == LevelState.Won ? Stars : 0, Score)
+            : MahalleProfile.Finish(LevelIndex, State == LevelState.Won ? Stars : 0, Score);
+
+        if (SfxPlayer.Instance != null)
+        {
+            if (State == LevelState.Won) SfxPlayer.Instance.PlayWin();
+            else SfxPlayer.Instance.PlayLose();
+        }
+
+        if (shooter != null) shooter.ShootingEnabled = false;
+        StateChanged?.Invoke();
+    }
+
+    // Teklif kabul: boncuk yetmezse false döner, hiçbir şey değişmez.
+    public bool AcceptContinue()
+    {
+        if (!ContinueOffered) return false;
+        if (!MahalleProfile.SpendBeads(ContinuePrice)) return false;
+        MahalleProfile.Save();
+        bonusShots += ContinueShots;
+        ContinueOffered = false;
+        if (shooter != null)
+        {
+            SettleShooter();
+            shooter.ShootingEnabled = !IsPaused;
+        }
+        StateChanged?.Invoke();
+        return true;
+    }
+
+    public void DeclineContinue()
+    {
+        if (!ContinueOffered) return;
+        FinishRound();
     }
 
     // Öğretici (1. bölüm üstünde): kaybetmek yok. Bütün misketler çıkınca

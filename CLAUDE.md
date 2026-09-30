@@ -175,7 +175,13 @@ ilgili Verify aracını çalıştır.
 Güçler 16/14/10/32, kaplamalar 0/40/80/110/140/180 + dört özel 400'er,
 tamir 130 (ömür 150 atış).
 Günün ödülü `25 + min(50, (seri-1)*7)` → 25'ten 75'e. Görevler 50/80/120.
-Tek seferlik toplam gelir ~1365 + günlük akış. **Bölüm ödülleri bilerek
+Tek seferlik toplam gelir ~1365 + günlük akış.
+**Devam teklifi + yardım boncuğu (2026-09-30, kullanıcı kararı, build 2):** atışlar
+bitip bölüm geçilemezse "+2 atış · 30 boncuk" (`LevelController.ContinueShots/Price`),
+kaldığı yerden sürer; kampanyada, günün bölümünde yok. Geçilmemiş bir bölüm üst üste 4
+kez kaybedilirse bölüm başına bir kez 50 boncuk (`MahalleProfile.HelpAfterFails/HelpBeads`).
+Farm'lanabilir olduğu biliniyor (teorik tavan 120×50); kullanıcı 1.1'de reklam/satın
+alma gelince yardım boncuğunu kaldıracak. **Bölüm ödülleri bilerek
 artırılmadı**: kampanya gelirini şişirmek boncuğu anlamsızlaştırır ve 1.1'deki
 satın almaya satacak bir şey bırakmaz.
 

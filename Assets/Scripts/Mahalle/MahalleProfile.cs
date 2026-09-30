@@ -53,6 +53,10 @@ public class MahalleSave
     // iCLOUD: her kayıtta bir artar. İki kayıttan sayısı büyük olan daha yenidir
     // (yeni telefon / yeniden kurulum buluttakini alır). Sıfırlamada sayı korunur.
     public int saveCount;
+    // YARDIM BONCUĞU: aynı bölümde üst üste kaç kez geçilemedi; bölüm başına bir kez verilir.
+    public int failLevel = -1;
+    public int failStreak;
+    public bool[] helpGiven = new bool[0];
 }
 
 [Serializable]
@@ -70,6 +74,7 @@ public struct RoundReward
     public bool newBadge;
     public int districtBonus;
     public string newSkin;
+    public int helpBeads;
 }
 
 public static class MahalleProfile
@@ -171,6 +176,9 @@ public static class MahalleProfile
             Array.Resize(ref mp.districtPlays, Maps.DistrictsPerMap);
         }
         value.lastMap = Mathf.Clamp(value.lastMap, 0, Maps.Count - 1);
+        if (value.helpGiven == null) value.helpGiven = new bool[0];
+        Array.Resize(ref value.helpGiven, Maps.TotalLevels);
+        value.failStreak = Mathf.Max(0, value.failStreak);
         for(int i=0;i<value.marbleLife.Length;i++)value.marbleLife[i]=Mathf.Clamp(value.marbleLife[i],0,SpecialMarbles.MaxLife);
         value.skins[0] = true;
         value.beads = Mathf.Max(0, value.beads);
@@ -521,6 +529,24 @@ public static class MahalleProfile
         if (record) Data.endlessBest = score;
         Save(); return record;
     }
+    // YARDIM BONCUĞU (2026-09-30, kullanıcı kararı; 1.1'de reklam/satın alma gelince kaldırılacak):
+    // henüz geçilmemiş bir bölüm üst üste HelpAfterFails kez geçilemezse, bölüm başına bir kez
+    // HelpBeads boncuk. Oyuncu bununla devam teklifini (+2 atış) alabilsin, takılıp kalmasın.
+    public const int HelpAfterFails = 4;
+    public const int HelpBeads = 50;
+    private static void TrackHelp(int levelIndex, int stars, ref RoundReward reward)
+    {
+        bool passedBefore = Stars(levelIndex) >= Required(levelIndex);
+        if (stars >= Required(levelIndex) || passedBefore) { if (Data.failLevel == levelIndex) Data.failStreak = 0; return; }
+        if (Data.failLevel != levelIndex) { Data.failLevel = levelIndex; Data.failStreak = 0; }
+        Data.failStreak++;
+        if (Data.failStreak < HelpAfterFails || Data.helpGiven[levelIndex]) return;
+        Data.helpGiven[levelIndex] = true;
+        Data.failStreak = 0;
+        reward.helpBeads = HelpBeads;
+        RefundBeads(HelpBeads);
+    }
+
     public static RoundReward Finish(int levelIndex, int stars, int score)
     {
         var reward = new RoundReward();
@@ -531,6 +557,7 @@ public static class MahalleProfile
         Data.knocked += Mathf.Max(0, score);
         PlayArray(map)[localDistrict]++;
         stars = Mathf.Clamp(stars, 0, 3);
+        TrackHelp(levelIndex, stars, ref reward);
         if (stars > 0)
         {
             int old = Stars(levelIndex);

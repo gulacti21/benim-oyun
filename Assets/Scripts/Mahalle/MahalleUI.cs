@@ -1351,7 +1351,26 @@ public class MahalleUI : MonoBehaviour
             var tutorial=page.Find("İlk atış");if(tutorial!=null&&MahalleProfile.Data.tutorialDone)tutorial.gameObject.SetActive(false);
         }
         if(GameSession.TutorialMode&&tutStep>=0&&controller.State==LevelController.LevelState.Playing)TutorialTick(shooter);
+        if(controller.ContinueOffered&&modal==null)ContinueOffer();
         if(controller.State!=LevelController.LevelState.Playing&&!resultShown){resultShown=true;Results();}
+    }
+    // DEVAM TEKLİFİ: atışlar bitti, bölüm geçilemedi. Mola penceresi açılıp kapanırsa
+    // Update teklifi yeniden gösterir (modal boş kalınca).
+    private void ContinueOffer()
+    {
+        var box=Modal("Devam teklifi",760);
+        int price=LevelController.ContinuePrice;
+        bool afford=MahalleProfile.Beads>=price;
+        Text(box,"ATIŞLARIN BİTTİ",30,34,924,77,51,Ink,TextAlignmentOptions.Center);
+        Text(box,L.F("{0} / {1} misket çıkardın",controller.Score,controller.TotalMarbles),30,122,924,56,36,Ink,TextAlignmentOptions.Center);
+        Text(box,L.F("Geçmek için {0} misket gerekiyor.",PassTarget()),30,182,924,50,29,Muted,TextAlignmentOptions.Center);
+        LabelButton(box,L.F("+{0} ATIŞ · {1} BONCUK",LevelController.ContinueShots,price),36,262,912,120,afford?Gold:new Color(.88f,.83f,.69f),afford?Ink:Muted,()=>{
+            if(!controller.AcceptContinue()){Toast("Yeterli boncuğun yok.");return;}
+            CloseModal();
+        },38);
+        Text(box,L.F("Kesende {0} boncuk var.",MahalleProfile.Beads),30,398,924,50,28,afford?Muted:new Color(.72f,.32f,.24f),TextAlignmentOptions.Center);
+        Text(box,"Kaldığın yerden devam edersin, çıkardığın misketler sayılır.",60,452,864,70,26,Muted,TextAlignmentOptions.Center);
+        LabelButton(box,"VAZGEÇ",36,560,912,100,Ink,Cream,()=>{CloseModal(false);controller.DeclineContinue();});
     }
     private RectTransform Modal(string name,float height)
     {
@@ -1433,6 +1452,7 @@ public class MahalleUI : MonoBehaviour
         string reward=!won?"Kesendeki güçler yardımcı olabilir. Normal misketle de geçebilirsin.":controller.LastReward.beads>0?L.F("+{0} BONCUK",controller.LastReward.beads):"Bu bölümden boncuk aldın. Yeni yıldız daha fazla kazandırır.";
         Text(box,reward,60,448,864,82,won?38:28,won?Ink:Muted,TextAlignmentOptions.Center);
         if(controller.LastReward.newBadge)Text(box,L.F("MAHALLE TAMAMLANDI · {0} BONCUK BONUS",controller.LastReward.districtBonus)+"\n"+L.T(controller.LastReward.newSkin??"Mahalle misketi zaten kesende")+" · "+L.T("KOLEKSİYON ÖDÜLÜ"),30,538,924,100,28,Muted,TextAlignmentOptions.Center);
+        else if(controller.LastReward.helpBeads>0)Text(box,L.F("Zorlandığını gördük: +{0} BONCUK hediye!",controller.LastReward.helpBeads)+"\n"+L.T("Atışların bitince ek atış alabilirsin."),30,538,924,100,30,new Color(.72f,.45f,.08f),TextAlignmentOptions.Center);
         else if(won&&!passed)Text(box,L.F("Sonraki bölümü açmak için {0} yıldız gerekiyor.",need),60,552,864,72,29,new Color(.72f,.32f,.24f),TextAlignmentOptions.Center);
         else Text(box,won?"Yeni rekorlar ve görevler daha fazla boncuk kazandırır.":"İpucu: Alt çizgide yer değiştirip kümeye yandan vur.",60,556,864,68,27,Muted,TextAlignmentOptions.Center);
         if(passed&&controller.HasNextLevel)LabelButton(box,"SONRAKİ BÖLÜM",36,669,912,98,Ink,Cream,()=>controller.LoadNextLevel());
