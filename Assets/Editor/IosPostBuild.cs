@@ -28,6 +28,14 @@ public static class IosPostBuild
 
         proj.WriteToFile(projPath);
 
+        // İhracat uyumluluğu: oyun özel/standart dışı şifreleme kullanmıyor. Bu anahtar olmadan
+        // App Store Connect her yüklemede "Missing Compliance" sorusunu sorar.
+        string plistPath = Path.Combine(pathToBuiltProject, "Info.plist");
+        var plist = new PlistDocument();
+        plist.ReadFromFile(plistPath);
+        plist.root.SetBoolean("ITSAppUsesNonExemptEncryption", false);
+        plist.WriteToFile(plistPath);
+
         // iCloud (anahtar-değer deposu) + Game Center yetkileri. SADECE ücretli hesapla:
         // ücretsiz hesapta bu yetkiler varken Xcode imzalayamaz. Anahtar: MisketrCloud.Enabled.
         if (MisketrCloud.Enabled)
