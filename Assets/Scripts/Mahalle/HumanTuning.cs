@@ -48,12 +48,12 @@ public static class HumanTuning
         ( 37, 6, 3, 'N' ),   // Toprak 02 · sıradan oyuncu %0 -> %48
         ( 38, 6, 4, 'N' ),   // Toprak 03 · sıradan oyuncu %0 -> %33 · kullanıcı ayarı 2026-10-01
         ( 39, 5, 5, 'N' ),   // Toprak 04 · sıradan oyuncu -> %62 · kullanıcı ayarı 2026-10-01 (Toprak Meydan'dan hafif kolay)
-        ( 40, 5, 5, 'N' ),   // Toprak 05 · sıradan oyuncu %0 -> %33 · kullanıcı ayarı 2026-10-01
+        ( 40, 5, 4, 'N' ),   // Toprak 05 · Toprak 11 yerine kolaylaştı · sıradan oyuncu -> %68 · kullanıcı ayarı 2026-10-01
         ( 41, 6, 4, 'N' ),   // Toprak 06 · sıradan oyuncu %0 -> %28 · kullanıcı ayarı 2026-10-01
         ( 43, 5, 4, 'N' ),   // Toprak 08 · sıradan oyuncu -> %35 · kullanıcı ayarı 2026-10-01 (Toprak Meydan'dan hafif kolay)
         ( 44, 5, 5, 'N' ),   // Toprak 09 · sıradan oyuncu -> %48 · kullanıcı ayarı 2026-10-01 (Toprak ort. %45-52)
         ( 45, 4, 5, 'N' ),   // Toprak 10 · sıradan oyuncu %0 -> %32 · kullanıcı ayarı 2026-10-01
-        ( 46, 5, 5, 'N' ),   // Toprak 11 · sıradan oyuncu -> %57 · kullanıcı ayarı 2026-10-01 (Toprak ort. %45-52)
+        ( 46, 4, 5, 'N' ),   // Toprak 11 · zor · sıradan oyuncu -> %27 · kullanıcı ayarı 2026-10-01
         ( 47, 5, 7, 'U' ),   // Toprak 12 · sıradan oyuncu %0 -> %17
         ( 48, 4, 5, 'N' ),   // Meydan 01 · sıradan oyuncu %13 -> %40 · kullanıcı ayarı 2026-10-01
         ( 49, 4, 5, 'N' ),   // Meydan 02 · sıradan oyuncu %10 -> %32 · kullanıcı ayarı 2026-10-01
