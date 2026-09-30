@@ -46,6 +46,8 @@ public static class DifficultyOrderVerify
                           "Uc yildiz sartinda uc esik de ayri olmali: " + name);
             }
 
+        try { passed += HumanChecks(); }
+        catch (System.Exception e) { failed++; Debug.LogError("DIFFICULTY_ORDER: " + e.Message); }
         try { passed += MemleketChecks(); }
         catch (System.Exception e) { failed++; Debug.LogError("DIFFICULTY_ORDER: " + e.Message); }
 
@@ -72,6 +74,30 @@ public static class DifficultyOrderVerify
         return c < 0 ? -1f : c / (float)l.TotalMarbles();
     }
     private static float Step(int local) => 1f / MemleketCampaign.Database.Get(local).TotalMarbles();
+
+    // İNSAN AYARI (HumanTuning): tablo oyuna uygulanmış mı, Kesem bölümleri kurala uyuyor mu.
+    // Kural bozulursa CHECK FAILED (MahalleVerify de çağırır).
+    public static int HumanChecks()
+    {
+        int n = 0;
+        void Must(bool ok, string m) { n++; if (!ok) throw new System.Exception("CHECK FAILED: " + m); }
+        for (int i = 0; i < HumanTuning.RowCount; i++)
+        {
+            var r = HumanTuning.Row(i); var l = Maps.Get(r.g);
+            int passT = l.starsToPass >= 2 ? l.twoStarTarget : l.oneStarTarget;
+            Must(l.shotCount == r.shots && passT == Mathf.Min(r.pass, l.TotalMarbles()), "HumanTuning uygulanmali: #" + r.g);
+            Must(l.oneStarTarget <= l.twoStarTarget && l.twoStarTarget <= l.threeStarTarget && l.threeStarTarget <= l.TotalMarbles(), "HumanTuning yildiz sirasi: #" + r.g);
+            if (l.starsToPass == 2) Must(l.twoStarTarget < l.threeStarTarget, "HumanTuning: kilit ve ustalik ayri: #" + r.g);
+        }
+        Must(HumanTuning.KesemLevels.Length == Maps.TotalDistricts, "Her bolgede bir Kesem bolumu");
+        for (int d = 0; d < HumanTuning.KesemLevels.Length; d++)
+        {
+            int k = HumanTuning.KesemLevels[d];
+            Must(k / 12 == d && k % 12 >= 5 && k % 12 <= 8, "Kesem bolumu bolgenin 6-9. bolumu, 12.'ye yapisik degil: #" + k);
+        }
+        Debug.Log("HUMAN_TUNING_OK: " + HumanTuning.RowCount + " satir, " + n + " kontrol");
+        return n;
+    }
 
     public static int MemleketChecks()
     {

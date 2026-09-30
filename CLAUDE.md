@@ -168,6 +168,19 @@ ilgili Verify aracını çalıştır.
 **Zorluk merdiveni** (896.778 simülasyon): Apartman %97 → Okul %85 → Park %66
 → Toprak %62 → Meydan %57. Geçilemeyen bölüm yok.
 
+**İNSAN AYARI (2026-10-01, `Mahalle/HumanTuning.cs`) — yukarıdaki merdiven "kusursuz oyuncu"
+tavanıdır, oyuncu deneyimini göstermez.** Kullanıcı Park'ı özel misketsiz geçemedi. 120 bölüm
+"sıradan oyuncu" modeliyle ölçüldü (`MemleketPhysicsVerify.BatchHuman`, ~880 bin sim, 2,7 saat;
++1/+2 atış turları; `Logs/HumanAll*.tsv`, `HumanPlus2.tsv`). Sadece atış hakkı ve geçme hedefi
+değişti (83 bölüm), dizilim/fizik aynı. Kural (kullanıcı): YAVAŞ YAVAŞ zorlaşsın; her bölgede
+10 normal bölüm (tek deneme ≥ ~%25, bölge başı yüksek), 12. bölüm "zor ama Kesem'siz geçilir",
+6-9. bölümlerden biri "Kesem'siz neredeyse geçilmez" (`HumanTuning.KesemLevels`, sıradan oyuncu
+≤ %4, hedef tavanı aşmaz). Bölge ortalaması (normal, tek deneme): Apartman %92 · Okul %79 ·
+Park %60 · Toprak %58 · Meydan %53 · Sahil %62 · Köy %66 · Yayla %46 · Pazar %49 · Bayram %45.
+Model kötümser (çamur/buzda özellikle): Köy 12 %3, Bayram 12 %7, Yayla 12 %10 çıktı, hedefleri
+zaten çok düşük (ör. 13'te 3). `DifficultyOrderVerify.HumanChecks` tabloyu ve Kesem kuralını
+her `MahalleVerify.Run`'da doğrular. Bölüm değiştirirsen `-humanLevels <g>` ile yeniden ölç.
+
 **Çeşitlilik**: 1770 bölüm çifti, benzerlik sınırı 0.30'un altında **sıfır** çift.
 
 **Ekonomi**: kese 40 boncuk başlangıç. İlk geçiş 6 boncuk, yıldız başına 3,
