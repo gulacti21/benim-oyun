@@ -42,7 +42,7 @@ public static class HumanTuning
         ( 29, 5, 3, 'N' ),   // Park 06 · sıradan oyuncu %2 -> %60
         ( 30, 4, 5, 'N' ),   // Park 07 · sıradan oyuncu %0 -> %53
         ( 31, 5, 3, 'N' ),   // Park 08 · sıradan oyuncu %2 -> %53
-        ( 33, 6, 3, 'N' ),   // Park 10 · sıradan oyuncu %0 -> %27
+        ( 33, 5, 3, 'N' ),   // Park 10 · sıradan oyuncu %0 -> %22 · kullanıcı ayarı 2026-10-01 (kolaydı: 6->5 atış)
         ( 34, 4, 5, 'N' ),   // Park 11 · sıradan oyuncu %0 -> %72
         ( 35, 5, 9, 'U' ),   // Park 12 · sıradan oyuncu %0 -> %33
         ( 37, 6, 3, 'N' ),   // Toprak 02 · sıradan oyuncu %0 -> %48
