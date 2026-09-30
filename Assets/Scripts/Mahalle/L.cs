@@ -203,8 +203,8 @@ public static class L
         // ---- Görevler ----
         {"Mahallenin sana işi var", "The block has jobs for you"},
         {"Oyna, hedefleri tamamla, ödülünü buradan al.", "Play, reach the goals, collect your reward here."},
-        {"Üç kez bölüm kazan", "Win three levels"}, {"Toplam 20 misket çıkar", "Knock out 20 marbles in total"},
-        {"Üç bölümde üç yıldız al", "Get three stars in three levels"},
+        {"10 bölüm kazan", "Win 10 levels"}, {"Toplam 150 misket çıkar", "Knock out 150 marbles in total"},
+        {"8 bölümde üç yıldız al", "Get three stars in 8 levels"},
         {"{0} / {1}    +{2} BONCUK", "{0} / {1}    +{2} BEADS"},
         {"ALINDI", "CLAIMED"}, {"ÖDÜLÜ AL", "CLAIM"}, {"SÜRÜYOR", "IN PROGRESS"}, {"USTALIK ROZETLERİ", "MASTERY BADGES"},
 
@@ -238,6 +238,14 @@ public static class L
         {"MAHALLE TAMAMLANDI · {0} BONCUK BONUS", "AREA COMPLETE · {0} BONUS BEADS"},
         {"Mahalle misketi zaten kesende", "The area marble is already in your pouch"}, {"KOLEKSİYON ÖDÜLÜ", "COLLECTION REWARD"},
         {"Sonraki bölümü açmak için {0} yıldız gerekiyor.", "You need {0} stars to open the next level."},
+        // ---- Oyun ekranı başlığı ve hedef (2026-09-30: İngilizcede Türkçe kalıyordu) ----
+        {"BÖLÜM {0}", "LEVEL {0}"},
+        {"En az {0} misketi çemberden çıkar", "Knock at least {0} marbles out of the ring"},
+        {"Bütün misketleri çemberin dışına çıkar", "Knock every marble out of the ring"},
+        {"Her misket +{0} saniye", "Each marble +{0} seconds"},
+        {"Atıcıyı taşımak için çizgiye dokun.", "Tap the line to move your shooter."},
+        {"Süre yarışı", "Race the clock"},
+        {"Çok yakında", "Coming soon"},
         // ---- Devam teklifi ve yardım boncuğu ----
         {"ATIŞLARIN BİTTİ", "OUT OF SHOTS"},
         {"Geçmek için {0} misket gerekiyor.", "You need {0} marbles to pass."},

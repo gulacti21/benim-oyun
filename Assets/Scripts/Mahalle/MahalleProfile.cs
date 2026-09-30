@@ -594,7 +594,7 @@ public static class MahalleProfile
     }
     public static readonly int[] MissionTargets = { 10, 150, 8 };
     public static readonly int[] MissionRewards = { 50, 80, 120 };
-    public static readonly string[] MissionNames = { "Üç kez bölüm kazan", "Toplam 20 misket çıkar", "Üç bölümde üç yıldız al" };
+    public static readonly string[] MissionNames = { "10 bölüm kazan", "Toplam 150 misket çıkar", "8 bölümde üç yıldız al" };
     public static bool Claim(int id)
     {
         if (id < 0 || id >= 3 || Data.claimed[id] || MissionProgress(id) < MissionTargets[id]) return false;
