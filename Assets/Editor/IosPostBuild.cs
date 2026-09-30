@@ -46,6 +46,17 @@ public static class IosPostBuild
             caps.AddiCloud(true, false, false, false, null);
             caps.AddGameCenter();
             caps.WriteToFile();
+
+            // AddiCloud boş bir "icloud-container-identifiers" dizisi de yazıyor; build 1'de elle
+            // silinmişti, profilde CloudKit yok. Her derlemede otomatik temizle.
+            string entPath = Path.Combine(pathToBuiltProject, "Unity-iPhone/misko.entitlements");
+            if (File.Exists(entPath))
+            {
+                var ent = new PlistDocument();
+                ent.ReadFromFile(entPath);
+                ent.root.values.Remove("com.apple.developer.icloud-container-identifiers");
+                ent.WriteToFile(entPath);
+            }
         }
     }
 }
