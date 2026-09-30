@@ -60,6 +60,8 @@ public class MahalleUI : MonoBehaviour
         district=MahalleProfile.NextLevelIn(CurrentMap())/Campaign.PerDistrict;
         // Harita/başlık sahnesine dönüldüyse öğretici modu kapanmış olmalı.
         if(controller==null){GameSession.TutorialMode=false;GameSession.DailyMode=false;GameSession.EndlessMode=false;}
+        // ZORUNLU GÜNCELLEME: menüde, internet varsa bir kez (UpdateCheck).
+        if(controller==null)StartCoroutine(UpdateCheck.Run(v=>requiredVersion=v));
         if(controller!=null)ShowGame();
         else if(returnToTitle){returnToTitle=false;ShowTitle(true);}
         else if(titleShown)ShowHome();
@@ -1301,9 +1303,20 @@ public class MahalleUI : MonoBehaviour
         }
         MisketrGameCenter.ReportIfChanged();
     }
+    // Mağazada daha yeni sürüm varsa dolu; pencere kapatılsa bile menüde yeniden açılır.
+    private static string requiredVersion;
+    private void ShowUpdateRequired()
+    {
+        var box=Modal("Güncelleme gerekli",560);
+        Text(box,"YENİ SÜRÜM VAR",30,40,924,77,50,Ink,TextAlignmentOptions.Center);
+        Text(box,L.F("Misko {0} yayında. Oynamaya devam etmek için oyunu güncelle.",requiredVersion),60,140,864,120,32,Muted,TextAlignmentOptions.Center);
+        LabelButton(box,"GÜNCELLE",36,300,912,120,Gold,Ink,()=>Application.OpenURL(UpdateCheck.StoreUrl),44);
+    }
+
     private void Update()
     {
         CloudTick();
+        if(requiredVersion!=null&&controller==null&&modal==null)ShowUpdateRequired();
         if(controller==null || scoreLabel==null)return;
         if(GameSession.EndlessMode)
         {

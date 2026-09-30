@@ -246,6 +246,9 @@ public static class L
         {"Atıcıyı taşımak için çizgiye dokun.", "Tap the line to move your shooter."},
         {"Süre yarışı", "Race the clock"},
         {"Çok yakında", "Coming soon"},
+        // ---- Zorunlu güncelleme ----
+        {"YENİ SÜRÜM VAR", "NEW VERSION AVAILABLE"}, {"GÜNCELLE", "UPDATE"},
+        {"Misko {0} yayında. Oynamaya devam etmek için oyunu güncelle.", "Misko {0} is out. Update the game to keep playing."},
         // ---- Sonsuz boncuğu ----
         {"+{0} BONCUK · BUGÜN {1}/{2}", "+{0} BEADS · TODAY {1}/{2}"},
         {"Bugünlük boncuk doldu, yarın yine gel.", "Today's beads are maxed out. Come back tomorrow."},
