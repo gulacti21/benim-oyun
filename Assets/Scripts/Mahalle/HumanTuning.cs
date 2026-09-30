@@ -47,13 +47,13 @@ public static class HumanTuning
         ( 35, 5, 9, 'U' ),   // Park 12 · sıradan oyuncu %0 -> %33
         ( 37, 6, 3, 'N' ),   // Toprak 02 · sıradan oyuncu %0 -> %48
         ( 38, 6, 4, 'N' ),   // Toprak 03 · sıradan oyuncu %0 -> %33 · kullanıcı ayarı 2026-10-01
-        ( 39, 4, 5, 'N' ),   // Toprak 04 · sıradan oyuncu %0 -> %25 · kullanıcı ayarı 2026-10-01
+        ( 39, 5, 5, 'N' ),   // Toprak 04 · sıradan oyuncu -> %62 · kullanıcı ayarı 2026-10-01 (Toprak Meydan'dan hafif kolay)
         ( 40, 5, 5, 'N' ),   // Toprak 05 · sıradan oyuncu %0 -> %33 · kullanıcı ayarı 2026-10-01
         ( 41, 6, 4, 'N' ),   // Toprak 06 · sıradan oyuncu %0 -> %28 · kullanıcı ayarı 2026-10-01
-        ( 43, 4, 4, 'N' ),   // Toprak 08 · sıradan oyuncu %22 -> %22 · kullanıcı ayarı 2026-10-01
+        ( 43, 5, 4, 'N' ),   // Toprak 08 · sıradan oyuncu -> %35 · kullanıcı ayarı 2026-10-01 (Toprak Meydan'dan hafif kolay)
         ( 44, 5, 6, 'N' ),   // Toprak 09 · sıradan oyuncu %2 -> %32 · kullanıcı ayarı 2026-10-01
         ( 45, 4, 5, 'N' ),   // Toprak 10 · sıradan oyuncu %0 -> %32 · kullanıcı ayarı 2026-10-01
-        ( 46, 4, 5, 'N' ),   // Toprak 11 · sıradan oyuncu %2 -> %27 · kullanıcı ayarı 2026-10-01
+        ( 46, 5, 6, 'N' ),   // Toprak 11 · sıradan oyuncu -> %33 · kullanıcı ayarı 2026-10-01 (Toprak Meydan'dan hafif kolay)
         ( 47, 5, 7, 'U' ),   // Toprak 12 · sıradan oyuncu %0 -> %17
         ( 48, 4, 5, 'N' ),   // Meydan 01 · sıradan oyuncu %13 -> %40 · kullanıcı ayarı 2026-10-01
         ( 49, 4, 5, 'N' ),   // Meydan 02 · sıradan oyuncu %10 -> %32 · kullanıcı ayarı 2026-10-01
