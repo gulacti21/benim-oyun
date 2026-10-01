@@ -89,7 +89,9 @@ public static class MemleketPhysicsVerify
         for (int i = 0; i < args.Length - 1; i++) if (args[i] == "-humanBonus") onlyBonus = int.Parse(args[i + 1]);
         if (onlyBonus > 0)
         {
-            try { shotBonus = onlyBonus; Measure(list.ToArray(), "HumanPlus" + onlyBonus + ".txt", false); }
+            string tag = "";   // -humanTag ad: aynı +N turunun önceki dosyasının üstüne yazılmasın
+            for (int i = 0; i < args.Length - 1; i++) if (args[i] == "-humanTag") tag = "_" + args[i + 1];
+            try { shotBonus = onlyBonus; Measure(list.ToArray(), "HumanPlus" + onlyBonus + tag + ".txt", false); }
             finally { CasualGames = 150; skipGreedy = false; shotBonus = 0; }
             return;
         }
