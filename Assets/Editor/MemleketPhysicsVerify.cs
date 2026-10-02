@@ -30,7 +30,10 @@ public static class MemleketPhysicsVerify
     private const int LinePositions = 7;
     private static readonly float[] AimOffsets = { 0f, -.22f, .22f };
     private static readonly float[] Powers = { 1f, .8f, .6f, .45f };
-    private const int CasualGames = 150, CasualSamples = 10;
+    private const int CasualSamples = 10;
+    private static int CasualGames = 150;
+    private static bool skipGreedy;   // insan ölçümünde tavan aranmaz (hızlı tur)
+    private static int shotBonus;      // ölçüm sırasında atış hakkına eklenir (geri alınır)
     private const float CasualAimNoise = 2f;
 
     private class Variant { public string name; public float massMul = 1f, scaleMul = 1f, impulseMul = 1f, dragMul = 1f; public bool own; public float frictionMul = 1f, bounce = -1f; public PhysicsMaterialCombine fc, bc; }
@@ -72,6 +75,35 @@ public static class MemleketPhysicsVerify
         Measure(new[] { 71, 83, 95, 107, 119 }, "MemleketMasteryVariants.txt", true);
     }
     public static void Calibrate() { Measure(new[] { 0, 5, 18, 30, 44, 59 }, "MemleketCalibration.txt", false); }
+    // İNSAN ÖLÇÜMÜ (2026-09-30): iki haritanın 120 bölümü, sıradan oyuncu modeliyle.
+    // Zorluk "kusursuz oyuncu" tavanına göre değil, normal bir insanın geçme oranına göre
+    // ayarlansın diye (kullanıcı Park'ı özel misketsiz geçemedi). Skor dağılımı TSV'de:
+    // hedef düşürülünce oran yeniden ölçmeden hesaplanır. -humanLevels 0,5,20 ile bir kısmı.
+    public static void BatchHuman()
+    {
+        var list = new List<int>(); var args = Environment.GetCommandLineArgs();
+        for (int i = 0; i < args.Length - 1; i++)
+            if (args[i] == "-humanLevels") foreach (var p in args[i + 1].Split(',')) list.Add(int.Parse(p));
+        CasualGames = 60; skipGreedy = true;
+        int onlyBonus = -1;   // -humanBonus N: sadece +N atışlı tur (ör. 2)
+        for (int i = 0; i < args.Length - 1; i++) if (args[i] == "-humanBonus") onlyBonus = int.Parse(args[i + 1]);
+        if (onlyBonus > 0)
+        {
+            string tag = "";   // -humanTag ad: aynı +N turunun önceki dosyasının üstüne yazılmasın
+            for (int i = 0; i < args.Length - 1; i++) if (args[i] == "-humanTag") tag = "_" + args[i + 1];
+            try { shotBonus = onlyBonus; Measure(list.ToArray(), "HumanPlus" + onlyBonus + tag + ".txt", false); }
+            finally { CasualGames = 150; skipGreedy = false; shotBonus = 0; }
+            return;
+        }
+        var levels = list.Count > 0 ? list.ToArray() : Range(0, 120);
+        string name = list.Count > 0 ? "HumanSome" : "HumanAll";
+        try
+        {
+            Measure(levels, name + ".txt", false);
+            shotBonus = 1; Measure(levels, name + "Plus1.txt", false);   // aynı bölümler +1 atış hakkıyla
+        }
+        finally { CasualGames = 150; skipGreedy = false; shotBonus = 0; }
+    }
     // Kuyruk/komut satırı: -memleketLevels 60,61,70
     public static void BatchSome()
     {
@@ -131,12 +163,14 @@ public static class MemleketPhysicsVerify
         foreach (int g in levels)
         {
             level = Maps.Get(g);
+            int keepShots = level.shotCount; level.shotCount += shotBonus;
             long before = sims;
             Open();
             try
             {
                 int total = level.TotalMarbles();
-                var greedy = Greedy(Normal, out string route);
+                string route = "-";
+                var greedy = skipGreedy ? new Outcome() : Greedy(Normal, out route);
                 var casual = Casual(g);
                 string var = "";
                 if (variants)
@@ -154,7 +188,7 @@ public static class MemleketPhysicsVerify
                          "\t" + casual.ice.ToString("F2") + "\t" + casual.split.ToString("F2") + "\t" + casual.pit.ToString("F2") + "\t" + string.Join(",", casual.scores));
                 Debug.Log("MEMLEKET_PHYSICS " + row);
             }
-            finally { Close(); }
+            finally { Close(); level.shotCount = keepShots; }
         }
         lines.Add("# " + sims + " simülasyon, " + (DateTime.Now - t0).TotalMinutes.ToString("F1") + " dk. Açgözlü tavan alt sınırdır.");
         Directory.CreateDirectory("Logs");

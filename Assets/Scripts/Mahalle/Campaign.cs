@@ -75,6 +75,8 @@ public static class Campaign
             }
             // Elle tasarlanmış bölümler formülle üretilenin üstüne yazar.
             for (int i = 0; i < Count; i++) LevelBook.Apply(cached.levels[i], i);
+            // İnsan ayarı: atış hakkı ve geçme hedefi sıradan oyuncuya göre (HumanTuning).
+            for (int i = 0; i < Count; i++) HumanTuning.Apply(cached.levels[i], i);
             return cached;
         }
     }

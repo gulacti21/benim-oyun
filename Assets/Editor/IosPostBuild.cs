@@ -28,14 +28,35 @@ public static class IosPostBuild
 
         proj.WriteToFile(projPath);
 
+        // İhracat uyumluluğu: oyun özel/standart dışı şifreleme kullanmıyor. Bu anahtar olmadan
+        // App Store Connect her yüklemede "Missing Compliance" sorusunu sorar.
+        string plistPath = Path.Combine(pathToBuiltProject, "Info.plist");
+        var plist = new PlistDocument();
+        plist.ReadFromFile(plistPath);
+        plist.root.SetBoolean("ITSAppUsesNonExemptEncryption", false);
+        plist.WriteToFile(plistPath);
+
         // iCloud (anahtar-değer deposu) + Game Center yetkileri. SADECE ücretli hesapla:
         // ücretsiz hesapta bu yetkiler varken Xcode imzalayamaz. Anahtar: MisketrCloud.Enabled.
         if (MisketrCloud.Enabled)
         {
             var caps = new ProjectCapabilityManager(projPath, "Unity-iPhone/misko.entitlements", null, main);
-            caps.AddiCloud(true, false, null);
+            // Sadece anahtar-değer deposu. 3 parametreli sürüm CloudKit + konteyner de ekliyordu,
+            // App ID'de CloudKit yok → imzalama sorun çıkarır (2026-09-30).
+            caps.AddiCloud(true, false, false, false, null);
             caps.AddGameCenter();
             caps.WriteToFile();
+
+            // AddiCloud boş bir "icloud-container-identifiers" dizisi de yazıyor; build 1'de elle
+            // silinmişti, profilde CloudKit yok. Her derlemede otomatik temizle.
+            string entPath = Path.Combine(pathToBuiltProject, "Unity-iPhone/misko.entitlements");
+            if (File.Exists(entPath))
+            {
+                var ent = new PlistDocument();
+                ent.ReadFromFile(entPath);
+                ent.root.values.Remove("com.apple.developer.icloud-container-identifiers");
+                ent.WriteToFile(entPath);
+            }
         }
     }
 }

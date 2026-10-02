@@ -10,7 +10,7 @@ using UnityEngine;
 // aşağıdaki kimliklerle oluştur (CLAUDE.md'de adım adım).
 public static class MisketrCloud
 {
-    public static readonly bool Enabled = false;
+    public static readonly bool Enabled = true;   // 2026-09-30: ücretli hesap geldi (Team 69W6P52PA2)
 
     // --- iCloud ---
     private const string SaveKey = "misko_save", SumKey = "misko_sum";

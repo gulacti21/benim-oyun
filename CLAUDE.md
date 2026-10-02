@@ -1,7 +1,7 @@
 # MİSKETR
 
 Geleneksel Türk misket oyunundan yola çıkan, üstten görünümlü 3D mobil oyun.
-Unity 6.3 LTS (6000.3.23f1) · URP · iOS · `com.gulacti.misketr` · sürüm 0.1.0
+Unity 6.3 LTS (6000.3.23f1) · URP · iOS · `com.gulacti.misko` (Team 69W6P52PA2) · sürüm 0.1.0
 Dal: `codex/mahalle-konsepti`
 
 Oyuncu bir çizgiden misket atar, hedefleri tebeşirle çizilmiş sahadan çıkarır.
@@ -168,6 +168,19 @@ ilgili Verify aracını çalıştır.
 **Zorluk merdiveni** (896.778 simülasyon): Apartman %97 → Okul %85 → Park %66
 → Toprak %62 → Meydan %57. Geçilemeyen bölüm yok.
 
+**İNSAN AYARI (2026-10-01, `Mahalle/HumanTuning.cs`) — yukarıdaki merdiven "kusursuz oyuncu"
+tavanıdır, oyuncu deneyimini göstermez.** Kullanıcı Park'ı özel misketsiz geçemedi. 120 bölüm
+"sıradan oyuncu" modeliyle ölçüldü (`MemleketPhysicsVerify.BatchHuman`, ~880 bin sim, 2,7 saat;
++1/+2 atış turları; `Logs/HumanAll*.tsv`, `HumanPlus2.tsv`). Sadece atış hakkı ve geçme hedefi
+değişti (83 bölüm), dizilim/fizik aynı. Kural (kullanıcı): YAVAŞ YAVAŞ zorlaşsın; her bölgede
+10 normal bölüm (tek deneme ≥ ~%25, bölge başı yüksek), 12. bölüm "zor ama Kesem'siz geçilir",
+6-9. bölümlerden biri "Kesem'siz neredeyse geçilmez" (`HumanTuning.KesemLevels`, sıradan oyuncu
+≤ %4, hedef tavanı aşmaz). Bölge ortalaması (normal, tek deneme): Apartman %92 · Okul %79 ·
+Park %60 · Toprak %58 · Meydan %53 · Sahil %62 · Köy %66 · Yayla %46 · Pazar %49 · Bayram %45.
+Model kötümser (çamur/buzda özellikle): Köy 12 %3, Bayram 12 %7, Yayla 12 %10 çıktı, hedefleri
+zaten çok düşük (ör. 13'te 3). `DifficultyOrderVerify.HumanChecks` tabloyu ve Kesem kuralını
+her `MahalleVerify.Run`'da doğrular. Bölüm değiştirirsen `-humanLevels <g>` ile yeniden ölç.
+
 **Çeşitlilik**: 1770 bölüm çifti, benzerlik sınırı 0.30'un altında **sıfır** çift.
 
 **Ekonomi**: kese 40 boncuk başlangıç. İlk geçiş 6 boncuk, yıldız başına 3,
@@ -175,7 +188,18 @@ ilgili Verify aracını çalıştır.
 Güçler 16/14/10/32, kaplamalar 0/40/80/110/140/180 + dört özel 400'er,
 tamir 130 (ömür 150 atış).
 Günün ödülü `25 + min(50, (seri-1)*7)` → 25'ten 75'e. Görevler 50/80/120.
-Tek seferlik toplam gelir ~1365 + günlük akış. **Bölüm ödülleri bilerek
+Tek seferlik toplam gelir ~1365 + günlük akış.
+**Devam teklifi + yardım boncuğu (2026-09-30, kullanıcı kararı, build 2):** atışlar
+bitip bölüm geçilemezse "+2 atış · 30 boncuk" (`LevelController.ContinueShots/Price`),
+kaldığı yerden sürer; kampanyada, günün bölümünde yok. Geçilmemiş bir bölümde toplam 5
+kayıpta bölüm başına bir kez 24 boncuk (`MahalleProfile.HelpAfterFails/HelpBeads`;
+2026-10-01: 4 kayıp/50'den 5 kayıp/24'e, 10 kayıpta +70 kaldırıldı). Kayıp bölüm başına TOPLAM sayılır
+(`failCounts`); geçilmiş bölümde sayılmaz. Kullanıcı 1.1'de reklam/satın alma gelince
+yardım boncuğunu kaldıracak.
+**Sonsuz boncuğu (build 3):** Sonsuz'da her 5 misket 1 boncuk, günde en fazla 100
+(`MahalleProfile.EndlessMarblesPerBead/EndlessDailyBeadCap`). Oyun ekranında sağda,
+sonuç ekranında kazanç yazar; menüde yazmaz (kullanıcı isteği).
+**Kese dolumu ve yıldız sandığı denendi, kullanıcı beğenmedi, kaldırıldı (2026-09-30).** **Bölüm ödülleri bilerek
 artırılmadı**: kampanya gelirini şişirmek boncuğu anlamsızlaştırır ve 1.1'deki
 satın almaya satacak bir şey bırakmaz.
 
@@ -270,13 +294,13 @@ demesini bekle. Bir günde üç kez boşa denendi.
 sayısal kuralları ölçer. Görsel değişiklikleri kullanıcı telefonda görmeden
 "tamam" deme. Claude oyunu çalıştıramaz, ekran görüntüsü alamaz.
 
-## AÇIK TEST BAYRAKLARI — YAYINDAN ÖNCE KAPAT
+## TEST BAYRAKLARI — 2026-09-30'DA KAPATILDI (dal `yayin/1.0`)
 
 `Assets/Scripts/Mahalle/MahalleProfile.cs`:
 
 ```csharp
-public static readonly bool TestUnlockAllLevels = true;  // → false
-public static readonly bool TestInfiniteBeads   = true;  // → false
+public static readonly bool TestUnlockAllLevels = false;  // telefonda denemek için geçici true
+public static readonly bool TestInfiniteBeads   = false;
 ```
 
 İkisi de açıkken oyunun altında turuncu "TEST" şeridi var ve `MahalleVerify`
@@ -328,8 +352,10 @@ iPhone uygulaması olarak açılır. Yerel iPad (4 yön, yatay düzen) sonraya. 
   `SekmeGeri`, `SekmeHarita`, `SekmeKese`, `SekmeGrafik`, `SekmeListe` —
   512×512, şeffaf, **beyaz çizgi** (kod renklendiriyor). Gelene kadar kodla
   çizilen şekiller çalışıyor.
-- Bundle ID yayında `com.gulacti.misko` olacak; **şimdi değiştirme**, kayıtları
-  sıfırlar.
+- ~~Bundle ID~~ 2026-09-30: `com.gulacti.misko` + Team `69W6P52PA2`, `BuildTools.cs`'te.
+  **MISKETR → Build iOS Xcode Project** derlerken ProjectSettings'e yazar (batch ile
+  ProjectSettings değiştirmek ortam tarafından engellendi). Eski test uygulaması
+  (`com.gulacti.misketr`) telefonda ayrı kalır.
 - Android: Google Play kişisel hesapta 12 test kullanıcısı × 14 gün kesintisiz
   şartı var, Apple'dan uzun sürer. Önce iOS, Android sonra.
 
@@ -499,10 +525,10 @@ Eğimli bölümde ekranın üstünde EĞİM rozeti (ok yönü); zemindeki oklar 
 - Batchmode ölçümleri uzun sürer (60 bölüm ~1-3 saat): `nohup … &` ile
   başlat, log'u izle. Aynı projede ikinci Unity açılamaz.
 
-## iCLOUD KAYDI + GAME CENTER (2026-09-24, KAPALI — ücretli hesap bekliyor)
+## iCLOUD KAYDI + GAME CENTER (2026-09-24; 2026-09-30'da AÇILDI, TestFlight'ta denenecek)
 
 `Scripts/Mahalle/MisketrCloud.cs` + `Plugins/iOS/MisketrCloud.mm`. Tek anahtar:
-`MisketrCloud.Enabled` (şimdi **false**). Ücretsiz Apple hesabıyla bu yetkiler varken
+`MisketrCloud.Enabled` (şimdi **true**; TestFlight'ta sorun çıkarsa false yap). Ücretsiz Apple hesabıyla bu yetkiler varken
 Xcode imzalayamaz; false iken oyun bugünkü gibi derlenir, hiçbir çağrı yapılmaz.
 
 - **iCloud:** kayıt JSON'u NSUbiquitousKeyValueStore'a da yazılır. `MahalleSave.saveCount`

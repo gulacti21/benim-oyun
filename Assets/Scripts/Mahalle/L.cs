@@ -203,8 +203,8 @@ public static class L
         // ---- Görevler ----
         {"Mahallenin sana işi var", "The block has jobs for you"},
         {"Oyna, hedefleri tamamla, ödülünü buradan al.", "Play, reach the goals, collect your reward here."},
-        {"Üç kez bölüm kazan", "Win three levels"}, {"Toplam 20 misket çıkar", "Knock out 20 marbles in total"},
-        {"Üç bölümde üç yıldız al", "Get three stars in three levels"},
+        {"10 bölüm kazan", "Win 10 levels"}, {"Toplam 150 misket çıkar", "Knock out 150 marbles in total"},
+        {"8 bölümde üç yıldız al", "Get three stars in 8 levels"},
         {"{0} / {1}    +{2} BONCUK", "{0} / {1}    +{2} BEADS"},
         {"ALINDI", "CLAIMED"}, {"ÖDÜLÜ AL", "CLAIM"}, {"SÜRÜYOR", "IN PROGRESS"}, {"USTALIK ROZETLERİ", "MASTERY BADGES"},
 
@@ -238,6 +238,31 @@ public static class L
         {"MAHALLE TAMAMLANDI · {0} BONCUK BONUS", "AREA COMPLETE · {0} BONUS BEADS"},
         {"Mahalle misketi zaten kesende", "The area marble is already in your pouch"}, {"KOLEKSİYON ÖDÜLÜ", "COLLECTION REWARD"},
         {"Sonraki bölümü açmak için {0} yıldız gerekiyor.", "You need {0} stars to open the next level."},
+        // ---- Oyun ekranı başlığı ve hedef (2026-09-30: İngilizcede Türkçe kalıyordu) ----
+        {"BÖLÜM {0}", "LEVEL {0}"},
+        {"En az {0} misketi çemberden çıkar", "Knock at least {0} marbles out of the ring"},
+        {"Bütün misketleri çemberin dışına çıkar", "Knock every marble out of the ring"},
+        {"Her misket +{0} saniye", "Each marble +{0} seconds"},
+        {"Atıcıyı taşımak için çizgiye dokun.", "Tap the line to move your shooter."},
+        {"Süre yarışı", "Race the clock"},
+        {"Çok yakında", "Coming soon"},
+        // ---- Zorunlu güncelleme ----
+        {"YENİ SÜRÜM VAR", "NEW VERSION AVAILABLE"}, {"GÜNCELLE", "UPDATE"},
+        {"Misko {0} yayında. Oynamaya devam etmek için oyunu güncelle.", "Misko {0} is out. Update the game to keep playing."},
+        // ---- Sonsuz boncuğu ----
+        {"+{0} BONCUK · BUGÜN {1}/{2}", "+{0} BEADS · TODAY {1}/{2}"},
+        {"Bugünlük boncuk doldu, yarın yine gel.", "Today's beads are maxed out. Come back tomorrow."},
+        {"Her {0} misket 1 boncuk kazandırır.", "Every {0} marbles earn 1 bead."},
+        {"{0} misket = 1 boncuk", "{0} marbles = 1 bead"},
+        // ---- Devam teklifi ve yardım boncuğu ----
+        {"ATIŞLARIN BİTTİ", "OUT OF SHOTS"},
+        {"Geçmek için {0} misket gerekiyor.", "You need {0} marbles to pass."},
+        {"+{0} ATIŞ · {1} BONCUK", "+{0} SHOTS · {1} BEADS"},
+        {"Kesende {0} boncuk var.", "You have {0} beads in your pouch."},
+        {"Kaldığın yerden devam edersin, çıkardığın misketler sayılır.", "You continue where you left off; knocked-out marbles still count."},
+        {"Yeterli boncuğun yok.", "You don't have enough beads."},
+        {"Zorlandığını gördük: +{0} BONCUK hediye!", "Tough one! Here are {0} free BEADS!"},
+        {"Atışların bitince ek atış alabilirsin.", "When you run out of shots, you can buy extra ones."},
         {"Yeni rekorlar ve görevler daha fazla boncuk kazandırır.", "New records and tasks earn more beads."},
         {"İpucu: Alt çizgide yer değiştirip kümeye yandan vur.", "Tip: move along the bottom line and hit the cluster from the side."},
         {"SONRAKİ BÖLÜM", "NEXT LEVEL"}, {"REKORUNU GELİŞTİR", "BEAT YOUR RECORD"}, {"MAHALLE HARİTASI", "AREA MAP"},

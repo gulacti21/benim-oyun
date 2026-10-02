@@ -31,7 +31,8 @@ public static class MemleketLayoutVerify
             if (l.marbles == null) continue;
             Check(l.shape == ArenaShape.Circle && l.arenaSize >= 3f && l.arenaSize <= 4f, n + ": circle 3-4");
             // Atış hakkı ölçümle seçildi (Faz 6): 3-7; bölgenin ilk üç öğretme bölümünde 2 de olabilir.
-            Check(l.shotCount >= (i % 12 <= 2 ? 2 : 3) && l.shotCount <= 7, n + ": shots 3-7 (teaching 2-7)");
+            // Üst sınır 10: Bayram Yeri "bol misket" bölgesi (2026-10-01 kullanıcı kararı, HumanTuning).
+            Check(l.shotCount >= (i % 12 <= 2 ? 2 : 3) && l.shotCount <= 10, n + ": shots 3-10 (teaching 2-10)");
             for (int a = 0; a < l.marbles.Length; a++)
             {
                 var p = new Vector2(l.marbles[a].x, l.marbles[a].z);

@@ -53,6 +53,12 @@ public class MahalleSave
     // iCLOUD: her kayıtta bir artar. İki kayıttan sayısı büyük olan daha yenidir
     // (yeni telefon / yeniden kurulum buluttakini alır). Sıfırlamada sayı korunur.
     public int saveCount;
+    // YARDIM BONCUĞU: bölüm başına bir kez verildi mi ve toplam kayıp sayısı.
+    public bool[] helpGiven = new bool[0];
+    public int[] failCounts = new int[0];   // bölüm başına toplam kayıp (geçilmemiş bölümlerde)
+    // SONSUZ BONCUĞU: bugün Sonsuz'dan kazanılan boncuk (DailyLevel.DayIndex ile gün değişince sıfırlanır).
+    public int endlessBeadDay = -9999;
+    public int endlessBeadsToday;
 }
 
 [Serializable]
@@ -70,6 +76,7 @@ public struct RoundReward
     public bool newBadge;
     public int districtBonus;
     public string newSkin;
+    public int helpBeads;
 }
 
 public static class MahalleProfile
@@ -171,6 +178,10 @@ public static class MahalleProfile
             Array.Resize(ref mp.districtPlays, Maps.DistrictsPerMap);
         }
         value.lastMap = Mathf.Clamp(value.lastMap, 0, Maps.Count - 1);
+        if (value.helpGiven == null) value.helpGiven = new bool[0];
+        Array.Resize(ref value.helpGiven, Maps.TotalLevels);
+        if (value.failCounts == null) value.failCounts = new int[0];
+        Array.Resize(ref value.failCounts, Maps.TotalLevels);
         for(int i=0;i<value.marbleLife.Length;i++)value.marbleLife[i]=Mathf.Clamp(value.marbleLife[i],0,SpecialMarbles.MaxLife);
         value.skins[0] = true;
         value.beads = Mathf.Max(0, value.beads);
@@ -246,14 +257,14 @@ public static class MahalleProfile
     // YAYINDAN ONCE false YAPILACAK. Acikken oyunun ustunde "TEST" yazar
     // ve MISKETR/Verify Mahalle Systems yuksek sesle uyarir.
     // ---------------------------------------------------------------
-    public static readonly bool TestUnlockAllLevels = true;
+    public static readonly bool TestUnlockAllLevels = false;   // 2026-09-30: yayın için kapatıldı
 
     // Telefonda deneme yaparken boncuk biriktirmekle ugrasilmasin diye:
     // acikken kese hep dolu gorunur ve harcamalar keseden dusmez.
     // TestUnlockAllLevels ile AYNI anahtara bagli degil ama ayni kural
     // gecerli: YAYINDAN ONCE false YAPILACAK. Acikken oyunun altinda
     // "TEST" serididir ve MahalleVerify yuksek sesle uyarir.
-    public static readonly bool TestInfiniteBeads = true;
+    public static readonly bool TestInfiniteBeads = false;     // 2026-09-30: yayın için kapatıldı
 
     // Test kesesi. Gercek bir sayi, cunku arayuzun her yerinde boncuk
     // sayisi yaziliyor; "sonsuz" diye bir deger koyarsak metinler bozulur.
@@ -514,13 +525,41 @@ public static class MahalleProfile
         Save(); return reward;
     }
     // SONSUZ ÇEMBER: sadece rekor tutulur, boncuk yok (kampanyanın ekonomisini bozmasın).
+    // SONSUZ BONCUĞU (2026-09-30, kullanıcı kararı): tıkanan oyuncu boncuk kasabilsin diye
+    // Sonsuz'da her EndlessMarblesPerBead misket 1 boncuk, günde en fazla EndlessDailyBeadCap.
+    // Günlük tavan, "tekrar oynama" farm açığının (saatte ~700) geri gelmesini engeller.
+    public const int EndlessMarblesPerBead = 5, EndlessDailyBeadCap = 100;
+    public static int EndlessBeadsToday => Data.endlessBeadDay == DailyLevel.DayIndex ? Data.endlessBeadsToday : 0;
+    public static int LastEndlessBeads { get; private set; }
+
     public static bool FinishEndless(int score)
     {
+        int day = DailyLevel.DayIndex;
+        if (Data.endlessBeadDay != day) { Data.endlessBeadDay = day; Data.endlessBeadsToday = 0; }
+        int earn = Mathf.Clamp(Mathf.Max(0, score) / EndlessMarblesPerBead, 0, EndlessDailyBeadCap - Data.endlessBeadsToday);
+        Data.endlessBeadsToday += earn;
+        RefundBeads(earn);
+        LastEndlessBeads = earn;
         Data.knocked += Mathf.Max(0, score);
         bool record = score > Data.endlessBest;
         if (record) Data.endlessBest = score;
         Save(); return record;
     }
+    // YARDIM BONCUĞU (kullanıcı kararı; 1.1'de reklam/satın alma gelince kaldırılacak):
+    // henüz geçilmemiş bir bölümde toplam HelpAfterFails kayıpta bölüm başına bir kez HelpBeads
+    // boncuk (2026-10-01: 4 kayıp/50 -> 5 kayıp/24; 10 kayıpta +70 kaldırıldı). Kayıplar bölüm başına TOPLAM
+    // sayılır (arada başka bölüm oynamak sıfırlamaz). Geçilmiş bölümde hiç sayılmaz, farm olmaz.
+    public const int HelpAfterFails = 5, HelpBeads = 24;
+    private static void TrackHelp(int levelIndex, int stars, ref RoundReward reward)
+    {
+        if (stars >= Required(levelIndex) || Stars(levelIndex) >= Required(levelIndex)) return;
+        int fails = ++Data.failCounts[levelIndex];
+        if (fails < HelpAfterFails || Data.helpGiven[levelIndex]) return;
+        Data.helpGiven[levelIndex] = true;
+        reward.helpBeads = HelpBeads;
+        RefundBeads(HelpBeads);
+    }
+
     public static RoundReward Finish(int levelIndex, int stars, int score)
     {
         var reward = new RoundReward();
@@ -531,6 +570,7 @@ public static class MahalleProfile
         Data.knocked += Mathf.Max(0, score);
         PlayArray(map)[localDistrict]++;
         stars = Mathf.Clamp(stars, 0, 3);
+        TrackHelp(levelIndex, stars, ref reward);
         if (stars > 0)
         {
             int old = Stars(levelIndex);
@@ -567,7 +607,7 @@ public static class MahalleProfile
     }
     public static readonly int[] MissionTargets = { 10, 150, 8 };
     public static readonly int[] MissionRewards = { 50, 80, 120 };
-    public static readonly string[] MissionNames = { "Üç kez bölüm kazan", "Toplam 20 misket çıkar", "Üç bölümde üç yıldız al" };
+    public static readonly string[] MissionNames = { "10 bölüm kazan", "Toplam 150 misket çıkar", "8 bölümde üç yıldız al" };
     public static bool Claim(int id)
     {
         if (id < 0 || id >= 3 || Data.claimed[id] || MissionProgress(id) < MissionTargets[id]) return false;

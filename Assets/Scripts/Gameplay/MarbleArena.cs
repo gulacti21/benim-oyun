@@ -288,10 +288,40 @@ public class MarbleArena : MonoBehaviour
         halvesOut = 0;
     }
 
-    // SONSUZ ÇEMBER: sahayı sıfırlamadan yeni misket ekler. Puan ve çıkanlar korunur.
+    // SONSUZ ÇEMBER: yeni dizilim gelince önceden çıkmış (dışarıda duran) misketler küçülüp
+    // kaybolur, saha dağınık kalmasın (kullanıcı isteği 2026-09-30). Puan etkilenmez.
+    private void ClearScored()
+    {
+        for (int i = spawnedMarbles.Count - 1; i >= 0; i--)
+        {
+            var m = spawnedMarbles[i];
+            if (m == null) { spawnedMarbles.RemoveAt(i); continue; }
+            if (!m.IsScored) continue;
+            spawnedMarbles.RemoveAt(i);
+            if (Application.isPlaying) StartCoroutine(ShrinkAway(m.gameObject));
+            else DestroyImmediate(m.gameObject);
+        }
+    }
+    private System.Collections.IEnumerator ShrinkAway(GameObject go)
+    {
+        var body = go.GetComponent<Rigidbody>();
+        if (body != null) { body.isKinematic = true; }
+        foreach (var c in go.GetComponentsInChildren<Collider>()) c.enabled = false;
+        Vector3 from = go.transform.localScale;
+        for (float t = 0f; t < .3f && go != null; t += Time.deltaTime)
+        {
+            float k = 1f - t / .3f;
+            go.transform.localScale = from * (k * k);
+            yield return null;
+        }
+        if (go != null) Destroy(go);
+    }
+
+    // SONSUZ ÇEMBER: sahayı sıfırlamadan yeni misket ekler. Puan korunur.
     public void AddMarbles(MarbleSpot[] spots)
     {
         if (spots == null || targetMarblePrefab == null) return;
+        ClearScored();
         Vector3 center = transform.position;
         foreach (var spot in spots)
             SpawnMarbleAt(new Vector3(center.x + spot.x, spawnHeight, center.z + spot.z), "TargetMarble_e" + spawnedMarbles.Count);

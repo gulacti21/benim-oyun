@@ -49,6 +49,8 @@ public static class MemleketCampaign
                 cached.levels[i] = level;
             }
             for (int i = 0; i < Count; i++) MemleketBook.Apply(cached.levels[i], i);
+            // İnsan ayarı: atış hakkı ve geçme hedefi sıradan oyuncuya göre (HumanTuning, global numara).
+            for (int i = 0; i < Count; i++) HumanTuning.Apply(cached.levels[i], Maps.PerMap + i);
             return cached;
         }
     }

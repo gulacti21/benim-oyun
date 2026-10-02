@@ -6,9 +6,13 @@ using UnityEngine;
 
 public static class BuildTools
 {
-    private const string BundleIdentifier = "com.gulacti.misketr";
-    // Ana ekrandaki ad. Mağaza adı "Misko: Misket Oyunu" (App Store Connect). Bundle ID yayında
-    // com.gulacti.misko olacak; şimdi değiştirme (kayıtlar sıfırlanır).
+    // Yayın kimliği (2026-09-30). Eski test kimliği com.gulacti.misketr idi; değişince telefondaki
+    // test uygulaması ayrı kalır, yeni uygulama sıfırdan başlar.
+    private const string BundleIdentifier = "com.gulacti.misko";
+    private const string TeamId = "69W6P52PA2";
+    private const string Version = "1.0";
+    private const string BuildNumber = "7";
+    // Ana ekrandaki ad. Mağaza adı "Misko: Misket Oyunu" (App Store Connect).
     private const string ProductName = "Misko";
     private const string CompanyName = "Gulacti";
 
@@ -34,6 +38,10 @@ public static class BuildTools
 
         PlayerSettings.iOS.targetOSVersionString = "15.0";
         PlayerSettings.iOS.appleEnableAutomaticSigning = true;
+        PlayerSettings.iOS.appleDeveloperTeamID = TeamId;
+        // Mağaza sürümü. Her yeni TestFlight yüklemesinde BuildNumber'ı bir artır (aynı numara reddedilir).
+        PlayerSettings.bundleVersion = Version;
+        PlayerSettings.iOS.buildNumber = BuildNumber;
         // 1.0 sadece iPhone (2026-09-25): Xcode 26'da UIRequiresFullScreen geçmiyor, iPad'i destekleyen
         // portre uygulama ITMS-90474 ile yüklenemiyor. iPad'de iPhone uygulaması olarak açılır.
         PlayerSettings.iOS.targetDevice = iOSTargetDevice.iPhoneOnly;
