@@ -71,29 +71,29 @@ public static class HumanTuning
         ( 63, 3, 3, 'N' ),   // Sahil 04 · sıradan oyuncu %27 -> %78
         ( 68, 5, 4, 'N' ),   // Sahil 09 · sıradan oyuncu %20 -> %48
         ( 70, 4, 4, 'N' ),   // Sahil 11 · sıradan oyuncu %3 -> %38
-        ( 71, 7, 4, 'U' ),   // Sahil 12 · sıradan oyuncu -> %5 · kullanıcı ayarı 2026-10-01
+        ( 71, 6, 3, 'U' ),   // Sahil 12 · sıradan oyuncu -> %27 · ortası 2026-10-02
         ( 72, 3, 3, 'N' ),   // Köy 01 · sıradan oyuncu %28 -> %82
         ( 73, 4, 3, 'N' ),   // Köy 02 · sıradan oyuncu %25 -> %80
-        ( 76, 3, 3, 'N' ),   // Köy 05 · sıradan oyuncu -> %13 · kullanıcı ayarı 2026-10-01
+        ( 76, 4, 3, 'N' ),   // Köy 05 · sıradan oyuncu -> %60 · ortası 2026-10-02
         ( 78, 4, 4, 'N' ),   // Köy 07 · sıradan oyuncu %32 -> %72
         ( 79, 4, 5, 'K' ),   // Köy 08 · sıradan oyuncu %27 -> %2
         ( 81, 4, 5, 'N' ),   // Köy 10 · sıradan oyuncu -> %18 · kullanıcı ayarı 2026-10-01
         ( 82, 5, 3, 'N' ),   // Köy 11 · sıradan oyuncu %0 -> %47
         ( 83, 7, 3, 'U' ),   // Köy 12 · sıradan oyuncu %0 -> %3
         ( 84, 2, 2, 'N' ),   // Yayla 01 · sıradan oyuncu %27 -> %85
-        ( 86, 3, 4, 'N' ),   // Yayla 03 · sıradan oyuncu -> %20 · kullanıcı ayarı 2026-10-01
+        ( 86, 2, 3, 'N' ),   // Yayla 03 · sıradan oyuncu -> %25 · ortası 2026-10-02
         ( 87, 4, 3, 'N' ),   // Yayla 04 · sıradan oyuncu %8 -> %40
         ( 88, 5, 5, 'N' ),   // Yayla 05 · sıradan oyuncu %85 -> %42
-        ( 90, 4, 4, 'N' ),   // Yayla 07 · sıradan oyuncu -> %17 · kullanıcı ayarı 2026-10-01
-        ( 92, 5, 4, 'N' ),   // Yayla 09 · sıradan oyuncu -> %2 · kullanıcı ayarı 2026-10-01
-        ( 95, 9, 5, 'U' ),   // Yayla 12 · sıradan oyuncu -> %3 · kullanıcı ayarı 2026-10-01
+        ( 90, 5, 5, 'N' ),   // Yayla 07 · sıradan oyuncu -> %22 · ortası 2026-10-02
+        ( 92, 5, 3, 'N' ),   // Yayla 09 · sıradan oyuncu -> %35 · ortası 2026-10-02
+        ( 95, 9, 3, 'U' ),   // Yayla 12 · sıradan oyuncu -> %22 · ortası 2026-10-02
         ( 97, 3, 3, 'N' ),   // Pazar 02 · sıradan oyuncu %70 -> %62
         ( 99, 7, 4, 'N' ),   // Pazar 04 · sıradan oyuncu %23 -> %57
         ( 101, 5, 4, 'N' ),   // Pazar 06 · sıradan oyuncu %75 -> %48
         ( 102, 3, 4, 'K' ),   // Pazar 07 · sıradan oyuncu %17 -> %3
         ( 103, 4, 3, 'N' ),   // Pazar 08 · sıradan oyuncu %20 -> %50
         ( 106, 9, 9, 'N' ),   // Pazar 11 · sıradan oyuncu -> %27 · kullanıcı ayarı 2026-10-01
-        ( 107, 6, 5, 'U' ),   // Pazar 12 · sıradan oyuncu -> %5 · kullanıcı ayarı 2026-10-01
+        ( 107, 6, 4, 'U' ),   // Pazar 12 · sıradan oyuncu -> %20 · ortası 2026-10-02
         ( 109, 8, 8, 'N' ),   // Bayram 02 · sıradan oyuncu -> %22 · kullanıcı ayarı 2026-10-01
         ( 110, 7, 9, 'N' ),   // Bayram 03 · sıradan oyuncu -> %28 · kullanıcı ayarı 2026-10-01
         ( 111, 8, 7, 'N' ),   // Bayram 04 · sıradan oyuncu -> %28 · kullanıcı ayarı 2026-10-01
@@ -102,14 +102,14 @@ public static class HumanTuning
         ( 117, 6, 4, 'N' ),   // Bayram 10 · sıradan oyuncu -> %35 · kullanıcı ayarı 2026-10-01
         ( 118, 10, 5, 'N' ),   // Bayram 11 · sıradan oyuncu -> %25 · kullanıcı ayarı 2026-10-01
         ( 119, 8, 7, 'U' ),   // Bayram 12 · sıradan oyuncu -> %12 · kullanıcı ayarı 2026-10-01
-        ( 67, 5, 4, 'N' ),   // Sahil 08 · sıradan oyuncu -> %7 · kullanıcı ayarı 2026-10-01
+        ( 67, 5, 3, 'N' ),   // Sahil 08 · sıradan oyuncu -> %70 · ortası 2026-10-02
         ( 77, 7, 4, 'N' ),   // Köy 06 · sıradan oyuncu -> %40 · kullanıcı ayarı 2026-10-01
         ( 80, 5, 4, 'N' ),   // Köy 09 · sıradan oyuncu -> %40 · kullanıcı ayarı 2026-10-01
         ( 91, 5, 5, 'N' ),   // Yayla 08 · sıradan oyuncu -> %28 · kullanıcı ayarı 2026-10-01
         ( 93, 4, 4, 'N' ),   // Yayla 10 · sıradan oyuncu -> %32 · kullanıcı ayarı 2026-10-01
-        ( 94, 5, 5, 'N' ),   // Yayla 11 · sıradan oyuncu -> %10 · kullanıcı ayarı 2026-10-01
+        ( 94, 4, 4, 'N' ),   // Yayla 11 · sıradan oyuncu -> %20 · ortası 2026-10-02
         ( 98, 4, 4, 'N' ),   // Pazar 03 · sıradan oyuncu -> %38 · kullanıcı ayarı 2026-10-01
-        ( 105, 4, 5, 'N' ),   // Pazar 10 · sıradan oyuncu -> %12 · kullanıcı ayarı 2026-10-01
+        ( 105, 3, 4, 'N' ),   // Pazar 10 · sıradan oyuncu -> %15 · ortası 2026-10-02
         ( 108, 7, 8, 'N' ),   // Bayram 01 · sıradan oyuncu -> %28 · kullanıcı ayarı 2026-10-01
         ( 112, 6, 9, 'N' ),   // Bayram 05 · sıradan oyuncu -> %33 · kullanıcı ayarı 2026-10-01
         ( 115, 8, 8, 'K' ),   // Bayram 08 · sıradan oyuncu -> %3 · kullanıcı ayarı 2026-10-01
