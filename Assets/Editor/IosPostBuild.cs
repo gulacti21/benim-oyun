@@ -34,6 +34,9 @@ public static class IosPostBuild
         var plist = new PlistDocument();
         plist.ReadFromFile(plistPath);
         plist.root.SetBoolean("ITSAppUsesNonExemptEncryption", false);
+        // 1.1 ATT: ödüllü reklam için izin penceresinin açıklaması (MiskoAds/MiskoATT.mm).
+        plist.root.SetString("NSUserTrackingUsageDescription",
+            "Bu izin, izlemeyi seçtiğin ödüllü reklamların sana daha uygun olması için kullanılır. İzin vermesen de oyun ve reklamlar aynı şekilde çalışır.");
         plist.WriteToFile(plistPath);
 
         // iCloud (anahtar-değer deposu) + Game Center yetkileri. SADECE ücretli hesapla:

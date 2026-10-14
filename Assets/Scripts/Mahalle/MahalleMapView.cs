@@ -161,7 +161,9 @@ public static class MahalleMapView
             int index = district * Campaign.PerDistrict + local;
             bool unlocked = MahalleProfile.Unlocked(index);
             int stars = MahalleProfile.Stars(index);
-            bool current = unlocked && index == MahalleProfile.NextLevelIn(Maps.MapOfDistrict(district));
+            // Harita bitince NextLevelIn son bölümü döndürür; geçilmişse "SIRADAKİ" değil yıldızları görünsün.
+            bool current = unlocked && index == MahalleProfile.NextLevelIn(Maps.MapOfDistrict(district))
+                           && stars < MahalleProfile.Required(index);
             bool mastery = local == 11;
             bool left = StopX[local] < 178f;
             string levelName = Maps.Get(index).levelName;

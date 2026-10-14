@@ -10,8 +10,8 @@ public static class BuildTools
     // test uygulaması ayrı kalır, yeni uygulama sıfırdan başlar.
     private const string BundleIdentifier = "com.gulacti.misko";
     private const string TeamId = "69W6P52PA2";
-    private const string Version = "1.0";
-    private const string BuildNumber = "7";
+    private const string Version = "1.1";
+    private const string BuildNumber = "8";
     // Ana ekrandaki ad. Mağaza adı "Misko: Misket Oyunu" (App Store Connect).
     private const string ProductName = "Misko";
     private const string CompanyName = "Gulacti";
