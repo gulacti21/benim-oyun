@@ -937,7 +937,10 @@ public class MahalleUI : MonoBehaviour
 
     private void Collection()
     {
-        var content=HomeScroll(2840);
+        const float shift=930;    // 1.1: koleksiyonun üstünde boncuk kesesi (bakiye sayfa başlığında zaten var)
+        var content=HomeScroll(2840+shift);
+        BeadShopBody(content,48,186,984,ShowHome);
+        var col=Rect("Koleksiyon",content);Place(col,0,shift,1080,2840);content=col;
         Text(content,"Misket koleksiyonun",48,182,984,65,47,Ink);
         Text(content,"Klasik misketler aşınmaz. Özellikli misketler aşağıda.",48,256,984,76,30,Muted);
         for(int i=0;i<SpecialMarbles.FirstSkin;i++) CollectionCard(content,i,363+(i/2)*302);
@@ -1133,9 +1136,6 @@ public class MahalleUI : MonoBehaviour
         Panel(bilgi.transform,"Hedef ayırıcı",40,132,904,2,new Color(Krem.r,Krem.g,Krem.b,.16f)).radius=1;
         Art(bilgi.transform,"Hedef noktası",MahalleGraphic.Shape.Circle,44,158,18,18,Amber).radius=9;
         Text(bilgi.transform,hedef,76,144,840,48,25,new Color(Krem.r,Krem.g,Krem.b,.92f));
-        // SONSUZ BONCUĞU: aynı satırın sağ ucunda, amber.
-        if(GameSession.EndlessMode)
-            Text(bilgi.transform,L.F("{0} misket = 1 boncuk",MahalleProfile.EndlessMarblesPerBead),480,144,460,48,25,Amber,TextAlignmentOptions.Right);
 
         // BOLUM IMZASI (sadece test yapisi acikken). Editor ile telefon ayni
         // bolumu mu oynuyor, onu karsilastirmak icin.
@@ -1460,7 +1460,10 @@ public class MahalleUI : MonoBehaviour
         if(passed&&MahalleProfile.TestUnlockAllLevels&&!GameSession.DailyMode&&!GameSession.EndlessMode
            &&Maps.Local(controller.LevelIndex)==Maps.PerMap-1&&Maps.MapOf(controller.LevelIndex)+1<Maps.Count)
             pendingMapIntro=Maps.MapOf(controller.LevelIndex)+1;
-        var box=Modal("Bölüm sonucu",won&&passed&&controller.HasNextLevel?1110:1010);
+        bool next=passed&&controller.HasNextLevel;
+        // 1.1: en alta "reklam izle / boncuk al" satırı (OfferRow), pencere ona göre uzar.
+        float offerY=won?(next?995:898)+86+20:(next?898+76:791+86)+20;
+        var box=Modal("Bölüm sonucu",offerY+86+34);
         Text(box,won?(controller.LastReward.newBadge||(controller.Level.mastery&&passed)?"MAHALLE USTASI!":"GÜZEL ATIŞLAR!"):"BİR DAHA DENE",30,34,924,77,51,Ink,TextAlignmentOptions.Center);
         Text(box,controller.Level.levelName,30,114,924,47,31,Muted,TextAlignmentOptions.Center);
         for(int i=0;i<3;i++){var star=Art(box,"Sonuç yıldızı "+i,MahalleGraphic.Shape.Star,259+i*163,i==1?184:201,i==1?142:115,i==1?142:115,Line);if(i<controller.Stars&&won)StartCoroutine(RevealStar(star,i));}
@@ -1483,6 +1486,7 @@ public class MahalleUI : MonoBehaviour
             StartCoroutine(AskReview());
         }
         if(won)LabelButton(box,"PAYLAŞ",36,passed&&controller.HasNextLevel?995:898,912,86,Gold,Ink,ShareCard,30);
+        OfferRow(box,offerY,Results);
     }
     // ---------------------------------------------------------------
     // PAYLAŞ KARTI
@@ -1792,22 +1796,18 @@ public class MahalleUI : MonoBehaviour
     private void EndlessResults()
     {
         bool rekor=controller.LastEndlessRecord;
-        var box=Modal("Sonsuz sonucu",990);
+        var box=Modal("Sonsuz sonucu",1110);
         Text(box,rekor?"YENİ REKOR!":"SÜRE BİTTİ",30,34,924,77,rekor?52:48,Ink,TextAlignmentOptions.Center);
         Text(box,L.F("KADEME {0}",controller.EndlessStage),30,114,924,47,29,Muted,TextAlignmentOptions.Center);
         Art(box,"Büyük yıldız",MahalleGraphic.Shape.Star,412,180,160,160,rekor?Gold:Line);
         Text(box,controller.EndlessScore.ToString(),30,346,924,120,92,Ink,TextAlignmentOptions.Center);
         Text(box,"misket çıkardın",30,462,924,50,30,Muted,TextAlignmentOptions.Center);
         Text(box,L.F("REKOR: {0}",MahalleProfile.Data.endlessBest),30,516,924,50,30,rekor?Gold:Muted,TextAlignmentOptions.Center);
-        // SONSUZ BONCUĞU: kazanılan boncuk ya da günlük tavan uyarısı.
-        int kazanc=MahalleProfile.LastEndlessBeads,bugun=MahalleProfile.EndlessBeadsToday,tavan=MahalleProfile.EndlessDailyBeadCap;
-        string boncukYazi=kazanc>0?L.F("+{0} BONCUK · BUGÜN {1}/{2}",kazanc,bugun,tavan)
-                        :bugun>=tavan?L.T("Bugünlük boncuk doldu, yarın yine gel.")
-                        :L.F("Her {0} misket 1 boncuk kazandırır.",MahalleProfile.EndlessMarblesPerBead);
-        Text(box,boncukYazi,30,576,924,56,kazanc>0?36:28,kazanc>0?new Color(.72f,.45f,.08f):Muted,TextAlignmentOptions.Center);
+        Text(box,"Sonsuz Çember'de rekor için oynarsın.",30,576,924,56,28,Muted,TextAlignmentOptions.Center);
         LabelButton(box,"TEKRAR DENE",36,660,912,98,Ink,Cream,()=>{CloseModal();controller.RestartLevel();ShowGame();});
         LabelButton(box,"PAYLAŞ",36,774,912,90,Gold,Ink,ShareCard,32);
         LabelButton(box,"ANA MENÜ",36,880,912,86,new Color(.88f,.83f,.69f),Ink,LeaveEndless,30);
+        OfferRow(box,986,EndlessResults);
     }
     private void StartDaily()
     {
@@ -1833,7 +1833,7 @@ public class MahalleUI : MonoBehaviour
     {
         bool won=controller.State==LevelController.LevelState.Won;
         int beads=controller.LastReward.beads;
-        var box=Modal("Günün bölümü sonucu",won?1010:860);
+        var box=Modal("Günün bölümü sonucu",won?1120:970);
         Text(box,won?"GÜNÜN BÖLÜMÜ TAMAM!":"BİR DAHA DENE",30,34,924,77,won?48:51,Ink,TextAlignmentOptions.Center);
         Text(box,DailyLevel.DateLabel,30,114,924,47,31,Muted,TextAlignmentOptions.Center);
         for(int i=0;i<3;i++){var star=Art(box,"Sonuç yıldızı "+i,MahalleGraphic.Shape.Star,259+i*163,i==1?184:201,i==1?142:115,i==1?142:115,Line);if(i<controller.Stars&&won)StartCoroutine(RevealStar(star,i));}
@@ -1853,6 +1853,103 @@ public class MahalleUI : MonoBehaviour
         if(won){LabelButton(box,"PAYLAŞ",36,y,912,98,Gold,Ink,ShareCard,34);y+=122;}
         else y+=80;
         LabelButton(box,"ANA MENÜ",36,y,912,86,new Color(.88f,.83f,.69f),Ink,LeaveDaily,30);
+        OfferRow(box,y+106,DailyResults);
+    }
+    // ---------------------------------------------------------------
+    // 1.1 BONCUK: oyun sonu teklifi + boncuk penceresi (Monetization.cs)
+    // ---------------------------------------------------------------
+    private void OfferRow(RectTransform box,float y,Action back)
+    {
+        bool ad=Monetization.AdReady;
+        string adText=MahalleProfile.AdsLeftToday<=0?L.T("BUGÜNLÜK REKLAM BİTTİ")
+                     :ad?L.F("REKLAM İZLE · +{0}",Monetization.AdRewardBeads):L.T("REKLAM HAZIRLANIYOR");
+        LabelButton(box,adText,36,y,444,86,ad?Gold:new Color(.88f,.83f,.69f),ad?Ink:Muted,()=>WatchAd(back),25);
+        LabelButton(box,"BONCUK AL",504,y,444,86,new Color(.88f,.83f,.69f),Ink,()=>BeadShop(back),27);
+    }
+    private void WatchAd(Action refresh)
+    {
+        if(MahalleProfile.AdsLeftToday<=0){Toast("Bugünlük reklam hakkın bitti. Yarın yine gel.");return;}
+        if(!Monetization.AdReady){Toast("Reklam şu an hazır değil, biraz sonra dene.");return;}
+        Monetization.WatchAdForBeads(ok=>{
+            if(ok){Toast(L.F("+{0} BONCUK",Monetization.AdRewardBeads));MahalleFeedback.Tap();}
+            else Toast("Reklam tamamlanmadı, boncuk verilmedi.");
+            refresh?.Invoke();
+        });
+    }
+    private void BeadShop(Action back)
+    {
+        var box=Modal("Boncuk al",1210);
+        Text(box,"Boncuk Kesesi",36,30,600,72,48,Komur).fontStyle=FontStyles.Bold;
+        BalanceChip(box,948,40);
+        float h=BeadShopBody(box,36,150,912,()=>BeadShop(back));
+        LabelButton(box,"GERİ",36,150+h+16,912,90,new Color(.88f,.83f,.69f),Ink,()=>{if(back!=null)back();else CloseModal();},30);
+    }
+    // BONCUK KESESİ gövdesi (1.1). Sade/kurumsal düzen (kullanıcı, 2026-10-15): küçük harfli bölüm
+    // başlıkları, koyu yeşil ödüllü reklam kartı, App Store satın alma listesi gibi tek sütun paket satırları.
+    // Hem pencerede hem KESEM sekmesinde. Kapladığı yüksekliği döner.
+    private static readonly Color YesilRozet=new Color(.87f,.94f,.85f), YesilYazi=new Color(.18f,.49f,.31f);
+    private float BeadShopBody(RectTransform box,float x,float y,float w,Action refresh)
+    {
+        float y0=y;
+        bool ad=Monetization.AdReady;int left=MahalleProfile.AdsLeftToday,lim=Monetization.AdDailyLimit;
+        Color sonuk=new Color(Krem.r,Krem.g,Krem.b,.22f),kremYari=new Color(Krem.r,Krem.g,Krem.b,.72f);
+
+        var b1=Text(box,"ÜCRETSİZ BONCUK",x+4,y,w,36,23,Muted);b1.fontStyle=FontStyles.Bold;b1.characterSpacing=8;
+        y+=50;
+        float bw=196;
+        var adCard=Panel(box,"Reklam kartı",x,y,w,176,Orman);adCard.radius=32;adCard.shadow=6;
+        var play=Art(adCard.transform,"Oynat dairesi",MahalleGraphic.Shape.Circle,28,32,112,112,Amber);
+        Art(play.transform,"Oynat",MahalleGraphic.Shape.Play,30,28,56,56,Komur);
+        float tw=w-168-bw-48;
+        Text(adCard.transform,"Ödüllü reklam",168,26,tw,48,36,Krem).fontStyle=FontStyles.Bold;
+        Text(adCard.transform,L.F("İzle, {0} boncuk kazan",Monetization.AdRewardBeads),168,74,tw,38,26,kremYari);
+        for(int i=0;i<lim;i++)Art(adCard.transform,"Hak "+i,MahalleGraphic.Shape.Circle,168+i*22,126,14,14,i<left?Amber:sonuk);
+        Text(adCard.transform,left>0?L.F("Bugün {0}/{1}",left,lim):L.T("Yarın yenilenir"),168+lim*22+10,114,tw-lim*22-10,38,22,kremYari);
+        var izle=LabelButton(adCard.transform,left<=0?"YARIN":ad?"İZLE":"HAZIRLANIYOR",w-bw-28,48,bw,80,ad?Amber:sonuk,ad?Komur:Krem,()=>WatchAd(refresh),30);
+        ((MahalleGraphic)izle.targetGraphic).radius=40;
+        y+=176+48;
+
+        var b2=Text(box,"BONCUK PAKETLERİ",x+4,y,w,36,23,Muted);b2.fontStyle=FontStyles.Bold;b2.characterSpacing=8;
+        y+=50;
+        float rh=136,pw=210,tagW=196;
+        string[] etiket={null,L.F("%{0} avantajlı",33),L.T("En iyi değer")};
+        for(int i=0;i<Monetization.Packs.Length;i++)
+        {
+            var p=Monetization.Packs[i];var pack=p;
+            var row=Panel(box,p.label,x,y,w,rh,Krem);row.radius=28;row.shadow=6;
+            // Simge: paket büyüdükçe bir misket daha (sade, tek renk ailesi).
+            for(int k=i;k>=0;k--)Art(row.transform,"Boncuk "+k,MahalleGraphic.Shape.Marble,28+k*18,30+k*4,72-k*6,72-k*6,Campaign.SkinColors[0]);
+            float nx=140,nw=w-nx-pw-28-(etiket[i]!=null?tagW+20:0)-16;
+            Text(row.transform,p.label,nx,26,nw,44,32,Komur).fontStyle=FontStyles.Bold;
+            Text(row.transform,L.F("{0} boncuk",p.beads),nx,72,nw,38,26,Muted);
+            if(etiket[i]!=null)
+            {
+                var tg=Panel(row.transform,"Etiket",w-pw-28-tagW-20,(rh-40)/2,tagW,40,i==2?Orman:YesilRozet);tg.radius=20;
+                Text(tg.transform,etiket[i],0,0,tagW,40,21,i==2?Amber:YesilYazi,TextAlignmentOptions.Center).fontStyle=FontStyles.Bold;
+            }
+            var fiyat=LabelButton(row.transform,Monetization.PriceOf(p),w-pw-28,(rh-80)/2,pw,80,Komur,Krem,()=>BuyPack(pack,refresh),32);
+            ((MahalleGraphic)fiyat.targetGraphic).radius=40;
+            y+=rh+16;
+        }
+        y+=8;
+        Text(box,"Ödeme App Store hesabından alınır. Boncuklar sadece Misko'da kullanılır.\nBoncukları oynayarak da kazanabilirsin.",x,y,w,70,22,Muted,TextAlignmentOptions.Center);
+        return y+70-y0;
+    }
+    // Sağ kenarı 'right' olan koyu yeşil boncuk hapı: misket simgesi + bakiye.
+    private void BalanceChip(RectTransform parent,float right,float y)
+    {
+        string v=MahalleProfile.Beads.ToString();float cw=96+v.Length*26;
+        var chip=Panel(parent,"Bakiye",right-cw,y,cw,84,Orman);chip.radius=42;
+        Art(chip.transform,"Boncuk",MahalleGraphic.Shape.Marble,14,14,56,56,Campaign.SkinColors[0]);
+        Text(chip.transform,v,80,0,cw-92,84,38,Krem).fontStyle=FontStyles.Bold;
+    }
+    private void BuyPack(Monetization.Pack p,Action refresh)
+    {
+        if(!Monetization.StoreReady){Toast("Mağaza şu an kullanılamıyor, biraz sonra dene.");return;}
+        Monetization.Buy(p,(ok,why)=>{
+            if(ok){Toast(L.F("+{0} BONCUK · TEŞEKKÜRLER!",p.beads));MahalleFeedback.Tap();refresh?.Invoke();}
+            else if(!string.IsNullOrEmpty(why))Toast(why);
+        });
     }
     private IEnumerator AskReview()
     {

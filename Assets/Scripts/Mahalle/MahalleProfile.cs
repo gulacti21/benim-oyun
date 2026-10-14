@@ -59,6 +59,11 @@ public class MahalleSave
     // SONSUZ BONCUĞU: bugün Sonsuz'dan kazanılan boncuk (DailyLevel.DayIndex ile gün değişince sıfırlanır).
     public int endlessBeadDay = -9999;
     public int endlessBeadsToday;
+    // 1.1 REKLAM BONCUĞU: bugün izlenen ödüllü reklam sayısı (gün değişince sıfırlanır).
+    public int adDay = -9999;
+    public int adsToday;
+    // 1.1 SATIN ALMA: boncuğu verilmiş siparişler (aynı sipariş iki kez boncuk vermesin).
+    public string[] iapOrders = new string[0];
 }
 
 [Serializable]
@@ -524,22 +529,36 @@ public static class MahalleProfile
         }
         Save(); return reward;
     }
-    // SONSUZ ÇEMBER: sadece rekor tutulur, boncuk yok (kampanyanın ekonomisini bozmasın).
-    // SONSUZ BONCUĞU (2026-09-30, kullanıcı kararı): tıkanan oyuncu boncuk kasabilsin diye
-    // Sonsuz'da her EndlessMarblesPerBead misket 1 boncuk, günde en fazla EndlessDailyBeadCap.
-    // Günlük tavan, "tekrar oynama" farm açığının (saatte ~700) geri gelmesini engeller.
-    public const int EndlessMarblesPerBead = 5, EndlessDailyBeadCap = 100;
-    public static int EndlessBeadsToday => Data.endlessBeadDay == DailyLevel.DayIndex ? Data.endlessBeadsToday : 0;
-    public static int LastEndlessBeads { get; private set; }
+    // SONSUZ ÇEMBER: sadece rekor tutulur, boncuk yok. 1.0'da günde 100'e kadar boncuk
+    // veriyordu; 1.1'de boncuk reklam/satın almaya taşındı (kullanıcı kararı, 2026-10-14).
+    // Eski kayıtlardaki endlessBead* alanları sadece uyumluluk için duruyor.
+    public static int LastEndlessBeads => 0;
+
+    // REKLAM BONCUĞU (1.1): günde Monetization.AdDailyLimit reklam.
+    public static int AdsLeftToday => Mathf.Max(0, Monetization.AdDailyLimit - (Data.adDay == DailyLevel.DayIndex ? Data.adsToday : 0));
+    public static void GrantAdBeads(int amount)
+    {
+        int day = DailyLevel.DayIndex;
+        if (Data.adDay != day) { Data.adDay = day; Data.adsToday = 0; }
+        Data.adsToday++;
+        Data.beads += Mathf.Max(0, amount);   // test bayrağından bağımsız: gerçek kazanç
+        Save();
+    }
+    // SATIN ALMA (1.1): sipariş daha önce işlendiyse false döner, boncuk tekrar verilmez.
+    public static bool GrantPurchase(string orderId, int beads)
+    {
+        if (string.IsNullOrEmpty(orderId) || beads <= 0) return false;
+        if (Array.IndexOf(Data.iapOrders ?? new string[0], orderId) >= 0) return false;
+        var list = new System.Collections.Generic.List<string>(Data.iapOrders ?? new string[0]) { orderId };
+        if (list.Count > 200) list.RemoveRange(0, list.Count - 200);
+        Data.iapOrders = list.ToArray();
+        Data.beads += beads;
+        Save();
+        return true;
+    }
 
     public static bool FinishEndless(int score)
     {
-        int day = DailyLevel.DayIndex;
-        if (Data.endlessBeadDay != day) { Data.endlessBeadDay = day; Data.endlessBeadsToday = 0; }
-        int earn = Mathf.Clamp(Mathf.Max(0, score) / EndlessMarblesPerBead, 0, EndlessDailyBeadCap - Data.endlessBeadsToday);
-        Data.endlessBeadsToday += earn;
-        RefundBeads(earn);
-        LastEndlessBeads = earn;
         Data.knocked += Mathf.Max(0, score);
         bool record = score > Data.endlessBest;
         if (record) Data.endlessBest = score;

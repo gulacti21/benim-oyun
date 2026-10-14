@@ -9,7 +9,7 @@ public class MahalleGraphic : MaskableGraphic
     {
         Panel, Circle, Star, Marble, Lock, Bag, House, Arrow, Triangle, Ring, Hand,
         ChalkRing, ChalkTriangle, Chevron, TabMap, TabTask,
-        Gear, Clock, People, Calendar, Bars
+        Gear, Clock, People, Calendar, Bars, Play
     }
 
     public Shape shape;
@@ -64,6 +64,11 @@ public class MahalleGraphic : MaskableGraphic
 
             case Shape.Circle:
                 Disc(vh, c, w * .5f, h * .5f, color);
+                break;
+
+            case Shape.Play:
+                // 1.1 boncuk kesesi: dolu "oynat" üçgeni (sağa bakar).
+                Tri(vh, c + new Vector2(-w * .32f, h * .38f), c + new Vector2(-w * .32f, -h * .38f), c + new Vector2(w * .38f, 0), color);
                 break;
 
             case Shape.Bars:
