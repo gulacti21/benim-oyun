@@ -7,6 +7,8 @@ using System;
 public interface IRewardedBackend
 {
     bool Ready { get; }
+    // Son yükleme denemesi "reklam yok" (no fill) ile bitti ve henüz reklam gelmedi.
+    bool NoFill { get; }
     // done(true) sadece reklam sonuna kadar izlenip ödül hak edildiğinde.
     void Show(Action<bool> done);
 }
@@ -32,6 +34,9 @@ public static class Monetization
     public static bool AdNetworkReady => Ads != null && Ads.Ready;
     // İnternet yoksa düğmede "HAZIRLANIYOR" yerine "İNTERNET GEREKLİ" yazar (sonsuza kadar beklemesin).
     public static bool Offline => UnityEngine.Application.internetReachability == UnityEngine.NetworkReachability.NotReachable;
+    public static bool AdNoFill => Ads != null && !Ads.Ready && Ads.NoFill;
+    // Reklam düğmesinin durumu: 0 hazırlanıyor, 1 reklam yok (ağ boş), 2 internet yok, 3 hazır.
+    public static int AdState => AdNetworkReady ? 3 : Offline ? 2 : AdNoFill ? 1 : 0;
     public static void ShowAd(Action<bool> done)
     {
         if (!AdNetworkReady) { done?.Invoke(false); return; }

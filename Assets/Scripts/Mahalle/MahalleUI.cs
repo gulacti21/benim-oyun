@@ -42,18 +42,35 @@ public class MahalleUI : MonoBehaviour
     // REKLAM DÜĞMESİ TAZELEME: düğme "HAZIRLANIYOR" çizildiyse, reklam yüklenince ekran bir kez yeniden
     // çizilir ve düğme "İZLE" olur. Eskiden kullanıcı ekrana yeniden girene kadar beklemek zorundaydı
     // (TestFlight build 11, 2026-10-15).
-    private RectTransform adBox;private Action adRedraw;private bool adWasReady;
-    private void WatchAdButton(RectTransform box,Action redraw){adBox=box;adRedraw=redraw;adWasReady=Monetization.AdNetworkReady;}
+    // Build 13: düğme durumu değişince (hazırlanıyor -> reklam yok -> hazır, internet gitti/geldi) de tazelenir.
+    // Telefonda reklam ağı sık sık "no fill" dedi; belirsiz "HAZIRLANIYOR" yerine "ŞU AN REKLAM YOK" yazılır.
+    private RectTransform adBox;private Action adRedraw;private int adShownState;
+    private void WatchAdButton(RectTransform box,Action redraw){adBox=box;adRedraw=redraw;adShownState=Monetization.AdState;}
     private IEnumerator AdReadyWatch()
     {
         var wait=new WaitForSecondsRealtime(.5f);
         while(true)
         {
             yield return wait;
-            if(adRedraw==null||adWasReady||adBox==null||!adBox.gameObject.activeInHierarchy)continue;
-            if(!Monetization.AdNetworkReady)continue;
-            adWasReady=true;var r=adRedraw;adRedraw=null;r();
+            if(adRedraw==null||adShownState==3||adBox==null||!adBox.gameObject.activeInHierarchy)continue;
+            if(Monetization.AdState==adShownState)continue;
+            var r=adRedraw;adRedraw=null;
+            try{r();}catch(Exception e){Debug.LogWarning("Reklam düğmesi tazelenemedi: "+e.Message);}
         }
+    }
+    private string AdWaitText(bool kisa)
+    {
+        int st=Monetization.AdState;
+        if(st==2)return L.T(kisa?"İNTERNET YOK":"İNTERNET GEREKLİ");
+        if(st==1)return L.T(kisa?"REKLAM YOK":"ŞU AN REKLAM YOK");
+        return L.T(kisa?"HAZIRLANIYOR":"REKLAM HAZIRLANIYOR");
+    }
+    private void AdNotReadyToast()
+    {
+        int st=Monetization.AdState;
+        Toast(st==2?"Reklam için internet bağlantısı gerekiyor."
+             :st==1?"Şu an gösterilecek reklam yok, birkaç saniye sonra tekrar dene."
+             :"Reklam şu an hazır değil, biraz sonra dene.");
     }
     private void Start()
     {
@@ -1415,10 +1432,10 @@ public class MahalleUI : MonoBehaviour
         },38);
         bool ready=adOk&&Monetization.AdNetworkReady;
         if(adOk)WatchAdButton(box,ContinueOffer);
-        string adText=!adOk?L.T("REKLAM KULLANILDI"):ready?L.F("REKLAM İZLE · +{0} ATIŞ",LevelController.AdContinueShots):L.T(Monetization.Offline?"İNTERNET GEREKLİ":"REKLAM HAZIRLANIYOR");
+        string adText=!adOk?L.T("REKLAM KULLANILDI"):ready?L.F("REKLAM İZLE · +{0} ATIŞ",LevelController.AdContinueShots):AdWaitText(false);
         var adBtn=LabelButton(box,adText,36,398,444,86,ready?Orman:new Color(.88f,.83f,.69f),ready?Krem:Muted,()=>{
             if(!adOk){Toast("Bu denemede reklam hakkını kullandın.");return;}
-            if(!Monetization.AdNetworkReady){Toast(Monetization.Offline?"Reklam için internet bağlantısı gerekiyor.":"Reklam şu an hazır değil, biraz sonra dene.");return;}
+            if(!Monetization.AdNetworkReady){AdNotReadyToast();return;}
             Monetization.ShowAd(ok=>{
                 if(ok&&controller.AcceptContinueByAd()){CloseModal();MahalleFeedback.Tap();}
                 else{Toast("Reklam tamamlanmadı.");ContinueOffer();}
@@ -1867,7 +1884,7 @@ public class MahalleUI : MonoBehaviour
         WatchAdButton(box,EndlessResults);
         Color kremYari=new Color(Krem.r,Krem.g,Krem.b,.72f),sonuk=new Color(Krem.r,Krem.g,Krem.b,.22f);
         var card=Button(box,"Sonsuz reklam kartı",x,y,w,176,Orman,()=>{
-            if(!Monetization.AdNetworkReady){Toast(Monetization.Offline?"Reklam için internet bağlantısı gerekiyor.":"Reklam şu an hazır değil, biraz sonra dene.");return;}
+            if(!Monetization.AdNetworkReady){AdNotReadyToast();return;}
             Monetization.ShowAd(ok=>{
                 if(ok&&!controller.EndlessAdClaimed)
                 {
@@ -1887,7 +1904,7 @@ public class MahalleUI : MonoBehaviour
         t1.enableAutoSizing=true;t1.fontSizeMin=22;t1.fontSizeMax=32;
         var t2=Text(card.transform,L.F("+{0} BONCUK",gain),168,88,tw,52,40,Amber);t2.fontStyle=FontStyles.Bold;
         var izle=Panel(card.transform,"İzle",w-bw-28,48,bw,80,ready?Amber:sonuk);izle.radius=40;
-        var il=Text(izle.transform,ready?"İZLE":Monetization.Offline?"İNTERNET YOK":"HAZIRLANIYOR",0,0,bw,80,ready?30:22,ready?Komur:Krem,TextAlignmentOptions.Center);il.fontStyle=FontStyles.Bold;
+        var il=Text(izle.transform,ready?"İZLE":AdWaitText(true),0,0,bw,80,ready?30:22,ready?Komur:Krem,TextAlignmentOptions.Center);il.fontStyle=FontStyles.Bold;
     }
     private void StartDaily()
     {
@@ -1952,7 +1969,7 @@ public class MahalleUI : MonoBehaviour
         if(MahalleProfile.AdsLeftToday>0)WatchAdButton(box,back);
         bool ad=Monetization.AdReady;
         string adText=MahalleProfile.AdsLeftToday<=0?L.T("BUGÜNLÜK REKLAM BİTTİ")
-                     :ad?L.F("REKLAM İZLE · +{0} BONCUK",Monetization.AdRewardBeads):L.T(Monetization.Offline?"İNTERNET GEREKLİ":"REKLAM HAZIRLANIYOR");
+                     :ad?L.F("REKLAM İZLE · +{0} BONCUK",Monetization.AdRewardBeads):AdWaitText(false);
         var adBtn=LabelButton(box,adText,36,y,444,86,ad?Gold:new Color(.88f,.83f,.69f),ad?Ink:Muted,()=>WatchAd(back),25);
         var adLbl=adBtn.GetComponentInChildren<TextMeshProUGUI>();
         if(adLbl!=null){adLbl.enableAutoSizing=true;adLbl.fontSizeMin=18;adLbl.fontSizeMax=25;}
@@ -1962,7 +1979,7 @@ public class MahalleUI : MonoBehaviour
     // gelmezse ilerleme kayıtta durur, düğme "DEVAM ET · 1/2" olur.
     private void WatchDailyX2()
     {
-        if(!Monetization.AdNetworkReady){Toast(Monetization.Offline?"Reklam için internet bağlantısı gerekiyor.":"Reklam şu an hazır değil, biraz sonra dene.");return;}
+        if(!Monetization.AdNetworkReady){AdNotReadyToast();return;}
         Monetization.ShowAd(ok=>{
             if(!ok){Toast("Reklam tamamlanmadı.");DailyResults();return;}
             int gain=MahalleProfile.DailyX2AdWatched();
@@ -1978,7 +1995,7 @@ public class MahalleUI : MonoBehaviour
         while(!Monetization.AdNetworkReady&&wait<12f){wait+=Time.unscaledDeltaTime;yield return null;}
         yield return new WaitForSecondsRealtime(.6f);
         if(Monetization.AdNetworkReady)WatchDailyX2();
-        else Toast(Monetization.Offline?"Reklam için internet bağlantısı gerekiyor.":"Reklam şu an hazır değil, biraz sonra dene.");
+        else AdNotReadyToast();
     }
     // FİYAT YAZISI: Nunito'da ₺ (ve bazı para birimi işaretleri) yok, kare çiziliyordu (2026-10-15,
     // ekran görüntüsünde yakalandı). Yazı tipinde olmayan işaret varsa: ₺ -> "49,99 TL",
@@ -2001,7 +2018,7 @@ public class MahalleUI : MonoBehaviour
     private void WatchAd(Action refresh)
     {
         if(MahalleProfile.AdsLeftToday<=0){Toast("Bugünlük reklam hakkın bitti. Yarın yine gel.");return;}
-        if(!Monetization.AdReady){Toast(Monetization.Offline?"Reklam için internet bağlantısı gerekiyor.":"Reklam şu an hazır değil, biraz sonra dene.");return;}
+        if(!Monetization.AdReady){AdNotReadyToast();return;}
         Monetization.WatchAdForBeads(ok=>{
             if(ok){Toast(L.F("+{0} BONCUK",Monetization.AdRewardBeads));MahalleFeedback.Tap();}
             else Toast("Reklam tamamlanmadı, boncuk verilmedi.");
@@ -2039,7 +2056,7 @@ public class MahalleUI : MonoBehaviour
         Text(adCard.transform,L.F("İzle, {0} boncuk kazan",Monetization.AdRewardBeads),168,74,tw,38,26,kremYari);
         for(int i=0;i<lim;i++)Art(adCard.transform,"Hak "+i,MahalleGraphic.Shape.Circle,168+i*22,126,14,14,i<left?Amber:sonuk);
         Text(adCard.transform,left>0?L.F("Bugün {0}/{1}",left,lim):L.T("Yarın yenilenir"),168+lim*22+10,114,tw-lim*22-10,38,22,kremYari);
-        var izle=LabelButton(adCard.transform,left<=0?"YARIN":ad?"İZLE":Monetization.Offline?"İNTERNET YOK":"HAZIRLANIYOR",w-bw-28,48,bw,80,ad?Amber:sonuk,ad?Komur:Krem,()=>WatchAd(refresh),30);
+        var izle=LabelButton(adCard.transform,left<=0?"YARIN":ad?"İZLE":AdWaitText(true),w-bw-28,48,bw,80,ad?Amber:sonuk,ad?Komur:Krem,()=>WatchAd(refresh),ad?30:22);
         ((MahalleGraphic)izle.targetGraphic).radius=40;
         y+=176+48;
 
