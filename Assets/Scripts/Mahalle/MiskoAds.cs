@@ -6,11 +6,11 @@ using UnityEngine;
 
 // 1.1 ÖDÜLLÜ REKLAM (Unity LevelPlay 9.5). Sadece oyuncunun kendi seçtiği ödüllü reklam;
 // geçiş (interstitial) ve banner YOK. Monetization.Ads'e arka uç olarak bağlanır.
-// Akış: ATT izni (iOS) -> LevelPlay.Init -> reklamı önceden yükle -> izlenince 20 boncuk.
+// Akış: ATT izni (iOS) -> LevelPlay.Init -> reklamı önceden yükle -> izlenince ödül (Monetization).
 public class MiskoAds : MonoBehaviour, IRewardedBackend
 {
     public const string AppKey = "28ba299f5";                 // LevelPlay > Apps > Misko: Marble Game
-    public const string RewardedAdUnitId = "u0iyqv60k7egixhe"; // Ad units > Boncuk Odulu (Rewarded, 20)
+    public const string RewardedAdUnitId = "u0iyqv60k7egixhe"; // Ad units > Boncuk Odulu (Rewarded; paneldeki miktar oyunda kullanılmaz)
 
     static MiskoAds instance;
     LevelPlayRewardedAd rewarded;
@@ -77,7 +77,29 @@ public class MiskoAds : MonoBehaviour, IRewardedBackend
     }
     void RetryInit() { LevelPlay.Init(AppKey); }
 
-    void LoadAd() { if (rewarded != null) rewarded.LoadAd(); }
+    float loadStart;
+    bool loading;   // aynı anda iki yükleme isteği gitmesin (kapanış + öne gelme aynı anda tetikler)
+    void LoadAd()
+    {
+        if (rewarded == null || rewarded.IsAdReady()) return;
+        // Cevapsız kalan yükleme 60 sn sonra yok sayılır, yoksa düğme sonsuza kadar beklerdi.
+        if (loading && Time.realtimeSinceStartup - loadStart < 60f) return;
+        loading = true; loadStart = Time.realtimeSinceStartup;
+        rewarded.LoadAd();
+    }
+
+    // Yükleme başarısız olursa kademeli yeniden dene: 5, 10, 20, 30, 30... sn (eskiden hep 30 sn'ydi,
+    // düğme yarım dakika "HAZIRLANIYOR" kalıyordu). Başarılı yüklemede sıfırlanır.
+    int loadFails;
+    float RetryDelay() => loadFails <= 1 ? 5f : loadFails == 2 ? 10f : loadFails == 3 ? 20f : 30f;
+
+    // Uygulama öne gelince reklam yoksa hemen yükle (arka planda süresi dolmuş/bağlantı yeni gelmiş olabilir).
+    void OnApplicationFocus(bool focus)
+    {
+        if (!focus || !initDone || rewarded == null || rewarded.IsAdReady() || pending != null) return;
+        CancelInvoke(nameof(LoadAd));
+        LoadAd();
+    }
 
     public void Show(Action<bool> done)
     {
@@ -86,12 +108,14 @@ public class MiskoAds : MonoBehaviour, IRewardedBackend
         rewarded.ShowAd();
     }
 
-    void OnAdLoaded(LevelPlayAdInfo info) { }
+    void OnAdLoaded(LevelPlayAdInfo info) { loading = false; loadFails = 0; }
     void OnAdLoadFailed(LevelPlayAdError error)
     {
         Debug.LogWarning($"Rewarded ad failed to load: {error.ErrorMessage}");
+        loading = false;
+        loadFails++;
         CancelInvoke(nameof(LoadAd));
-        Invoke(nameof(LoadAd), 30f);
+        Invoke(nameof(LoadAd), RetryDelay());
     }
     void OnAdDisplayed(LevelPlayAdInfo info) { AudioListener.pause = true; }
     void OnAdDisplayFailed(LevelPlayAdInfo info, LevelPlayAdError error)

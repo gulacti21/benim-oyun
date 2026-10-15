@@ -15,6 +15,8 @@ public interface IStoreBackend
 {
     bool Ready { get; }
     string PriceOf(string productId);   // yerel fiyat ("₺39,99"); bilinmiyorsa null
+    string CurrencyOf(string productId);   // ISO para birimi ("TRY"); bilinmiyorsa null
+    decimal AmountOf(string productId);    // sayısal fiyat (49.99); bilinmiyorsa 0
     // done(true, null) boncuk verilip kayıt alındığında; done(false, sebep) aksi halde.
     void Buy(string productId, Action<bool, string> done);
 }
@@ -24,6 +26,17 @@ public static class Monetization
     // DENGE (kullanıcı kararı 2026-10-15): az boncuk, çok reklam. 10 × 8 = günde en fazla 80 boncuk
     // (ilk taslak 20 × 5 = 100'dü; satın almayı cazip tutmak için düşürüldü). Sonsuz artık boncuk vermiyor.
     public const int AdRewardBeads = 10, AdDailyLimit = 8;
+    // Günün ödülü ×2 için arka arkaya izlenecek reklam (bedeli olsun diye 2; kullanıcı kararı 2026-10-15).
+    public const int DailyX2Ads = 2;
+    // Reklam ağı hazır mı (boncuk reklamı sınırından bağımsız: devam ve ×2 için).
+    public static bool AdNetworkReady => Ads != null && Ads.Ready;
+    // İnternet yoksa düğmede "HAZIRLANIYOR" yerine "İNTERNET GEREKLİ" yazar (sonsuza kadar beklemesin).
+    public static bool Offline => UnityEngine.Application.internetReachability == UnityEngine.NetworkReachability.NotReachable;
+    public static void ShowAd(Action<bool> done)
+    {
+        if (!AdNetworkReady) { done?.Invoke(false); return; }
+        Ads.Show(done);
+    }
 
     public struct Pack { public string id; public int beads; public string fallbackPrice; public string label; }
     // Ürün kimlikleri App Store Connect'te birebir aynı açılmalı (Consumable).
@@ -36,6 +49,11 @@ public static class Monetization
 
     public static IRewardedBackend Ads;
     public static IStoreBackend Store;
+
+    // Bekleyen bir Buy() çağrısı olmadan gelen satın alma (ilk sandbox girişi, yarıda kalan satın alma,
+    // "Satın almayı onayla" sonrası). Boncuk kayda yazıldıktan sonra çağrılır; arayüz tazelenir.
+    public static event Action<int> UnsolicitedGrant;
+    public static void RaiseUnsolicitedGrant(int beads) { UnsolicitedGrant?.Invoke(beads); }
 
     public static bool AdReady => Ads != null && Ads.Ready && MahalleProfile.AdsLeftToday > 0;
     public static bool StoreReady => Store != null && Store.Ready;
@@ -51,6 +69,8 @@ public static class Monetization
         string s = Store != null ? Store.PriceOf(p.id) : null;
         return string.IsNullOrEmpty(s) ? p.fallbackPrice : s;
     }
+    public static string CurrencyOf(Pack p) => Store != null ? Store.CurrencyOf(p.id) : null;
+    public static decimal AmountOf(Pack p) => Store != null ? Store.AmountOf(p.id) : 0m;
 
     // Reklamı göster; sonuna kadar izlenirse boncuk eklenir ve kaydedilir.
     public static void WatchAdForBeads(Action<bool> done)

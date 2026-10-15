@@ -69,6 +69,7 @@ public class LevelController : MonoBehaviour
     // Sadece kampanyada (günün bölümü, sonsuz mod ve öğreticide yok).
     public const int ContinueShots = 2;
     public const int ContinuePrice = 30;
+    public const int AdContinueShots = 1;   // reklamla devam +1 atış (kullanıcı: 2 fazla, 2026-10-15)
     private int bonusShots;
     public bool ContinueOffered { get; private set; }
     public int Score => arena != null ? arena.Score : 0;
@@ -222,6 +223,8 @@ public class LevelController : MonoBehaviour
         shotsUsed = 0;
         bonusShots = 0;
         ContinueOffered = false;
+        AdContinueUsed = false;
+        EndlessAdClaimed = false;
         waitingForSettle = false;
         scoredTimes.Clear();
         shooterOutsideTime = 0f;
@@ -400,6 +403,24 @@ public class LevelController : MonoBehaviour
         if (!MahalleProfile.SpendBeads(ContinuePrice)) return false;
         MahalleProfile.Save();
         bonusShots += ContinueShots;
+        ContinueOffered = false;
+        if (shooter != null)
+        {
+            SettleShooter();
+            shooter.ShootingEnabled = !IsPaused;
+        }
+        StateChanged?.Invoke();
+        return true;
+    }
+
+    // REKLAMLA DEVAM (1.1): aynı teklif, bedeli boncuk yerine ödüllü reklam. Deneme başına bir kez.
+    public bool AdContinueUsed { get; private set; }
+    public bool EndlessAdClaimed { get; set; }   // bu Sonsuz turunun reklam boncuğu alındı mı
+    public bool AcceptContinueByAd()
+    {
+        if (!ContinueOffered || AdContinueUsed) return false;
+        AdContinueUsed = true;
+        bonusShots += AdContinueShots;
         ContinueOffered = false;
         if (shooter != null)
         {

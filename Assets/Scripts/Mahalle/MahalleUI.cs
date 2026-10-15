@@ -31,8 +31,34 @@ public class MahalleUI : MonoBehaviour
     private static bool returnToTitle;
     private bool resultShown;
     public RectTransform Root => root;
+    private void OnDestroy(){Monetization.UnsolicitedGrant-=OnUnsolicitedGrant;}
+    // Bekleyen çağrısı olmayan satın alma geldi: teşekkür et, açık boncuk ekranını tazele.
+    private RectTransform shopBox;private Action shopRefresh;
+    private void OnUnsolicitedGrant(int beads)
+    {
+        Toast(L.F("+{0} BONCUK · TEŞEKKÜRLER!",beads));MahalleFeedback.Tap();
+        if(shopBox!=null&&shopBox.gameObject.activeInHierarchy)shopRefresh?.Invoke();
+    }
+    // REKLAM DÜĞMESİ TAZELEME: düğme "HAZIRLANIYOR" çizildiyse, reklam yüklenince ekran bir kez yeniden
+    // çizilir ve düğme "İZLE" olur. Eskiden kullanıcı ekrana yeniden girene kadar beklemek zorundaydı
+    // (TestFlight build 11, 2026-10-15).
+    private RectTransform adBox;private Action adRedraw;private bool adWasReady;
+    private void WatchAdButton(RectTransform box,Action redraw){adBox=box;adRedraw=redraw;adWasReady=Monetization.AdNetworkReady;}
+    private IEnumerator AdReadyWatch()
+    {
+        var wait=new WaitForSecondsRealtime(.5f);
+        while(true)
+        {
+            yield return wait;
+            if(adRedraw==null||adWasReady||adBox==null||!adBox.gameObject.activeInHierarchy)continue;
+            if(!Monetization.AdNetworkReady)continue;
+            adWasReady=true;var r=adRedraw;adRedraw=null;r();
+        }
+    }
     private void Start()
     {
+        Monetization.UnsolicitedGrant-=OnUnsolicitedGrant;Monetization.UnsolicitedGrant+=OnUnsolicitedGrant;
+        StartCoroutine(AdReadyWatch());
         font=Resources.Load<TMP_FontAsset>("Mahalle/Nunito SDF");
         var canvas=gameObject.AddComponent<Canvas>();canvas.renderMode=RenderMode.ScreenSpaceOverlay;canvas.sortingOrder=20;
         var scaler=gameObject.AddComponent<CanvasScaler>();scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize;scaler.referenceResolution=new Vector2(1080,1920);scaler.matchWidthOrHeight=0;
@@ -1374,7 +1400,10 @@ public class MahalleUI : MonoBehaviour
     // Update teklifi yeniden gösterir (modal boş kalınca).
     private void ContinueOffer()
     {
-        var box=Modal("Devam teklifi",760);
+        // Altında yan yana iki küçük düğme: reklamla +1 atış | boncuk al (kullanıcı, 2026-10-15).
+        bool adOk=!controller.AdContinueUsed&&!GameSession.DailyMode;
+        float ad=104;
+        var box=Modal("Devam teklifi",760+ad);
         int price=LevelController.ContinuePrice;
         bool afford=MahalleProfile.Beads>=price;
         Text(box,"ATIŞLARIN BİTTİ",30,34,924,77,51,Ink,TextAlignmentOptions.Center);
@@ -1384,9 +1413,23 @@ public class MahalleUI : MonoBehaviour
             if(!controller.AcceptContinue()){Toast("Yeterli boncuğun yok.");return;}
             CloseModal();
         },38);
-        Text(box,L.F("Kesende {0} boncuk var.",MahalleProfile.Beads),30,398,924,50,28,afford?Muted:new Color(.72f,.32f,.24f),TextAlignmentOptions.Center);
-        Text(box,"Kaldığın yerden devam edersin, çıkardığın misketler sayılır.",60,452,864,70,26,Muted,TextAlignmentOptions.Center);
-        LabelButton(box,"VAZGEÇ",36,560,912,100,Ink,Cream,()=>{CloseModal(false);controller.DeclineContinue();});
+        bool ready=adOk&&Monetization.AdNetworkReady;
+        if(adOk)WatchAdButton(box,ContinueOffer);
+        string adText=!adOk?L.T("REKLAM KULLANILDI"):ready?L.F("REKLAM İZLE · +{0} ATIŞ",LevelController.AdContinueShots):L.T(Monetization.Offline?"İNTERNET GEREKLİ":"REKLAM HAZIRLANIYOR");
+        var adBtn=LabelButton(box,adText,36,398,444,86,ready?Orman:new Color(.88f,.83f,.69f),ready?Krem:Muted,()=>{
+            if(!adOk){Toast("Bu denemede reklam hakkını kullandın.");return;}
+            if(!Monetization.AdNetworkReady){Toast(Monetization.Offline?"Reklam için internet bağlantısı gerekiyor.":"Reklam şu an hazır değil, biraz sonra dene.");return;}
+            Monetization.ShowAd(ok=>{
+                if(ok&&controller.AcceptContinueByAd()){CloseModal();MahalleFeedback.Tap();}
+                else{Toast("Reklam tamamlanmadı.");ContinueOffer();}
+            });
+        },25);
+        var adLbl=adBtn.GetComponentInChildren<TextMeshProUGUI>();
+        if(adLbl!=null){adLbl.enableAutoSizing=true;adLbl.fontSizeMin=18;adLbl.fontSizeMax=25;}
+        LabelButton(box,"BONCUK AL",504,398,444,86,new Color(.88f,.83f,.69f),Ink,()=>BeadShop(ContinueOffer),27);
+        Text(box,L.F("Kesende {0} boncuk var.",MahalleProfile.Beads),30,398+ad,924,50,28,afford?Muted:new Color(.72f,.32f,.24f),TextAlignmentOptions.Center);
+        Text(box,"Kaldığın yerden devam edersin, çıkardığın misketler sayılır.",60,452+ad,864,70,26,Muted,TextAlignmentOptions.Center);
+        LabelButton(box,"VAZGEÇ",36,560+ad,912,100,Ink,Cream,()=>{CloseModal(false);controller.DeclineContinue();});
     }
     private RectTransform Modal(string name,float height)
     {
@@ -1462,8 +1505,10 @@ public class MahalleUI : MonoBehaviour
             pendingMapIntro=Maps.MapOf(controller.LevelIndex)+1;
         bool next=passed&&controller.HasNextLevel;
         // 1.1: en alta "reklam izle / boncuk al" satırı (OfferRow), pencere ona göre uzar.
+        // Kullanıcı (2026-10-15): bölüm geçilince bu satır çıkmaz, sadece geçilemeyince.
         float offerY=won?(next?995:898)+86+20:(next?898+76:791+86)+20;
-        var box=Modal("Bölüm sonucu",offerY+86+34);
+        bool offer=!passed;
+        var box=Modal("Bölüm sonucu",offer?offerY+86+34:offerY+14);
         Text(box,won?(controller.LastReward.newBadge||(controller.Level.mastery&&passed)?"MAHALLE USTASI!":"GÜZEL ATIŞLAR!"):"BİR DAHA DENE",30,34,924,77,51,Ink,TextAlignmentOptions.Center);
         Text(box,controller.Level.levelName,30,114,924,47,31,Muted,TextAlignmentOptions.Center);
         for(int i=0;i<3;i++){var star=Art(box,"Sonuç yıldızı "+i,MahalleGraphic.Shape.Star,259+i*163,i==1?184:201,i==1?142:115,i==1?142:115,Line);if(i<controller.Stars&&won)StartCoroutine(RevealStar(star,i));}
@@ -1478,15 +1523,16 @@ public class MahalleUI : MonoBehaviour
         else LabelButton(box,passed?"HARİTAYA DÖN":"TEKRAR DENE",36,669,912,98,Ink,Cream,()=>{if(passed)controller.OpenLevelSelect();else{CloseModal();controller.RestartLevel();ShowGame();}});
         LabelButton(box,passed?"REKORUNU GELİŞTİR":"HARİTAYA DÖN",36,791,912,86,new Color(.88f,.83f,.69f),Ink,()=>{if(passed){CloseModal();controller.RestartLevel();ShowGame();}else controller.OpenLevelSelect();},30);
         if(passed&&controller.HasNextLevel)LabelButton(box,"MAHALLE HARİTASI",36,898,912,76,Paper,Muted,()=>controller.OpenLevelSelect(),27);
-        // Oyuncu iyi bir anda: ilk kez 3 yıldızla geçtiyse ve yeterince oynadıysa
-        // iOS'un kendi puanlama penceresi bir kez açılır.
-        if(passed&&controller.Stars==3&&!MahalleProfile.Data.reviewAsked&&MahalleProfile.MasteryPoints>=200)
+        // Oyuncu iyi bir anda: 3 yıldızla geçtiyse ve yeterince oynadıysa iOS'un kendi puanlama
+        // penceresi açılır. 1.1: sürüm başına bir kez (eskiden ömür boyu bir kezdi). Apple yılda
+        // en fazla 3 kez gösterir, gerisini kendisi susturur.
+        if(passed&&controller.Stars==3&&MahalleProfile.Data.reviewAskedVersion!=Application.version&&MahalleProfile.MasteryPoints>=200)
         {
-            MahalleProfile.Data.reviewAsked=true;MahalleProfile.Save();
+            MahalleProfile.Data.reviewAsked=true;MahalleProfile.Data.reviewAskedVersion=Application.version;MahalleProfile.Save();
             StartCoroutine(AskReview());
         }
         if(won)LabelButton(box,"PAYLAŞ",36,passed&&controller.HasNextLevel?995:898,912,86,Gold,Ink,ShareCard,30);
-        OfferRow(box,offerY,Results);
+        if(offer)OfferRow(box,offerY,Results);
     }
     // ---------------------------------------------------------------
     // PAYLAŞ KARTI
@@ -1617,8 +1663,9 @@ public class MahalleUI : MonoBehaviour
         // yamali duruyordu.
         var panel=Panel(page,"Öğretici",60,0,960,190,new Color(Komur.r,Komur.g,Komur.b,.95f));
         panel.radius=42;Bottom(panel.rectTransform,60,300,960,190);
-        tutTitle=Text(panel.transform,"",28,14,904,54,34,Amber,TextAlignmentOptions.Center);
-        tutBody=Text(panel.transform,"",28,70,904,106,29,Krem,TextAlignmentOptions.Center);
+        tutTitle=Text(panel.transform,"",28,14,904,64,40,Amber,TextAlignmentOptions.Center);
+        tutTitle.fontStyle=FontStyles.Bold;
+        tutBody=Text(panel.transform,"",28,82,904,90,36,Krem,TextAlignmentOptions.Center);
         tutSpot=Art(page,"Öğretici noktası",MahalleGraphic.Shape.ChalkRing,0,0,120,120,Amber);tutSpot.stroke=7f;
         tutHand=Art(page,"Öğretici eli",MahalleGraphic.Shape.Hand,0,0,65,88,new Color(1,.97f,.89f,0f)).rectTransform;
         tutSide=0;tutNudge=0;tutKesemDone=false;tutRetry=0;
@@ -1631,29 +1678,29 @@ public class MahalleUI : MonoBehaviour
         if(step==4&&!controller.TutorialFinalPhase)controller.StartTutorialFinal();
         controller.Shooter.AimLocked=step==0||step==5;
         if(tutBag!=null){tutBag.gameObject.SetActive(step>=4);tutBag.localScale=Vector3.one;}
-        string[] titles={tutSide==0?"1/5 · YERİNİ SEÇ (SAĞ)":"1/5 · YERİNİ SEÇ (SOL)","2/5 · GERİ ÇEK","3/5 · NİŞAN AL VE BIRAK","BAKALIM…","5/5 · HEPSİNİ ÇIKAR","4/5 · KESEM"};
+        string[] titles={tutSide==0?"1/5 · YERİNİ SEÇ":"1/5 · YERİNİ SEÇ","2/5 · GERİ ÇEK","3/5 · BIRAK","BAKALIM…","5/5 · HEPSİNİ ÇIKAR","4/5 · KESEM"};
         string[] bodies={
-            tutSide==0?"Atmadan önce yerini ayarlarsın. Misketin çizgi boyunca kayar. Sağdaki parlayan noktaya dokun.":"Güzel! Şimdi soldaki parlayan noktaya dokun. Her atıştan önce en iyi açıyı böyle bulursun.",
-            "Misketine dokun ve parmağını GERİ çek. Ne kadar çekersen o kadar güçlü atar.",
-            "Kesik çizgi misketin gideceği yönü gösterir. Kümeye çevir ve parmağını bırak.",
+            tutSide==0?"Parlayan noktaya dokun.":"Güzel! Şimdi soldakine dokun.",
+            "Misketi parmağınla aşağı çek.",
+            "Kümeye çevir ve bırak.",
             "Misketler duruluyor.",
-            "Güçleri öğrendin, saha yeniden dizildi. Şimdi bölümü bitir: bütün misketleri çıkar. İstersen kesendeki güçleri kullanabilirsin, öğreticide bedava.",
-            "Harika, çemberden çıkan misket senin! Zor anlar için bir kesen var. Soldaki KESEM'e dokun."};
+            "Hepsini çemberden çıkar.",
+            "Süper! Şimdi KESEM'e dokun."};
         if(step>=6)
         {
-            string[] pt={"KESEM 1/4 · BAŞ MİSKET","KESEM 2/4 · DEMİR MİSKET","KESEM 3/4 · USTA GÖZÜ","KESEM 4/4 · YERİNDE KAL","YERİNDE KAL · ŞİMDİ ORADAN AT"};
+            string[] pt={"BAŞ MİSKET","DEMİR MİSKET","USTA GÖZÜ","YERİNDE KAL","YERİNDE KAL"};
             string[] pb={
-                "Misketin büyüdü! Büyük misket sık kümeleri dağıtır. Kümeye at ve farkı gör.",
-                "Misketin küçük ve ağır oldu. Dar aralıktan geçip sert vurur. Bir misketi hedefle ve at.",
-                "Nişan alırken misketin İLK nereye değeceği gösterilir. Çek, işarete bak, tam isabetle bırak.",
-                "Bu güç farklı: misketin atıştan sonra ÇİZGİYE DÖNMEZ, durduğu yerde kalır. Çembere yakın durması için hafif at.",
-                "Misketin durduğu yerde kaldı. Bu atışı oradan yapıyorsun: yakından nişan al ve at. Sonra yine çizgiye döner."};
-            tutTitle.SetTextL(retry?"YERİNDE KAL · TEKRAR DENE":pt[step-6]);
-            tutBody.SetTextL(retry?"Misketin çemberden uzakta kaldı, çizgiye döndü (normal oyunda hakkın iade edilir). Daha HAFİF at, çembere yakın dursun.":pb[step-6]);
+                "Misketin büyüdü. Kümeye at!",
+                "Küçük ama ağır. Bir misketi vur!",
+                "Nereye değeceğini gösterir. Çek, bak, bırak.",
+                "Misket durduğu yerde kalır. Hafif at.",
+                "Şimdi oradan at."};
+            tutTitle.SetTextL(retry?"TEKRAR DENE":pt[step-6]);
+            tutBody.SetTextL(retry?"Çok uzağa gitti. Daha hafif at.":pb[step-6]);
             return;
         }
         tutTitle.SetTextL(retry?"TEKRAR DENE":titles[step]);
-        tutBody.SetTextL(retry?"Misketi çemberin DIŞINA kadar itmelisin. Biraz daha geri çek, daha güçlü atar.":bodies[step]);
+        tutBody.SetTextL(retry?"Daha çok geri çek.":bodies[step]);
     }
     private void TutorialTick(ShotController shooter)
     {
@@ -1691,7 +1738,7 @@ public class MahalleUI : MonoBehaviour
                 {
                     tutNudge-=Time.unscaledDeltaTime;
                     tutTitle.SetTextL("ÖNCE YERİNİ SEÇ");
-                    tutBody.SetTextL(L.F("Misketini çekmeden önce {0} parlayan noktaya dokun.",L.T(tutSide==0?"sağdaki":"soldaki")));
+                    tutBody.SetTextL(L.T("Parlayan noktaya dokun."));
                     if(tutNudge<=0)SetTutStep(0);
                 }
                 break;
@@ -1743,7 +1790,7 @@ public class MahalleUI : MonoBehaviour
         tutHand.gameObject.SetActive(false);
         var box=Modal("Kese anlatımı",1180);
         Text(box,"Kesen",36,28,912,70,50,Ink);
-        Text(box,"Zorlandığın bölümlerde atıştan önce bir güç seçebilirsin. Her güçten 1 ÜCRETSİZ hakkın var, sonrası boncukla.",36,104,912,110,28,Muted);
+        Text(box,"Zorlanınca bir güç seç. Her biri 1 kez bedava.",36,104,912,110,28,Muted);
         var colors=new[]{Gold,Campaign.SkinColors[5],Campaign.SkinColors[1],Campaign.SkinColors[3]};
         for(int i=0;i<Campaign.PowerNames.Length;i++)
         {
@@ -1752,7 +1799,7 @@ public class MahalleUI : MonoBehaviour
             Text(row.transform,Campaign.PowerNames[i],130,16,770,48,34,Ink);
             Text(row.transform,Campaign.PowerDescriptions[i],130,64,770,64,26,Muted);
         }
-        Text(box,"Boncukları bölüm bitirerek ve görevlerle kazanırsın. Her bölüm normal misketle de geçilebilir.",36,892,912,100,27,Muted,TextAlignmentOptions.Center);
+        Text(box,"Her bölüm normal misketle de geçilir.",36,892,912,100,27,Muted,TextAlignmentOptions.Center);
         LabelButton(box,"ANLADIM",36,1030,912,110,Ink,Cream,()=>{tutKesemDone=true;CloseModal();after?.Invoke();},38);
     }
     private void TutorialDone()
@@ -1768,14 +1815,14 @@ public class MahalleUI : MonoBehaviour
         int beads=controller.LastReward.beads;
         Text(box,L.F("1. bölüm tamam · {0} yıldız",controller.Stars)+(beads>0?L.F(" · +{0} boncuk",beads):""),36,690,912,50,30,Muted,TextAlignmentOptions.Center);
         string[] lines={
-            "Ne kadar çok misket çıkarırsan o kadar çok yıldız kazanırsın.",
-            "Her bölümde atış hakkın sınırlı. Hedefe ulaşırsan sonraki bölüm açılır.",
-            "Zorlanırsan KESEM'deki güçleri dene. Yine de her bölüm normal misketle geçilebilir."};
+            "Çok misket çıkar, çok yıldız al.",
+            "Atış hakkın sınırlı.",
+            "Zorlanırsan KESEM'i aç."};
         var shapes=new[]{MahalleGraphic.Shape.Star,MahalleGraphic.Shape.Marble,MahalleGraphic.Shape.Bag};
         for(int i=0;i<3;i++)
         {
             Art(box,"Simge "+i,shapes[i],56,170+i*130,70,70,Gold);
-            Text(box,lines[i],150,160+i*130,780,100,30,Ink);
+            Text(box,lines[i],150,160+i*130,780,100,36,Ink);
         }
         LabelButton(box,tutorialFromSettings?"TAMAM":"2. BÖLÜME GEÇ",36,750,912,110,Ink,Cream,()=>EndTutorial(TutorialLevel.LevelIndex+1),38);
     }
@@ -1796,18 +1843,51 @@ public class MahalleUI : MonoBehaviour
     private void EndlessResults()
     {
         bool rekor=controller.LastEndlessRecord;
-        var box=Modal("Sonsuz sonucu",1110);
+        int adGain=controller.EndlessAdClaimed?0:MahalleProfile.EndlessAdBeads(controller.EndlessScore);
+        float sh=adGain>0?130:0;
+        var box=Modal("Sonsuz sonucu",1110+sh-106);
         Text(box,rekor?"YENİ REKOR!":"SÜRE BİTTİ",30,34,924,77,rekor?52:48,Ink,TextAlignmentOptions.Center);
         Text(box,L.F("KADEME {0}",controller.EndlessStage),30,114,924,47,29,Muted,TextAlignmentOptions.Center);
         Art(box,"Büyük yıldız",MahalleGraphic.Shape.Star,412,180,160,160,rekor?Gold:Line);
         Text(box,controller.EndlessScore.ToString(),30,346,924,120,92,Ink,TextAlignmentOptions.Center);
         Text(box,"misket çıkardın",30,462,924,50,30,Muted,TextAlignmentOptions.Center);
         Text(box,L.F("REKOR: {0}",MahalleProfile.Data.endlessBest),30,516,924,50,30,rekor?Gold:Muted,TextAlignmentOptions.Center);
-        Text(box,"Sonsuz Çember'de rekor için oynarsın.",30,576,924,56,28,Muted,TextAlignmentOptions.Center);
-        LabelButton(box,"TEKRAR DENE",36,660,912,98,Ink,Cream,()=>{CloseModal();controller.RestartLevel();ShowGame();});
-        LabelButton(box,"PAYLAŞ",36,774,912,90,Gold,Ink,ShareCard,32);
-        LabelButton(box,"ANA MENÜ",36,880,912,86,new Color(.88f,.83f,.69f),Ink,LeaveEndless,30);
-        OfferRow(box,986,EndlessResults);
+        if(adGain>0)EndlessAdCard(box,36,592,912,adGain);
+        else Text(box,"Sonsuz Çember'de rekor için oynarsın.",30,576,924,56,28,Muted,TextAlignmentOptions.Center);
+        LabelButton(box,"TEKRAR DENE",36,660+sh,912,98,Ink,Cream,()=>{CloseModal();controller.RestartLevel();ShowGame();});
+        LabelButton(box,"PAYLAŞ",36,774+sh,912,90,adGain>0?new Color(.88f,.83f,.69f):Gold,Ink,ShareCard,32);
+        LabelButton(box,"ANA MENÜ",36,880+sh,912,86,new Color(.88f,.83f,.69f),Ink,LeaveEndless,30);
+        box.sizeDelta=new Vector2(984,880+sh+86+40);
+    }
+    // SONSUZ REKLAM KARTI: Boncuk Kesesi'ndeki ödüllü reklam kartıyla aynı aile (koyu yeşil, amber oynat).
+    // "18 misket → 3 boncuk" çevrimi büyük yazılır; kart tamamen dokunulabilir.
+    private void EndlessAdCard(RectTransform box,float x,float y,float w,int gain)
+    {
+        bool ready=Monetization.AdNetworkReady;
+        WatchAdButton(box,EndlessResults);
+        Color kremYari=new Color(Krem.r,Krem.g,Krem.b,.72f),sonuk=new Color(Krem.r,Krem.g,Krem.b,.22f);
+        var card=Button(box,"Sonsuz reklam kartı",x,y,w,176,Orman,()=>{
+            if(!Monetization.AdNetworkReady){Toast(Monetization.Offline?"Reklam için internet bağlantısı gerekiyor.":"Reklam şu an hazır değil, biraz sonra dene.");return;}
+            Monetization.ShowAd(ok=>{
+                if(ok&&!controller.EndlessAdClaimed)
+                {
+                    controller.EndlessAdClaimed=true;
+                    int g=MahalleProfile.GrantEndlessAd(controller.EndlessScore);
+                    if(g>0){Toast(L.F("+{0} BONCUK",g));MahalleFeedback.Tap();}
+                }
+                else if(!ok)Toast("Reklam tamamlanmadı, boncuk verilmedi.");
+                EndlessResults();
+            });
+        });
+        var bg=(MahalleGraphic)card.targetGraphic;bg.radius=32;bg.shadow=6;
+        var play=Art(card.transform,"Oynat dairesi",MahalleGraphic.Shape.Circle,28,32,112,112,ready?Amber:sonuk);
+        Art(play.transform,"Oynat",MahalleGraphic.Shape.Play,30,28,56,56,Komur);
+        float bw=196,tw=w-168-bw-48;
+        var t1=Text(card.transform,L.F("{0} misket = 1 boncuk",MahalleProfile.EndlessMarblesPerBead),168,36,tw,46,32,Krem);t1.fontStyle=FontStyles.Bold;
+        t1.enableAutoSizing=true;t1.fontSizeMin=22;t1.fontSizeMax=32;
+        var t2=Text(card.transform,L.F("+{0} BONCUK",gain),168,88,tw,52,40,Amber);t2.fontStyle=FontStyles.Bold;
+        var izle=Panel(card.transform,"İzle",w-bw-28,48,bw,80,ready?Amber:sonuk);izle.radius=40;
+        var il=Text(izle.transform,ready?"İZLE":Monetization.Offline?"İNTERNET YOK":"HAZIRLANIYOR",0,0,bw,80,ready?30:22,ready?Komur:Krem,TextAlignmentOptions.Center);il.fontStyle=FontStyles.Bold;
     }
     private void StartDaily()
     {
@@ -1833,7 +1913,8 @@ public class MahalleUI : MonoBehaviour
     {
         bool won=controller.State==LevelController.LevelState.Won;
         int beads=controller.LastReward.beads;
-        var box=Modal("Günün bölümü sonucu",won?1120:970);
+        bool x2=won&&MahalleProfile.DailyX2Open;
+        var box=Modal("Günün bölümü sonucu",(won?1120:970)+(x2?122:0)-106);
         Text(box,won?"GÜNÜN BÖLÜMÜ TAMAM!":"BİR DAHA DENE",30,34,924,77,won?48:51,Ink,TextAlignmentOptions.Center);
         Text(box,DailyLevel.DateLabel,30,114,924,47,31,Muted,TextAlignmentOptions.Center);
         for(int i=0;i<3;i++){var star=Art(box,"Sonuç yıldızı "+i,MahalleGraphic.Shape.Star,259+i*163,i==1?184:201,i==1?142:115,i==1?142:115,Line);if(i<controller.Stars&&won)StartCoroutine(RevealStar(star,i));}
@@ -1850,26 +1931,77 @@ public class MahalleUI : MonoBehaviour
             y+=122;
         }
         else if(!won)Text(box,L.T("Bugünlük hakkın bitti. Yarın yeni bölüm gelir."),60,y+18,864,60,28,Muted,TextAlignmentOptions.Center);
-        if(won){LabelButton(box,"PAYLAŞ",36,y,912,98,Gold,Ink,ShareCard,34);y+=122;}
+        if(x2)
+        {
+            int seen=MahalleProfile.DailyX2Watched,need=Monetization.DailyX2Ads;
+            WatchAdButton(box,DailyResults);
+            string t=seen==0?L.F("{0} REKLAM İZLE · +{1} BONCUK",need,MahalleProfile.DailyX2Beads)
+                            :L.F("DEVAM ET · {0}/{1} REKLAM",seen,need);
+            LabelButton(box,t,36,y,912,98,Gold,Ink,WatchDailyX2,32);y+=122;
+        }
+        if(won){LabelButton(box,"PAYLAŞ",36,y,912,98,x2?new Color(.88f,.83f,.69f):Gold,Ink,ShareCard,34);y+=122;}
         else y+=80;
         LabelButton(box,"ANA MENÜ",36,y,912,86,new Color(.88f,.83f,.69f),Ink,LeaveDaily,30);
-        OfferRow(box,y+106,DailyResults);
+        box.sizeDelta=new Vector2(984,y+86+40);   // pencere içeriğe göre
     }
     // ---------------------------------------------------------------
     // 1.1 BONCUK: oyun sonu teklifi + boncuk penceresi (Monetization.cs)
     // ---------------------------------------------------------------
     private void OfferRow(RectTransform box,float y,Action back)
     {
+        if(MahalleProfile.AdsLeftToday>0)WatchAdButton(box,back);
         bool ad=Monetization.AdReady;
         string adText=MahalleProfile.AdsLeftToday<=0?L.T("BUGÜNLÜK REKLAM BİTTİ")
-                     :ad?L.F("REKLAM İZLE · +{0}",Monetization.AdRewardBeads):L.T("REKLAM HAZIRLANIYOR");
-        LabelButton(box,adText,36,y,444,86,ad?Gold:new Color(.88f,.83f,.69f),ad?Ink:Muted,()=>WatchAd(back),25);
+                     :ad?L.F("REKLAM İZLE · +{0} BONCUK",Monetization.AdRewardBeads):L.T(Monetization.Offline?"İNTERNET GEREKLİ":"REKLAM HAZIRLANIYOR");
+        var adBtn=LabelButton(box,adText,36,y,444,86,ad?Gold:new Color(.88f,.83f,.69f),ad?Ink:Muted,()=>WatchAd(back),25);
+        var adLbl=adBtn.GetComponentInChildren<TextMeshProUGUI>();
+        if(adLbl!=null){adLbl.enableAutoSizing=true;adLbl.fontSizeMin=18;adLbl.fontSizeMax=25;}
         LabelButton(box,"BONCUK AL",504,y,444,86,new Color(.88f,.83f,.69f),Ink,()=>BeadShop(back),27);
+    }
+    // GÜNÜN ÖDÜLÜ ×2: reklamlar arka arkaya. İkincisi yüklenene kadar en fazla 12 sn beklenir;
+    // gelmezse ilerleme kayıtta durur, düğme "DEVAM ET · 1/2" olur.
+    private void WatchDailyX2()
+    {
+        if(!Monetization.AdNetworkReady){Toast(Monetization.Offline?"Reklam için internet bağlantısı gerekiyor.":"Reklam şu an hazır değil, biraz sonra dene.");return;}
+        Monetization.ShowAd(ok=>{
+            if(!ok){Toast("Reklam tamamlanmadı.");DailyResults();return;}
+            int gain=MahalleProfile.DailyX2AdWatched();
+            if(gain>0){Toast(L.F("+{0} BONCUK",gain));MahalleFeedback.Tap();DailyResults();return;}
+            DailyResults();
+            if(MahalleProfile.DailyX2Open)StartCoroutine(NextDailyX2());
+        });
+    }
+    private IEnumerator NextDailyX2()
+    {
+        Toast(L.F("Sıradaki reklam geliyor… {0}/{1}",MahalleProfile.DailyX2Watched,Monetization.DailyX2Ads));
+        float wait=0;
+        while(!Monetization.AdNetworkReady&&wait<12f){wait+=Time.unscaledDeltaTime;yield return null;}
+        yield return new WaitForSecondsRealtime(.6f);
+        if(Monetization.AdNetworkReady)WatchDailyX2();
+        else Toast(Monetization.Offline?"Reklam için internet bağlantısı gerekiyor.":"Reklam şu an hazır değil, biraz sonra dene.");
+    }
+    // FİYAT YAZISI: Nunito'da ₺ (ve bazı para birimi işaretleri) yok, kare çiziliyordu (2026-10-15,
+    // ekran görüntüsünde yakalandı). Yazı tipinde olmayan işaret varsa: ₺ -> "49,99 TL",
+    // diğerleri -> işaret atılır, ISO kodu eklenir ("4,99 PLN").
+    private string SafePrice(string s,string iso,decimal amount)
+    {
+        if(string.IsNullOrEmpty(s)||font==null)return s;
+        bool missing=false;
+        foreach(char c in s)if(!char.IsWhiteSpace(c)&&!font.HasCharacter(c,true,true)){missing=true;break;}
+        if(!missing)return s;
+        if(s.Contains("₺"))return s.Replace("₺","").Trim()+" TL";
+        var sb=new System.Text.StringBuilder();
+        foreach(char c in s)if(char.IsWhiteSpace(c)||font.HasCharacter(c,true,true))sb.Append(c);
+        string num=sb.ToString().Trim();
+        // Rakamlar da yazı tipinde yoksa (ör. Arapça rakamlar) sayısal fiyattan yaz.
+        bool digit=false;foreach(char c in num)if(c>='0'&&c<='9'){digit=true;break;}
+        if(!digit&&amount>0)num=amount.ToString("0.00",System.Globalization.CultureInfo.InvariantCulture);
+        return string.IsNullOrEmpty(iso)?num:num+" "+iso;
     }
     private void WatchAd(Action refresh)
     {
         if(MahalleProfile.AdsLeftToday<=0){Toast("Bugünlük reklam hakkın bitti. Yarın yine gel.");return;}
-        if(!Monetization.AdReady){Toast("Reklam şu an hazır değil, biraz sonra dene.");return;}
+        if(!Monetization.AdReady){Toast(Monetization.Offline?"Reklam için internet bağlantısı gerekiyor.":"Reklam şu an hazır değil, biraz sonra dene.");return;}
         Monetization.WatchAdForBeads(ok=>{
             if(ok){Toast(L.F("+{0} BONCUK",Monetization.AdRewardBeads));MahalleFeedback.Tap();}
             else Toast("Reklam tamamlanmadı, boncuk verilmedi.");
@@ -1890,6 +2022,8 @@ public class MahalleUI : MonoBehaviour
     private static readonly Color YesilRozet=new Color(.87f,.94f,.85f), YesilYazi=new Color(.18f,.49f,.31f);
     private float BeadShopBody(RectTransform box,float x,float y,float w,Action refresh)
     {
+        shopBox=box;shopRefresh=refresh;
+        if(MahalleProfile.AdsLeftToday>0)WatchAdButton(box,refresh);
         float y0=y;
         bool ad=Monetization.AdReady;int left=MahalleProfile.AdsLeftToday,lim=Monetization.AdDailyLimit;
         Color sonuk=new Color(Krem.r,Krem.g,Krem.b,.22f),kremYari=new Color(Krem.r,Krem.g,Krem.b,.72f);
@@ -1905,7 +2039,7 @@ public class MahalleUI : MonoBehaviour
         Text(adCard.transform,L.F("İzle, {0} boncuk kazan",Monetization.AdRewardBeads),168,74,tw,38,26,kremYari);
         for(int i=0;i<lim;i++)Art(adCard.transform,"Hak "+i,MahalleGraphic.Shape.Circle,168+i*22,126,14,14,i<left?Amber:sonuk);
         Text(adCard.transform,left>0?L.F("Bugün {0}/{1}",left,lim):L.T("Yarın yenilenir"),168+lim*22+10,114,tw-lim*22-10,38,22,kremYari);
-        var izle=LabelButton(adCard.transform,left<=0?"YARIN":ad?"İZLE":"HAZIRLANIYOR",w-bw-28,48,bw,80,ad?Amber:sonuk,ad?Komur:Krem,()=>WatchAd(refresh),30);
+        var izle=LabelButton(adCard.transform,left<=0?"YARIN":ad?"İZLE":Monetization.Offline?"İNTERNET YOK":"HAZIRLANIYOR",w-bw-28,48,bw,80,ad?Amber:sonuk,ad?Komur:Krem,()=>WatchAd(refresh),30);
         ((MahalleGraphic)izle.targetGraphic).radius=40;
         y+=176+48;
 
@@ -1927,7 +2061,7 @@ public class MahalleUI : MonoBehaviour
                 var tg=Panel(row.transform,"Etiket",w-pw-28-tagW-20,(rh-40)/2,tagW,40,i==2?Orman:YesilRozet);tg.radius=20;
                 Text(tg.transform,etiket[i],0,0,tagW,40,21,i==2?Amber:YesilYazi,TextAlignmentOptions.Center).fontStyle=FontStyles.Bold;
             }
-            var fiyat=LabelButton(row.transform,Monetization.PriceOf(p),w-pw-28,(rh-80)/2,pw,80,Komur,Krem,()=>BuyPack(pack,refresh),32);
+            var fiyat=LabelButton(row.transform,SafePrice(Monetization.PriceOf(p),Monetization.CurrencyOf(p),Monetization.AmountOf(p)),w-pw-28,(rh-80)/2,pw,80,Komur,Krem,()=>BuyPack(pack,refresh),32);
             ((MahalleGraphic)fiyat.targetGraphic).radius=40;
             y+=rh+16;
         }

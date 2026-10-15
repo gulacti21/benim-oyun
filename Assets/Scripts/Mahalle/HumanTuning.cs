@@ -86,7 +86,7 @@ public static class HumanTuning
         ( 88, 5, 5, 'N' ),   // Yayla 05 · sıradan oyuncu %85 -> %42
         ( 90, 5, 5, 'N' ),   // Yayla 07 · sıradan oyuncu -> %22 · ortası 2026-10-02
         ( 92, 5, 3, 'N' ),   // Yayla 09 · sıradan oyuncu -> %35 · ortası 2026-10-02
-        ( 95, 9, 3, 'U' ),   // Yayla 12 · sıradan oyuncu -> %22 · ortası 2026-10-02
+        ( 95, 9, 4, 'U' ),   // Yayla 12 · sıradan oyuncu -> %7 · kullanıcı 2026-10-02
         ( 97, 3, 3, 'N' ),   // Pazar 02 · sıradan oyuncu %70 -> %62
         ( 99, 7, 4, 'N' ),   // Pazar 04 · sıradan oyuncu %23 -> %57
         ( 101, 5, 4, 'N' ),   // Pazar 06 · sıradan oyuncu %75 -> %48

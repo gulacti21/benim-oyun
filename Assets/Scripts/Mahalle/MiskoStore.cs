@@ -79,6 +79,18 @@ public class MiskoStore : MonoBehaviour, IStoreBackend
         return p != null && p.availableToPurchase ? p.metadata.localizedPriceString : null;
     }
 
+    public string CurrencyOf(string productId)
+    {
+        var p = store != null ? store.GetProductById(productId) : null;
+        return p != null ? p.metadata.isoCurrencyCode : null;
+    }
+
+    public decimal AmountOf(string productId)
+    {
+        var p = store != null ? store.GetProductById(productId) : null;
+        return p != null ? p.metadata.localizedPrice : 0m;
+    }
+
     public void Buy(string productId, Action<bool, string> done)
     {
         var p = store != null ? store.GetProductById(productId) : null;
@@ -99,7 +111,9 @@ public class MiskoStore : MonoBehaviour, IStoreBackend
         bool granted = MahalleProfile.GrantPurchase(tx, beads);       // içeride Save() var
         // Daha önce verilmiş (granted=false) ya da şimdi verildi: her iki durumda da artık onaylanabilir.
         store.ConfirmPurchase(order);
-        Callback(id, granted, granted ? null : "");
+        // Bekleyen çağrı yoksa (ör. ilk satın almada sandbox girişi araya girdi) arayüze ayrıca haber ver,
+        // yoksa boncuk kayda yazılır ama ekran ancak oyun yeniden açılınca güncellenirdi (TestFlight, 2026-10-15).
+        if (!Callback(id, granted, granted ? null : "") && granted) Monetization.RaiseUnsolicitedGrant(beads);
     }
     void OnPurchaseConfirmed(Order order)
     {
@@ -119,10 +133,17 @@ public class MiskoStore : MonoBehaviour, IStoreBackend
         string id = item != null && item.Product != null ? item.Product.definition.id : null;
         Callback(id, false, L.T("Satın alma onay bekliyor. Onaylanınca boncuklar kesene eklenir."));
     }
-    void Callback(string id, bool ok, string why)
+    bool Callback(string id, bool ok, string why)
     {
-        if (id == null || !waiting.TryGetValue(id, out var cb)) return;
+        if (id == null || !waiting.TryGetValue(id, out var cb)) return false;
         waiting.Remove(id);
         cb?.Invoke(ok, why);
+        return true;
+    }
+
+    // Uygulama öne gelince onaylanmamış satın almaları tekrar iste (ör. ödeme onayı dışarıda tamamlandı).
+    void OnApplicationFocus(bool focus)
+    {
+        if (focus && connected && store != null) store.FetchPurchases();
     }
 }

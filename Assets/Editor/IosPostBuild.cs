@@ -9,6 +9,17 @@ using System.IO;
 // baglanmazsa "Undefined symbol: _OBJC_CLASS_$_UNUserNotificationCenter" hatasi alinir.
 public static class IosPostBuild
 {
+    const string AttEn = "This permission is used to make the rewarded ads you choose to watch more relevant to you. The game and ads work the same if you don't allow it.";
+    const string AttTr = "Bu izin, izlemeyi seçtiğin ödüllü reklamların sana daha uygun olması için kullanılır. İzin vermesen de oyun ve reklamlar aynı şekilde çalışır.";
+
+    static void WriteLoc(string root, string lang, string att)
+    {
+        string dir = Path.Combine(root, "MiskoLoc", lang + ".lproj");
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "InfoPlist.strings"),
+            "\"NSUserTrackingUsageDescription\" = \"" + att.Replace("\"", "\\\"") + "\";\n", new System.Text.UTF8Encoding(false));
+    }
+
     [PostProcessBuild(100)]
     public static void OnPostProcessBuild(BuildTarget target, string pathToBuiltProject)
     {
@@ -35,9 +46,22 @@ public static class IosPostBuild
         plist.ReadFromFile(plistPath);
         plist.root.SetBoolean("ITSAppUsesNonExemptEncryption", false);
         // 1.1 ATT: ödüllü reklam için izin penceresinin açıklaması (MiskoAds/MiskoATT.mm).
-        plist.root.SetString("NSUserTrackingUsageDescription",
-            "Bu izin, izlemeyi seçtiğin ödüllü reklamların sana daha uygun olması için kullanılır. İzin vermesen de oyun ve reklamlar aynı şekilde çalışır.");
+        // Info.plist'te İngilizce (inceleme ekibi İngilizce cihazla bakar), Türkçe telefonda
+        // tr.lproj/InfoPlist.strings'teki metin görünür. Klasör referansı olarak eklenir ki
+        // paket içinde tr.lproj/ klasörü korunsun (düz dosya kökte düzleşirdi).
+        plist.root.SetString("NSUserTrackingUsageDescription", AttEn);
+        var locs = plist.root.CreateArray("CFBundleLocalizations");
+        locs.AddString("en"); locs.AddString("tr");
         plist.WriteToFile(plistPath);
+        WriteLoc(pathToBuiltProject, "en", AttEn);
+        WriteLoc(pathToBuiltProject, "tr", AttTr);
+        proj.ReadFromFile(projPath);
+        foreach (var lang in new[] { "en", "tr" })
+        {
+            string guid = proj.AddFolderReference(Path.Combine(pathToBuiltProject, "MiskoLoc", lang + ".lproj"), "MiskoLoc/" + lang + ".lproj");
+            proj.AddFileToBuild(main, guid);
+        }
+        proj.WriteToFile(projPath);
 
         // iCloud (anahtar-değer deposu) + Game Center yetkileri. SADECE ücretli hesapla:
         // ücretsiz hesapta bu yetkiler varken Xcode imzalayamaz. Anahtar: MisketrCloud.Enabled.
