@@ -64,6 +64,11 @@ public class MahalleSave
     public int adsToday;
     // 1.1 SATIN ALMA: boncuğu verilmiş siparişler (aynı sipariş iki kez boncuk vermesin).
     public string[] iapOrders = new string[0];
+    // 1.1 GÜNÜN ÖDÜLÜ ×2: bugün izlenen "iki kat" reklamı (2 olunca ödül bir kez daha verilir).
+    public int dailyX2Day = -9999;
+    public int dailyX2Ads;
+    // 1.1 PUANLAMA: puan penceresinin istendiği sürüm (sürüm başına bir kez; reviewAsked eski alan).
+    public string reviewAskedVersion = "";
 }
 
 [Serializable]
@@ -533,6 +538,22 @@ public static class MahalleProfile
     // veriyordu; 1.1'de boncuk reklam/satın almaya taşındı (kullanıcı kararı, 2026-10-14).
     // Eski kayıtlardaki endlessBead* alanları sadece uyumluluk için duruyor.
     public static int LastEndlessBeads => 0;
+    // SONSUZ REKLAM BONCUĞU (1.1, kullanıcı kararı 2026-10-15): süre bitince reklam izlenirse her
+    // EndlessMarblesPerBead misket 1 boncuk, günde en fazla EndlessDailyBeadCap. Reklamsız boncuk yok.
+    public const int EndlessMarblesPerBead = 5, EndlessDailyBeadCap = 100;
+    public static int EndlessBeadsLeftToday => Mathf.Max(0, EndlessDailyBeadCap - (Data.endlessBeadDay == DailyLevel.DayIndex ? Data.endlessBeadsToday : 0));
+    public static int EndlessAdBeads(int score) => Mathf.Min(Mathf.Max(0, score) / EndlessMarblesPerBead, EndlessBeadsLeftToday);
+    public static int GrantEndlessAd(int score)
+    {
+        int gain = EndlessAdBeads(score);
+        if (gain <= 0) return 0;
+        int day = DailyLevel.DayIndex;
+        if (Data.endlessBeadDay != day) { Data.endlessBeadDay = day; Data.endlessBeadsToday = 0; }
+        Data.endlessBeadsToday += gain;
+        Data.beads += gain;
+        Save();
+        return gain;
+    }
 
     // REKLAM BONCUĞU (1.1): günde Monetization.AdDailyLimit reklam.
     public static int AdsLeftToday => Mathf.Max(0, Monetization.AdDailyLimit - (Data.adDay == DailyLevel.DayIndex ? Data.adsToday : 0));
@@ -543,6 +564,24 @@ public static class MahalleProfile
         Data.adsToday++;
         Data.beads += Mathf.Max(0, amount);   // test bayrağından bağımsız: gerçek kazanç
         Save();
+    }
+    // GÜNÜN ÖDÜLÜ ×2 (1.1, kullanıcı kararı 2026-10-15): bugünün ödülünü aldıktan sonra arka arkaya
+    // Monetization.DailyX2Ads reklam izlenirse aynı ödül bir kez daha verilir. İlerleme kayıtta durur,
+    // ikinci reklam o an yüklenmemişse oyuncu kaldığı yerden devam eder. Reklam boncuğu sınırına sayılmaz.
+    public static int DailyX2Watched => Data.dailyX2Day == DailyLevel.DayIndex ? Data.dailyX2Ads : 0;
+    public static bool DailyX2Open => Data.dailyDay == DailyLevel.DayIndex && DailyX2Watched < Monetization.DailyX2Ads;
+    public static int DailyX2Beads => DailyLevel.RewardFor(Mathf.Max(1, Data.dailyStreak));
+    // Bir reklam izlendi; ödül verildiyse verilen boncuğu, yoksa 0 döner.
+    public static int DailyX2AdWatched()
+    {
+        if (!DailyX2Open) return 0;
+        int day = DailyLevel.DayIndex;
+        if (Data.dailyX2Day != day) { Data.dailyX2Day = day; Data.dailyX2Ads = 0; }
+        Data.dailyX2Ads++;
+        int gain = 0;
+        if (Data.dailyX2Ads >= Monetization.DailyX2Ads) { gain = DailyX2Beads; Data.beads += gain; }
+        Save();
+        return gain;
     }
     // SATIN ALMA (1.1): sipariş daha önce işlendiyse false döner, boncuk tekrar verilmez.
     public static bool GrantPurchase(string orderId, int beads)
