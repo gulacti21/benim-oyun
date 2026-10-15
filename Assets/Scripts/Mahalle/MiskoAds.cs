@@ -27,6 +27,8 @@ public class MiskoAds : MonoBehaviour, IRewardedBackend
     }
 
     public bool Ready => initDone && rewarded != null && rewarded.IsAdReady();
+    bool noFill;
+    public bool NoFill => noFill;
 
 #if UNITY_IOS && !UNITY_EDITOR
     delegate void AttCallback(int status);
@@ -68,6 +70,27 @@ public class MiskoAds : MonoBehaviour, IRewardedBackend
         initDone = true;
         Monetization.Ads = this;
         LoadAd();   // önceden yükle: oyun sonunda düğme hazır olsun
+        StartCoroutine(Watchdog());
+    }
+
+    // BEKÇİ (build 13, 2026-10-15): telefonda yükleme isteğine ne "yüklendi" ne "başarısız" cevabı
+    // gelmediği görüldü; o zaman hiçbir şey yeniden denemiyor, düğme sonsuza kadar HAZIRLANIYOR
+    // kalıyordu. 5 sn'de bir: reklam yoksa ve istek yoksa ya da 20 sn'dir cevapsızsa yeniden iste.
+    IEnumerator Watchdog()
+    {
+        var wait = new WaitForSecondsRealtime(5f);
+        while (true)
+        {
+            yield return wait;
+            if (rewarded == null || pending != null) continue;
+            bool ready = rewarded.IsAdReady();
+            if (ready) { loading = false; continue; }
+            if (loading && Time.realtimeSinceStartup - loadStart < 20f) continue;
+            if (IsInvoking(nameof(LoadAd))) continue;
+            Debug.Log($"MiskoAds watchdog: reklam yok (loading={loading}), yeniden isteniyor");
+            loading = false;
+            LoadAd();
+        }
     }
 
     void OnInitFailed(LevelPlayInitError error)
@@ -82,9 +105,10 @@ public class MiskoAds : MonoBehaviour, IRewardedBackend
     void LoadAd()
     {
         if (rewarded == null || rewarded.IsAdReady()) return;
-        // Cevapsız kalan yükleme 60 sn sonra yok sayılır, yoksa düğme sonsuza kadar beklerdi.
-        if (loading && Time.realtimeSinceStartup - loadStart < 60f) return;
+        // Cevapsız kalan yükleme 20 sn sonra yok sayılır, yoksa düğme sonsuza kadar beklerdi.
+        if (loading && Time.realtimeSinceStartup - loadStart < 20f) return;
         loading = true; loadStart = Time.realtimeSinceStartup;
+        Debug.Log("MiskoAds: LoadAd istendi");
         rewarded.LoadAd();
     }
 
@@ -108,12 +132,13 @@ public class MiskoAds : MonoBehaviour, IRewardedBackend
         rewarded.ShowAd();
     }
 
-    void OnAdLoaded(LevelPlayAdInfo info) { loading = false; loadFails = 0; }
+    void OnAdLoaded(LevelPlayAdInfo info) { loading = false; loadFails = 0; noFill = false; Debug.Log("MiskoAds: reklam yuklendi"); }
     void OnAdLoadFailed(LevelPlayAdError error)
     {
         Debug.LogWarning($"Rewarded ad failed to load: {error.ErrorMessage}");
         loading = false;
         loadFails++;
+        noFill = true;   // "no fill" ya da başka sebep: düğmede "ŞU AN REKLAM YOK"; denemeye devam edilir
         CancelInvoke(nameof(LoadAd));
         Invoke(nameof(LoadAd), RetryDelay());
     }
