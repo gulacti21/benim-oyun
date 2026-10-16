@@ -22,7 +22,9 @@ public static class UpdateCheck
     // show(mağazadaki sürüm): sadece telefondaki sürüm eskiyse çağrılır.
     public static IEnumerator Run(Action<string> show)
     {
-        if (done || Application.isEditor) yield break;
+        // Sadece iPhone: Android'de App Store sürümüne bakmak, iOS'a yeni sürüm çıkınca Android
+        // oyuncusunu "GÜNCELLEME GEREKLİ" ile kilitlerdi (düğmesi de App Store'u açardı).
+        if (done || Application.isEditor || Application.platform != RuntimePlatform.IPhonePlayer) yield break;
         done = true;
         if (Application.internetReachability == NetworkReachability.NotReachable) yield break;
 

@@ -13,6 +13,23 @@ public static class MisketrShare
     {
 #if UNITY_IOS && !UNITY_EDITOR
         MisketrShareImage(path, text);
+#elif UNITY_ANDROID && !UNITY_EDITOR
+        // Android: sistemin paylaşım menüsü (metin). Görsel paylaşmak FileProvider ister; metin yeterli.
+        try
+        {
+            using (var intentClass = new AndroidJavaClass("android.content.Intent"))
+            using (var intent = new AndroidJavaObject("android.content.Intent"))
+            using (var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+            using (var activity = player.GetStatic<AndroidJavaObject>("currentActivity"))
+            {
+                intent.Call<AndroidJavaObject>("setAction", intentClass.GetStatic<string>("ACTION_SEND"));
+                intent.Call<AndroidJavaObject>("setType", "text/plain");
+                intent.Call<AndroidJavaObject>("putExtra", intentClass.GetStatic<string>("EXTRA_TEXT"), text);
+                using (var chooser = intentClass.CallStatic<AndroidJavaObject>("createChooser", intent, "Misko"))
+                    activity.Call("startActivity", chooser);
+            }
+        }
+        catch (System.Exception e) { Debug.LogWarning("Paylasim acilamadi: " + e.Message); }
 #else
         Debug.Log("PAYLAS_KARTI: " + path + "\n" + text);
 #if UNITY_EDITOR

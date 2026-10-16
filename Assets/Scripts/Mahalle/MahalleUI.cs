@@ -1071,7 +1071,7 @@ public class MahalleUI : MonoBehaviour
             var d2=Panel(kart.transform,"Dolu",712,64,Mathf.Max(10f,240f*ilerleme/hedef),10,tamam?Gold:Ink);d2.radius=5;
         }
         // Game Center: liderlik tabloları ve başarımlar (ücretli hesapla açılır, MisketrCloud.Enabled).
-        if(MisketrCloud.Enabled)
+        if(MisketrCloud.Enabled&&Application.platform==RuntimePlatform.IPhonePlayer)
             LabelButton(content,"GAME CENTER · SIRALAMA",48,2170,984,96,Ink,Cream,MisketrGameCenter.ShowDashboard,30);
     }
     private void Missions()
@@ -2083,7 +2083,11 @@ public class MahalleUI : MonoBehaviour
             y+=rh+16;
         }
         y+=8;
+#if UNITY_ANDROID
+        Text(box,"Ödeme Google Play hesabından alınır. Boncuklar sadece Misko'da kullanılır.\nBoncukları oynayarak da kazanabilirsin.",x,y,w,70,22,Muted,TextAlignmentOptions.Center);
+#else
         Text(box,"Ödeme App Store hesabından alınır. Boncuklar sadece Misko'da kullanılır.\nBoncukları oynayarak da kazanabilirsin.",x,y,w,70,22,Muted,TextAlignmentOptions.Center);
+#endif
         return y+70-y0;
     }
     // Sağ kenarı 'right' olan koyu yeşil boncuk hapı: misket simgesi + bakiye.

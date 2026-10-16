@@ -9,8 +9,16 @@ using UnityEngine;
 // Akış: ATT izni (iOS) -> LevelPlay.Init -> reklamı önceden yükle -> izlenince ödül (Monetization).
 public class MiskoAds : MonoBehaviour, IRewardedBackend
 {
-    public const string AppKey = "28ba299f5";                 // LevelPlay > Apps > Misko: Marble Game
-    public const string RewardedAdUnitId = "u0iyqv60k7egixhe"; // Ad units > Boncuk Odulu (Rewarded; paneldeki miktar oyunda kullanılmaz)
+    // LevelPlay'de her platform ayrı uygulama: iOS ve Android anahtarları/reklam birimleri farklı.
+    public const string IosAppKey = "28ba299f5";                 // LevelPlay > Apps > Misko: Marble Game (iOS)
+    public const string IosRewardedAdUnitId = "u0iyqv60k7egixhe"; // Ad units > Boncuk Odulu (Rewarded; paneldeki miktar oyunda kullanılmaz)
+    public const string AndroidAppKey = "28c6cdc15";              // LevelPlay > Apps > Misko: Marble Game (Android)
+    public const string AndroidRewardedAdUnitId = "tv2l688pyoxtna3w"; // Ad units > Boncuk Odulu (Android; Unity Ads Game ID 6206496, Rewarded_Android)
+#if UNITY_ANDROID
+    public const string AppKey = AndroidAppKey, RewardedAdUnitId = AndroidRewardedAdUnitId;
+#else
+    public const string AppKey = IosAppKey, RewardedAdUnitId = IosRewardedAdUnitId;
+#endif
 
     static MiskoAds instance;
     LevelPlayRewardedAd rewarded;
@@ -41,6 +49,8 @@ public class MiskoAds : MonoBehaviour, IRewardedBackend
 
     IEnumerator Start()
     {
+        // Platform anahtarı henüz yoksa (Android paneli kurulmadan) reklam sistemi hiç başlamaz; düğmeler "HAZIRLANIYOR".
+        if (string.IsNullOrEmpty(AppKey) || string.IsNullOrEmpty(RewardedAdUnitId)) yield break;
         // Açılış animasyonu ve menü otursun; ATT penceresi ilk saniyede çıkmasın.
         yield return new WaitForSecondsRealtime(2f);
 #if UNITY_IOS && !UNITY_EDITOR
