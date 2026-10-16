@@ -12,8 +12,39 @@ public class MahalleFeedback : MonoBehaviour
         if(!MahalleProfile.Data.haptics) return;
 #if UNITY_IOS && !UNITY_EDITOR
         MisketrHaptic();
+#elif UNITY_ANDROID && !UNITY_EDITOR
+        AndroidTick();
 #endif
     }
+#if UNITY_ANDROID && !UNITY_EDITOR
+    // Android: 15 ms hafif titreşim (Handheld.Vibrate çok uzun ve sert). Handheld referansı, Unity'nin
+    // VIBRATE iznini manifest'e eklemesi için burada duruyor.
+    static AndroidJavaObject vibrator; static bool vibratorTried;
+    static bool neverVibrate;   // sabit false olsaydı derleyici Handheld çağrısını silerdi
+    static void AndroidTick()
+    {
+        try
+        {
+            if (!vibratorTried)
+            {
+                vibratorTried = true;
+                using (var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+                using (var activity = player.GetStatic<AndroidJavaObject>("currentActivity"))
+                    vibrator = activity.Call<AndroidJavaObject>("getSystemService", "vibrator");
+            }
+            if (vibrator == null) return;
+            using (var ver = new AndroidJavaClass("android.os.Build$VERSION"))
+            {
+                if (ver.GetStatic<int>("SDK_INT") >= 26)
+                    using (var fx = new AndroidJavaClass("android.os.VibrationEffect"))
+                    using (var effect = fx.CallStatic<AndroidJavaObject>("createOneShot", 15L, 80))
+                        vibrator.Call("vibrate", effect);
+                else vibrator.Call("vibrate", 15L);
+            }
+        }
+        catch (System.Exception) { if (neverVibrate) Handheld.Vibrate(); }
+    }
+#endif
     public static void Score(Vector3 point)
     {
         Tap();
