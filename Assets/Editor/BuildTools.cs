@@ -11,7 +11,7 @@ public static class BuildTools
     private const string BundleIdentifier = "com.gulacti.misko";
     private const string TeamId = "69W6P52PA2";
     private const string Version = "1.2";
-    private const string BuildNumber = "20";
+    private const string BuildNumber = "21";
     // ANDROID: versionCode her Play yüklemesinde bir artar (iOS build numarasından bağımsız).
     private const int AndroidVersionCode = 2;
     // İmza anahtarı repo DIŞINDA: ~/.misko-android/keystore.properties (şifre burada, commit edilmez).
@@ -50,6 +50,8 @@ public static class BuildTools
         // 1.0 sadece iPhone (2026-09-25): Xcode 26'da UIRequiresFullScreen geçmiyor, iPad'i destekleyen
         // portre uygulama ITMS-90474 ile yüklenemiyor. iPad'de iPhone uygulaması olarak açılır.
         PlayerSettings.iOS.targetDevice = iOSTargetDevice.iPhoneOnly;
+        // 1.2 (build 21): uygulama içi etkinlik (In-App Event) deep link ister; misko://lunapark oyunu açar.
+        PlayerSettings.iOS.iOSUrlSchemes = new[] { "misko" };
 
         PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel25;
         // Google Play: 31 Ağustos 2026'dan beri yeni uygulamalar API 36 (Android 16) hedeflemeli.
