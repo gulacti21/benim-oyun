@@ -4,12 +4,23 @@ using UnityEngine.Rendering;
 public class MahalleWorld : MonoBehaviour
 {
     private Material groundMaterial, stoneMaterial;
+    private readonly Material[] bumperMats = new Material[3];
+    // Harita 4 tampon materyalleri (taşla aynı, build'de hayatta kalan shader): 0 kırmızı, 1 beyaz, 2 kara lastik.
+    private Material BumperMaterial(int k)
+    {
+        if(bumperMats[k]!=null)return bumperMats[k];
+        var sh=Resources.Load<Shader>("Mahalle/Environment");
+        if(sh==null||!sh.isSupported) sh=Shader.Find("Universal Render Pipeline/Lit");
+        var m=new Material(sh){hideFlags=HideFlags.HideAndDontSave};
+        m.SetColor("_BaseColor",k==0?Lunapark.BumperRed:k==1?Lunapark.BumperWhite:Lunapark.BumperRubber);
+        return bumperMats[k]=m;
+    }
     // Kodla uretilen gurultu dokusu ayri tutuluyor: OnDestroy sadece BUNU yok
     // etmeli. Fotograf kullanilirsa o Resources varligidir, yok edilmemeli.
     private Texture2D grainTexture;
     // Mahalle zemin fotograflari: Assets/Resources/Mahalle/Ground/<ad>.png
     // Harita 2 (Memleket) bölgeleri 5-9: dosya yoksa renkli gürültü zemini çizilir.
-    private static readonly string[] GroundFiles={"Apartman","Okul","Park","Toprak","Meydan","Sahil","Koy","Yayla","Pazar","Bayram"};
+    private static readonly string[] GroundFiles={"Apartman","Okul","Park","Toprak","Meydan","Sahil","Koy","Yayla","Pazar","Bayram","SehirMerkezi","Sanayi","Liman","Avm","Gokdelen","Giris","Carpisan","DonmeDolap","OyunSokagi","Sirk"};
 
     // TANI ARACI.
     // "Editorde boyle, telefonda boyle" durumlarini tahminle degil olcumle
@@ -44,7 +55,11 @@ public class MahalleWorld : MonoBehaviour
     private GameObject decor;
     public const float GroundGrow=2f;
     private static readonly Color[] GroundColors={new Color(.57f,.42f,.28f),new Color(.53f,.52f,.44f),new Color(.47f,.49f,.30f),new Color(.64f,.43f,.28f),new Color(.57f,.51f,.40f),
-        new Color(.80f,.70f,.50f),new Color(.50f,.40f,.29f),new Color(.44f,.53f,.32f),new Color(.60f,.54f,.45f),new Color(.55f,.46f,.40f)};
+        new Color(.80f,.70f,.50f),new Color(.50f,.40f,.29f),new Color(.44f,.53f,.32f),new Color(.60f,.54f,.45f),new Color(.55f,.46f,.40f),
+        // Harita 3 — Şehir: asfalt, beton, ıslak rıhtım, parlak karo, gece.
+        new Color(.42f,.43f,.44f),new Color(.50f,.49f,.46f),new Color(.40f,.45f,.48f),new Color(.66f,.64f,.60f),new Color(.30f,.31f,.36f),
+        // Harita 4 — Lunapark: parke taşı, kauçuk, ahşap iskele, oyun sokağı karosu, sirk halısı.
+        new Color(.70f,.55f,.45f),new Color(.26f,.26f,.28f),new Color(.66f,.52f,.36f),new Color(.62f,.50f,.36f),new Color(.52f,.16f,.16f)};
     // KAMERA KIRPMASI DÜZELTMESİ
     // Eskiden görünen yatay alan sabitti (yarı genişlik 3.65), saha yarıçapı
     // 3.65'i geçen bölümlerde çemberin kenarı ekran dışında kalıyordu.
@@ -137,6 +152,8 @@ public class MahalleWorld : MonoBehaviour
         }
         var light=FindFirstObjectByType<Light>();
         if(light!=null) {light.color=new Color(1,.94f,.82f);light.intensity=1.4f;light.transform.rotation=Quaternion.Euler(52,-30,0);light.shadows=LightShadows.Soft;}
+        // Harita 3 (Şehir): sıcak sarı ışık asfaltı kahverengi gösteriyordu; nötr, hafif soğuk gün ışığı.
+        if(light!=null&&SehirCampaign.IsCity(controller.Level))light.color=new Color(.97f,.98f,1f);
         RenderSettings.ambientMode=AmbientMode.Flat;RenderSettings.ambientLight=new Color(.6f,.65f,.69f);
         if(parkStudy)
         {
@@ -169,6 +186,8 @@ public class MahalleWorld : MonoBehaviour
             stoneMaterial.hideFlags=HideFlags.HideAndDontSave;
             stoneMaterial.SetColor("_BaseColor",new Color(.3f,.32f,.28f));
         }
+        // Harita 3 (Şehir): engeller açık gri kaldırım taşı.
+        stoneMaterial.SetColor("_BaseColor",controller.Level.district>=Maps.FirstDistrict(2)?new Color(.62f,.62f,.59f):new Color(.3f,.32f,.28f));
         var arena=FindFirstObjectByType<MarbleArena>();
         Vector3 centre=arena!=null?arena.transform.position:Vector3.zero;
         var designed=controller.Level.obstacles;
@@ -178,10 +197,18 @@ public class MahalleWorld : MonoBehaviour
             for(int i=0;i<designed.Length;i++)
             {
                 var spot=designed[i];
+                // Harita 4: tampon (kırmızı-beyaz, çarpanı fırlatır).
+                if(spot.kind==ObstacleKind.Bumper)
+                {
+                    Lunapark.BuildBumper(new Vector3(centre.x+spot.x,0f,centre.z+spot.z),spot.width,decor.transform,BumperMaterial(0),BumperMaterial(1),BumperMaterial(2));
+                    continue;
+                }
                 var stone=GameObject.CreatePrimitive(PrimitiveType.Cube);stone.name="Engel "+(i+1);
                 stone.transform.SetParent(decor.transform);
-                stone.transform.position=new Vector3(centre.x+spot.x,.22f,centre.z+spot.z);
-                stone.transform.localScale=new Vector3(Mathf.Max(.2f,spot.width),.44f,Mathf.Max(.2f,spot.depth));
+                // Harita 3: alçak kaldırım (hızlı misket üstünden aşar). Diğer haritalarda tam engel.
+                float eh=SehirCampaign.IsCity(controller.Level)?SehirCampaign.CurbHeight:.44f;
+                stone.transform.position=new Vector3(centre.x+spot.x,eh*.5f,centre.z+spot.z);
+                stone.transform.localScale=new Vector3(Mathf.Max(.2f,spot.width),eh,Mathf.Max(.2f,spot.depth));
                 stone.transform.rotation=Quaternion.Euler(0,spot.angle,0);
                 stone.GetComponent<Renderer>().sharedMaterial=stoneMaterial;
             }
@@ -204,5 +231,5 @@ public class MahalleWorld : MonoBehaviour
             pebble.transform.localScale=new Vector3(.08f+.06f*(i%3),.07f,.13f);pebble.GetComponent<Renderer>().sharedMaterial=stoneMaterial;
         }
     }
-    private void OnDestroy() {if(grainTexture!=null)Destroy(grainTexture);if(groundMaterial!=null)Destroy(groundMaterial);if(stoneMaterial!=null)Destroy(stoneMaterial);}
+    private void OnDestroy() {if(grainTexture!=null)Destroy(grainTexture);if(groundMaterial!=null)Destroy(groundMaterial);if(stoneMaterial!=null)Destroy(stoneMaterial);foreach(var bm in bumperMats)if(bm!=null)Destroy(bm);}
 }

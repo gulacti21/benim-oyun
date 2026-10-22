@@ -7,19 +7,20 @@ public class SpecialMarblePhysics : MonoBehaviour
     private PhysicsMaterial original,variant;
     private Vector3 normalScale;
     private float normalMass,normalDrag;
+    private RigidbodyConstraints normalConstraints;
     public int ActiveSkin {get;private set;}
     public float ImpulseMultiplier {get;private set;}=1f;
     private void Awake()
     {
         body=GetComponent<Rigidbody>();sphere=GetComponent<SphereCollider>();
-        normalScale=transform.localScale;normalMass=body.mass;normalDrag=body.linearDamping;
+        normalScale=transform.localScale;normalMass=body.mass;normalDrag=body.linearDamping;normalConstraints=body.constraints;
         original=sphere.sharedMaterial;variant=new PhysicsMaterial("Özel misket");
     }
     public void Apply(MarblePower power)
     {
         if(body==null)Awake();
         transform.localScale=normalScale;body.mass=normalMass;body.linearDamping=normalDrag;
-        sphere.sharedMaterial=original;ImpulseMultiplier=1f;
+        sphere.sharedMaterial=original;ImpulseMultiplier=1f;body.constraints=normalConstraints;
         ActiveSkin=power==MarblePower.None?MahalleProfile.EffectiveSkin:0;
         if(power==MarblePower.None&&SpecialMarbles.IsSpecial(ActiveSkin))
         {
@@ -38,7 +39,9 @@ public class SpecialMarblePhysics : MonoBehaviour
                 sphere.sharedMaterial=variant;
             }
         }
-        else if(power==MarblePower.Big){transform.localScale=normalScale*1.65f;body.mass=normalMass*2f;}
+        // 1.2: Baş Misket büyüyünce küçük misketlere çarpınca üstlerine tırmanıyordu (kullanıcı bildirdi).
+        // Dikey hareket kilitli: zeminde kalır, misketleri önden iter. Kütle/itki aynı.
+        else if(power==MarblePower.Big){transform.localScale=normalScale*1.65f;body.mass=normalMass*2f;body.constraints=normalConstraints|RigidbodyConstraints.FreezePositionY;}
         else if(power==MarblePower.Iron)body.mass=normalMass*2.6f;
     }
     private void OnDestroy()

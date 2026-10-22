@@ -10,8 +10,8 @@ public static class BuildTools
     // test uygulaması ayrı kalır, yeni uygulama sıfırdan başlar.
     private const string BundleIdentifier = "com.gulacti.misko";
     private const string TeamId = "69W6P52PA2";
-    private const string Version = "1.1";
-    private const string BuildNumber = "15";
+    private const string Version = "1.2";
+    private const string BuildNumber = "20";
     // ANDROID: versionCode her Play yüklemesinde bir artar (iOS build numarasından bağımsız).
     private const int AndroidVersionCode = 2;
     // İmza anahtarı repo DIŞINDA: ~/.misko-android/keystore.properties (şifre burada, commit edilmez).

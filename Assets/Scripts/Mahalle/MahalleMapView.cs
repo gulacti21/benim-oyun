@@ -28,10 +28,18 @@ public static class MahalleMapView
     private const float SideShift = 190f;  // durak kutusunun cembere gore kaymasi
     private const float TextGap = 125f;    // cember merkezi ile yazi blogu arasi
 
+    // Ortadaki şeridin ortalama parlaklığı (0-255), bölge sırasıyla (Harita*.png). Görsel değişirse yeniden ölç.
+    private static readonly int[] MapLum = { 215, 175, 196, 131, 160, 200, 156, 152, 192, 164, 110, 196, 166, 210, 53, 224, 51, 192, 217, 85 };
+    private static Color Ink = new Color(.176f, .169f, .145f), Line = new Color(1f, .97f, .89f);
+
     // Harita arka planlari. Zemin dokulariyla karismasin diye ayri klasor ve "Harita" oneki.
     private static readonly string[] MapFiles = { "HaritaApartman", "HaritaOkul", "HaritaPark", "HaritaToprak", "HaritaMeydan",
-                                                          "HaritaSahil", "HaritaKoy", "HaritaYayla", "HaritaPazar", "HaritaBayram" };
-    private static readonly string[] GroundFiles = { "Apartman", "Okul", "Park", "Toprak", "Meydan", "Sahil", "Koy", "Yayla", "Pazar", "Bayram" };
+                                                          "HaritaSahil", "HaritaKoy", "HaritaYayla", "HaritaPazar", "HaritaBayram",
+                                                          "HaritaSehirMerkezi", "HaritaSanayi", "HaritaLiman", "HaritaAvm", "HaritaGokdelen",
+                                                          "HaritaGiris", "HaritaCarpisan", "HaritaDonmeDolap", "HaritaOyunSokagi", "HaritaSirk" };
+    private static readonly string[] GroundFiles = { "Apartman", "Okul", "Park", "Toprak", "Meydan", "Sahil", "Koy", "Yayla", "Pazar", "Bayram",
+                                                     "SehirMerkezi", "Sanayi", "Liman", "Avm", "Gokdelen",
+                                                     "Giris", "Carpisan", "DonmeDolap", "OyunSokagi", "Sirk" };
 
     // Bölgenin harita görseli (yoksa null). Harita geçişi animasyonu arka plan olarak kullanır.
     public static Texture2D MapPhoto(int district)
@@ -140,13 +148,20 @@ public static class MahalleMapView
                 if (d.flip) r.localScale = new Vector3(-1f, 1f, 1f);
             }
 
+        // Harita görselinin ortası çok açık ya da çok koyuysa (Lunapark: Giriş, Oyun Sokağı açık; Çarpışan
+        // Arabalar, Sirk, Gökdelenler koyu) krem yol ve kömür yazı kayboluyordu (kullanıcı, 2026-10-20).
+        // Ortadaki şeridin parlaklığı ölçüldü (MapLum); koyu zeminde yazı krem, açık zeminde yol koyu.
+        int lum = district >= 0 && district < MapLum.Length && MapPhoto(district) != null ? MapLum[district] : 150;
+        Ink = lum < 100 ? Krem : Komur;
+        Line = lum >= 205 ? new Color(.36f, .27f, .18f) : Krem;
+
         // --- duraklari baglayan tek, ince, kesik tebesir rotasi ---
         var pathRect = Rect("Yol", host2, Vector2.zero, new Vector2(1080f, MapHeight));
         var path = pathRect.gameObject.AddComponent<MahalleChalkPath>();
         var stops = new Vector2[12];
         for (int i = 0; i < 12; i++) stops[i] = Stop(i);
         path.stops = stops;
-        path.color = Krem;
+        path.color = Line;
         path.lineAlpha = .78f;
         path.dustAlpha = 0f;          // kalin yol seridi yok
         path.lineWidth = 6f;
@@ -201,13 +216,13 @@ public static class MahalleMapView
             {
                 var kilit = Art(vis, "Kilit", MahalleGraphic.Shape.Lock,
                                 new Vector2(cx + 66f, -66f), Vector2.one * 52f);
-                kilit.color = new Color(Komur.r, Komur.g, Komur.b, .62f);
+                kilit.color = new Color(Ink.r, Ink.g, Ink.b, .62f);
             }
             if (mastery)
             {
                 var badge = Art(vis, "Ustalik rozeti", MahalleGraphic.Shape.Star,
                                 new Vector2(cx, RingSize * .5f + 34f), Vector2.one * 52f);
-                badge.color = stars >= 3 ? Amber : new Color(Komur.r, Komur.g, Komur.b, .45f);
+                badge.color = stars >= 3 ? Amber : new Color(Ink.r, Ink.g, Ink.b, .45f);
             }
 
             Block(vis, font, left, cx, local, levelName, stars, unlocked, current,
@@ -218,7 +233,8 @@ public static class MahalleMapView
             bool open = unlocked;
             int needBefore = index > 0 ? MahalleProfile.Required(index - 1) : 1;
             bool mapLocked = !unlocked && index == Maps.First(Maps.MapOfDistrict(district)) && index > 0;
-            string blocked = mapLocked ? L.F("{0} haritası, {1} haritasının son bölümünü geçince açılır.", L.T(Maps.Names[Maps.MapOfDistrict(district)]), L.T(Maps.Names[Maps.MapOfDistrict(district) - 1]))
+            string blocked = !Maps.Ready(index) ? "Bu bölüm çok yakında geliyor."
+                : mapLocked ? L.F("{0} haritası, {1} haritasının son bölümünü geçince açılır.", L.T(Maps.Names[Maps.MapOfDistrict(district)]), L.T(Maps.Names[Maps.MapOfDistrict(district) - 1]))
                 : needBefore > 1
                 ? L.F("Bu bölüm için önceki bölümde {0} yıldız almalısın.", needBefore)
                 : "Önce bir önceki bölümü tamamla.";
@@ -247,7 +263,7 @@ public static class MahalleMapView
         var badge = Art(node, "Numara", MahalleGraphic.Shape.Panel,
                         new Vector2(edge, 44f), new Vector2(78f, 58f));
         badge.radius = 18f;
-        badge.color = unlocked ? Amber : new Color(Komur.r, Komur.g, Komur.b, .32f);
+        badge.color = unlocked ? Amber : new Color(Ink.r, Ink.g, Ink.b, .32f);
         badge.rectTransform.pivot = new Vector2(pivotX, .5f);
         badge.rectTransform.anchoredPosition = new Vector2(edge, 44f);
         var num = Text(node, font, (local + 1).ToString("00"), new Vector2(edge, 44f),
@@ -258,7 +274,7 @@ public static class MahalleMapView
 
         // bolum adi
         var name = Text(node, font, levelName, new Vector2(edge, -8f), new Vector2(430f, 58f),
-                        42f, new Color(Komur.r, Komur.g, Komur.b, dim), align);
+                        42f, new Color(Ink.r, Ink.g, Ink.b, dim), align);
         name.rectTransform.pivot = new Vector2(pivotX, .5f);
         name.rectTransform.anchoredPosition = new Vector2(edge, -8f);
         name.fontStyle = FontStyles.Bold;
@@ -279,14 +295,14 @@ public static class MahalleMapView
         {
             float sx = left ? edge + 18f + s * 44f : edge - 18f - (2 - s) * 44f;
             var star = Art(node, "Yildiz " + s, MahalleGraphic.Shape.Star, new Vector2(sx, -62f), Vector2.one * 36f);
-            star.color = s < stars ? Amber : new Color(Komur.r, Komur.g, Komur.b, unlocked ? .24f : .16f);
+            star.color = s < stars ? Amber : new Color(Ink.r, Ink.g, Ink.b, unlocked ? .24f : .16f);
         }
 
         // baraj bolumu: kac yildiz gerektigi tek satir, gosterissiz
         if (!unlocked && need > 1)
         {
             var req = Text(node, font, L.F("{0} YILDIZ GEREKLİ", need), new Vector2(edge, -108f),
-                           new Vector2(430f, 40f), 23f, new Color(Komur.r, Komur.g, Komur.b, .55f), align);
+                           new Vector2(430f, 40f), 23f, new Color(Ink.r, Ink.g, Ink.b, .55f), align);
             req.rectTransform.pivot = new Vector2(pivotX, .5f);
             req.rectTransform.anchoredPosition = new Vector2(edge, -108f);
         }
@@ -302,7 +318,7 @@ public static class MahalleMapView
 
         var ring = Art(node, "Tebesir cemberi", MahalleGraphic.Shape.ChalkRing,
                        new Vector2(cx, 0f), Vector2.one * RingSize);
-        ring.color = new Color(Krem.r, Krem.g, Krem.b, unlocked ? .92f : .5f);
+        ring.color = new Color(Line.r, Line.g, Line.b, unlocked ? .92f : .5f);
         ring.dashed = true;
         ring.stroke = 6f;
     }

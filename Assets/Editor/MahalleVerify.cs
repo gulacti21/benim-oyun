@@ -39,7 +39,7 @@ public static class MahalleVerify
             reward=MahalleProfile.Finish(0,3,6);
             Check(reward.beads==3&&data.stars[0]==3,"Only incremental stars are rewarded");
             int wallet=data.beads;Check(MahalleProfile.Consume(MarblePower.Big)&&data.stock[0]==0&&data.beads==wallet,"Free trial precedes spending");
-            Check(MahalleProfile.Consume(MarblePower.Big)&&data.beads==wallet-16,"Power charged once");
+            Check(MahalleProfile.Consume(MarblePower.Big)&&data.beads==wallet-Campaign.PowerPrices[0],"Power charged once");
             data.beads=0;Check(!MahalleProfile.Consume(MarblePower.Big)&&data.beads==0,"Insufficient funds never go negative");
             Check(MahalleProfile.Consume(MarblePower.None)&&data.beads==0,"Normal shot always available");
             data.beads=100;Check(MahalleProfile.EquipOrBuy(1)&&data.beads==60&&data.selectedSkin==1,"Skin purchase equips");

@@ -1,0 +1,140 @@
+== Apartman
+   1  5 atışta  1 /  3 misket  -> %100
+   2  5 atışta  3 /  6 misket  -> %100
+   3  5 atışta  3 /  6 misket  -> %100
+   4  5 atışta  5 /  8 misket  -> %100
+   5  5 atışta  6 /  7 misket  -> %95
+   6  5 atışta  3 /  7 misket  -> %80
+   7  5 atışta  7 /  8 misket  -> %97
+   8  5 atışta  6 /  7 misket  -> %3 [KESEM]
+   9  2 atışta  3 /  5 misket  -> %95
+  10  3 atışta  5 /  9 misket  -> %77
+  11  5 atışta  4 / 12 misket  -> %73
+  12  3 atışta  5 / 10 misket  -> %20 [SINAV]
+  ORTALAMA (normal bölümler): %92
+== Okul
+   1  4 atışta  5 /  8 misket  -> %97
+   2  4 atışta  5 /  8 misket  -> %100
+   3  4 atışta  4 /  8 misket  -> %95
+   4  5 atışta  5 /  8 misket  -> %87
+   5  5 atışta  7 / 10 misket  -> %70
+   6  5 atışta  7 / 10 misket  -> %73
+   7  5 atışta  4 / 10 misket  -> %72
+   8  4 atışta  5 / 10 misket  -> %63
+   9  4 atışta  8 / 11 misket  -> %0 [KESEM]
+  10  4 atışta  4 / 12 misket  -> %67
+  11  4 atışta  4 / 12 misket  -> %70
+  12  5 atışta  8 / 12 misket  -> %27 [SINAV]
+  ORTALAMA (normal bölümler): %79
+== Park
+   1  4 atışta  4 / 10 misket  -> %68
+   2  5 atışta  3 / 10 misket  -> %72
+   3  5 atışta  3 / 10 misket  -> %63
+   4  5 atışta  5 / 12 misket  -> %63
+   5  6 atışta  4 / 12 misket  -> %67
+   6  5 atışta  3 / 12 misket  -> %60
+   7  4 atışta  5 / 12 misket  -> %53
+   8  5 atışta  3 / 12 misket  -> %53
+   9  3 atışta  7 / 14 misket  -> %0 [KESEM]
+  10  5 atışta  3 / 14 misket  -> %22
+  11  4 atışta  5 / 14 misket  -> %72
+  12  5 atışta  9 / 14 misket  -> %33 [SINAV]
+  ORTALAMA (normal bölümler): %59
+== Toprak
+   1  3 atışta  4 / 10 misket  -> %70
+   2  6 atışta  3 / 10 misket  -> %48
+   3  6 atışta  4 / 10 misket  -> %33
+   4  5 atışta  5 / 12 misket  -> %62
+   5  5 atışta  4 / 12 misket  -> %68
+   6  6 atışta  4 / 13 misket  -> %28
+   7  4 atışta  6 / 12 misket  -> %0 [KESEM]
+   8  5 atışta  4 / 12 misket  -> %35
+   9  5 atışta  5 / 14 misket  -> %48
+  10  4 atışta  5 / 14 misket  -> %32
+  11  4 atışta  5 / 14 misket  -> %27
+  12  5 atışta  7 / 16 misket  -> %17 [SINAV]
+  ORTALAMA (normal bölümler): %45
+== Meydan
+   1  4 atışta  5 / 12 misket  -> %40
+   2  4 atışta  5 / 12 misket  -> %32
+   3  5 atışta  4 / 13 misket  -> %23
+   4  5 atışta  6 / 13 misket  -> %45
+   5  4 atışta  4 / 13 misket  -> %27
+   6  5 atışta  4 / 13 misket  -> %62
+   7  6 atışta  4 / 14 misket  -> %23
+   8  4 atışta  5 / 14 misket  -> %45
+   9  4 atışta  7 / 14 misket  -> %0 [KESEM]
+  10  4 atışta  5 / 15 misket  -> %13
+  11  5 atışta  4 / 15 misket  -> %30
+  12  4 atışta  3 / 16 misket  -> %28 [SINAV]
+  ORTALAMA (normal bölümler): %34
+== Sahil
+   1  2 atışta  2 / 10 misket  -> %73
+   2  3 atışta  3 /  7 misket  -> %58
+   3  6 atışta  4 /  9 misket  -> %70
+   4  3 atışta  3 /  9 misket  -> %78
+   5  3 atışta  3 /  9 misket  -> %68
+   6  3 atışta  4 /  9 misket  -> %62
+   7  5 atışta  5 /  9 misket  -> %0 [KESEM]
+   8  5 atışta  4 /  9 misket  -> %7
+   9  5 atışta  4 / 11 misket  -> %48
+  10  3 atışta  4 / 10 misket  -> %53
+  11  4 atışta  4 / 11 misket  -> %38
+  12  7 atışta  4 / 12 misket  -> %5 [SINAV]
+  ORTALAMA (normal bölümler): %56
+== Köy
+   1  3 atışta  3 / 10 misket  -> %82
+   2  4 atışta  3 /  8 misket  -> %80
+   3  4 atışta  4 /  9 misket  -> %53
+   4  5 atışta  3 /  7 misket  -> %50
+   5  3 atışta  3 /  8 misket  -> %13
+   6  7 atışta  4 /  9 misket  -> %40
+   7  4 atışta  4 / 12 misket  -> %72
+   8  4 atışta  5 /  9 misket  -> %2 [KESEM]
+   9  5 atışta  4 / 10 misket  -> %40
+  10  4 atışta  5 / 10 misket  -> %18
+  11  5 atışta  3 / 12 misket  -> %47
+  12  7 atışta  3 / 13 misket  -> %3 [SINAV]
+  ORTALAMA (normal bölümler): %50
+== Yayla
+   1  2 atışta  2 / 10 misket  -> %85
+   2  3 atışta  3 /  8 misket  -> %48
+   3  3 atışta  4 /  8 misket  -> %20
+   4  4 atışta  3 /  9 misket  -> %40
+   5  5 atışta  5 / 10 misket  -> %42
+   6  4 atışta  4 / 12 misket  -> %2 [KESEM]
+   7  4 atışta  4 / 12 misket  -> %17
+   8  5 atışta  5 / 11 misket  -> %28
+   9  5 atışta  4 / 10 misket  -> %2
+  10  4 atışta  4 /  9 misket  -> %32
+  11  5 atışta  5 / 13 misket  -> %10
+  12  9 atışta  5 / 13 misket  -> %3 [SINAV]
+  ORTALAMA (normal bölümler): %32
+== Pazar
+   1  3 atışta  3 /  9 misket  -> %68
+   2  3 atışta  3 /  7 misket  -> %62
+   3  4 atışta  4 /  9 misket  -> %38
+   4  7 atışta  4 / 13 misket  -> %57
+   5  3 atışta  3 / 10 misket  -> %32
+   6  5 atışta  4 / 10 misket  -> %48
+   7  3 atışta  4 /  9 misket  -> %3 [KESEM]
+   8  4 atışta  3 /  9 misket  -> %50
+   9  3 atışta  4 / 12 misket  -> %27
+  10  4 atışta  5 / 11 misket  -> %12
+  11  9 atışta  9 / 12 misket  -> %27
+  12  6 atışta  5 / 12 misket  -> %5 [SINAV]
+  ORTALAMA (normal bölümler): %42
+== Bayram
+   1  7 atışta  8 /  9 misket  -> %28
+   2  8 atışta  8 /  9 misket  -> %22
+   3  7 atışta  9 / 15 misket  -> %28
+   4  8 atışta  7 / 10 misket  -> %28
+   5  6 atışta  9 / 11 misket  -> %33
+   6  8 atışta  9 / 13 misket  -> %25
+   7  7 atışta  7 /  9 misket  -> %38
+   8  8 atışta  8 / 12 misket  -> %3 [KESEM]
+   9  7 atışta  6 / 12 misket  -> %32
+  10  6 atışta  4 /  9 misket  -> %35
+  11  10 atışta  5 / 15 misket  -> %25
+  12  8 atışta  7 / 14 misket  -> %12 [SINAV]
+  ORTALAMA (normal bölümler): %29

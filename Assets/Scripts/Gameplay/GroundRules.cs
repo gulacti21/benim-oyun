@@ -23,10 +23,14 @@ public static class GroundRules
     public static float SlopeMinSpeed = .3f;     // bunun altında eğim etkisiz (duran misket)
     public static float SlopeFullSpeed = 2.3f;   // eğim bu hızda tam etkili, altında orantılı azalır
     public static float PitCaptureSpeed = 2.2f;  // bundan yavaş geçen hedef çukura düşer
+    // HARİTA 3 RÖGAR KAPAĞI: taban sürtünmenin (.6) çoğunu geri verir, misket kayar. Tabanın
+    // altında kaldığı için hiçbir misket kendi kendine hızlanmaz, sadece geç yavaşlar.
+    public static float SlickBoost = .45f;
     public const float PitDepth = .22f;          // düşen misketin çökme miktarı (görsel)
 
+    // Harita 4: mıknatıs misket de bir kural (Lunapark.Magnets).
     public static bool HasRules(LevelData level) =>
-        level != null && ((level.zones != null && level.zones.Length > 0) || level.slope.sqrMagnitude > 1e-6f);
+        level != null && ((level.zones != null && level.zones.Length > 0) || level.slope.sqrMagnitude > 1e-6f || Lunapark.HasMagnet(level));
 
     // Bir fizik adımı öncesi. center = çemberin merkezi. captured: çukura düşen hedef
     // (çağıran kendi listesinden çıkarır). shooter null olabilir.
@@ -42,6 +46,7 @@ public static class GroundRules
         }
         if (shooter != null && !shooter.isKinematic && shooter.gameObject.activeInHierarchy)
             Apply(level, center, shooter, dt, false);
+        Lunapark.Magnets(level, center, targets, shooter, dt);
     }
 
     // true = hedef çukura düştü.
@@ -60,6 +65,13 @@ public static class GroundRules
                 {
                     case ZoneKind.Sand: drag += SandDrag; break;
                     case ZoneKind.Mud: drag += MudDrag; break;
+                    case ZoneKind.Slick: drag -= SlickBoost; break;
+                    case ZoneKind.Belt:
+                        // Harita 4 yürüyen bant: duran misketi de taşır (uyuyan gövde uyandırılır).
+                        if (b.IsSleeping()) b.WakeUp();
+                        b.linearVelocity = Lunapark.Belt(b.linearVelocity, z.angle, dt);
+                        v = b.linearVelocity; speed = new Vector2(v.x, v.z).magnitude;
+                        break;
                     case ZoneKind.Pit:
                         if (speed < PitCaptureSpeed)
                         {
@@ -70,8 +82,9 @@ public static class GroundRules
                         break;
                 }
             }
-        if (drag > 0f)
+        if (drag != 0f)
         {
+            // Rögar (eksi değer) tabanın altında kalır, k hep 1/(1-.45·dt) civarında: kararlı.
             // PhysX linearDamping ile aynı biçim: v *= 1 / (1 + drag·dt) — kararlı, işaret değiştirmez.
             float k = 1f / (1f + drag * dt);
             b.linearVelocity = new Vector3(v.x * k, v.y, v.z * k);

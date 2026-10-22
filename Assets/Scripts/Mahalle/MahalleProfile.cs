@@ -58,6 +58,8 @@ public class MahalleSave
     public int[] failCounts = new int[0];   // bölüm başına toplam kayıp (geçilmemiş bölümlerde)
     // SONSUZ BONCUĞU: bugün Sonsuz'dan kazanılan boncuk (DailyLevel.DayIndex ile gün değişince sıfırlanır).
     public int endlessBeadDay = -9999;
+    // 1.2: oyuncunun misketlerine verdiği isimler (koleksiyon sırasıyla; boş = orijinal ad). Sadece bu cihazda/iCloud'da.
+    public string[] skinNicknames = new string[0];
     public int endlessBeadsToday;
     // 1.1 REKLAM BONCUĞU: bugün izlenen ödüllü reklam sayısı (gün değişince sıfırlanır).
     public int adDay = -9999;
@@ -169,7 +171,7 @@ public static class MahalleProfile
         if(value.version<3)
         {
             // Kaldırılan takım misketlerinin 600 boncuk bedeli bir kez iade edilir.
-            for(int i=SpecialMarbles.FirstSkin;i<Campaign.SkinCount;i++)
+            for(int i=SpecialMarbles.FirstSkin;i<SpecialMarbles.FirstSkin+SpecialMarbles.Count;i++)
                 if(value.skins[i]){value.beads+=600;value.skins[i]=false;}
             if(SpecialMarbles.IsSpecial(value.selectedSkin))value.selectedSkin=0;
             value.version=3;
@@ -187,11 +189,26 @@ public static class MahalleProfile
             if (mp.districtPlays == null) mp.districtPlays = new int[Maps.DistrictsPerMap];
             Array.Resize(ref mp.districtPlays, Maps.DistrictsPerMap);
         }
+        if (value.version < 4)
+        {
+            // 1.2: 1★ ile 3★ arasında yer kalmayan bölümler artık 2 yıldızla geçiliyor; 2★ = eski 1★
+            // (aynı misket sayısı). Eski kayıttaki 1 yıldız 2'ye çevrilir, yoksa sonraki bölüm kilitlenirdi.
+            for (int g = 0; g < Maps.TotalLevels; g++)
+            {
+                if (!HumanTuning.PassLifted(g)) continue;
+                int map = Maps.MapOf(g), local = Maps.Local(g);
+                int[] arr = map == 0 ? value.stars : value.maps[map - 1].stars;
+                if (arr[local] == 1) arr[local] = 2;
+            }
+            value.version = 4;
+        }
         value.lastMap = Mathf.Clamp(value.lastMap, 0, Maps.Count - 1);
         if (value.helpGiven == null) value.helpGiven = new bool[0];
         Array.Resize(ref value.helpGiven, Maps.TotalLevels);
         if (value.failCounts == null) value.failCounts = new int[0];
         Array.Resize(ref value.failCounts, Maps.TotalLevels);
+        if (value.skinNicknames == null) value.skinNicknames = new string[0];
+        Array.Resize(ref value.skinNicknames, Campaign.SkinCount);
         for(int i=0;i<value.marbleLife.Length;i++)value.marbleLife[i]=Mathf.Clamp(value.marbleLife[i],0,SpecialMarbles.MaxLife);
         value.skins[0] = true;
         value.beads = Mathf.Max(0, value.beads);
@@ -267,7 +284,7 @@ public static class MahalleProfile
     // YAYINDAN ONCE false YAPILACAK. Acikken oyunun ustunde "TEST" yazar
     // ve MISKETR/Verify Mahalle Systems yuksek sesle uyarir.
     // ---------------------------------------------------------------
-    public static readonly bool TestUnlockAllLevels = false;   // 2026-09-30: yayın için kapatıldı
+    public static readonly bool TestUnlockAllLevels = false;  // telefonda denemek için geçici true
 
     // Telefonda deneme yaparken boncuk biriktirmekle ugrasilmasin diye:
     // acikken kese hep dolu gorunur ve harcamalar keseden dusmez.
@@ -352,6 +369,8 @@ public static class MahalleProfile
     public static bool Unlocked(int index)
     {
         if (index < 0 || index >= Maps.TotalLevels) return false;
+        // Henüz tasarlanmamış bölüm (Şehir'in 11. bölümünden sonrası) hiçbir modda açılmaz.
+        if (!Maps.Ready(index)) return false;
 #if UNITY_EDITOR
         // TestMode = dogrulama testleri calisiyor; onlar gercek kilit kuralini olcmeli.
         if (TestUnlockAllLevels && !TestMode) return true;
@@ -376,7 +395,7 @@ public static class MahalleProfile
     public static int NextLevelIn(int map)
     {
         map = Mathf.Clamp(map, 0, Maps.Count - 1);
-        int first = Maps.First(map), end = first + Maps.PerMap;
+        int first = Maps.First(map), end = first + Maps.ReadyCount(map);
         for (int i = first; i < end; i++) if (Unlocked(i) && Stars(i) < Required(i)) return i;
         return end - 1;
     }
@@ -455,6 +474,25 @@ public static class MahalleProfile
     }
 
     public static bool CanBuySkin(int skin)=>skin>=0&&skin<Campaign.SkinCount;
+    public static bool BuyPack(int i)
+    {
+        if (i < 0 || i >= Campaign.PackPrice.Length) return false;
+        if (!SpendBeads(Campaign.PackPrice[i])) return false;
+        Data.stock[Campaign.PackPower[i]] += Campaign.PackCount[i];
+        Save();
+        return true;
+    }
+    // MİSKET İSMİ: en fazla 14 harf, baş/son boşluk atılır; boş verilirse orijinal ada döner.
+    public const int NicknameMax = 14;
+    public static string Nickname(int skin) => skin >= 0 && skin < Data.skinNicknames.Length ? Data.skinNicknames[skin] : null;
+    public static void SetNickname(int skin, string name)
+    {
+        if (skin < 0 || skin >= Data.skinNicknames.Length || !Data.skins[skin]) return;
+        name = (name ?? "").Replace("\n", " ").Trim();
+        if (name.Length > NicknameMax) name = name.Substring(0, NicknameMax);
+        Data.skinNicknames[skin] = name.Length == 0 ? null : name;
+        Save();
+    }
     public static int RemainingLife(int skin)=>SpecialMarbles.IsSpecial(skin)?Data.marbleLife[skin-SpecialMarbles.FirstSkin]:SpecialMarbles.MaxLife;
     public static int EffectiveSkin=>SpecialMarbles.IsSpecial(Data.selectedSkin)&&RemainingLife(Data.selectedSkin)==0?0:Data.selectedSkin;
     public static bool EquipOrBuy(int skin)

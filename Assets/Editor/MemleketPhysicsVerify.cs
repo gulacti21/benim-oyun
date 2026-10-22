@@ -36,11 +36,11 @@ public static class MemleketPhysicsVerify
     private static int shotBonus;      // ölçüm sırasında atış hakkına eklenir (geri alınır)
     private const float CasualAimNoise = 2f;
 
-    private class Variant { public string name; public float massMul = 1f, scaleMul = 1f, impulseMul = 1f, dragMul = 1f; public bool own; public float frictionMul = 1f, bounce = -1f; public PhysicsMaterialCombine fc, bc; }
+    private class Variant { public string name; public float massMul = 1f, scaleMul = 1f, impulseMul = 1f, dragMul = 1f; public bool own, freezeY; public float frictionMul = 1f, bounce = -1f; public PhysicsMaterialCombine fc, bc; }
     private static readonly Variant Normal = new Variant { name = "NORMAL" };
     private static readonly Variant[] Extra =
     {
-        new Variant { name = "GUC-BUYUK", scaleMul = 1.65f, massMul = 2f, impulseMul = 2.3f },
+        new Variant { name = "GUC-BUYUK", scaleMul = 1.65f, massMul = 2f, impulseMul = 2.0f, freezeY = true },
         new Variant { name = "GUC-DEMIR", massMul = 2.6f, impulseMul = 2.5f },
         new Variant { name = "AGIR", massMul = 1.25f, impulseMul = 1.12f },
         new Variant { name = "INCE", scaleMul = .8f },
@@ -51,7 +51,7 @@ public static class MemleketPhysicsVerify
     // Bir misketin durumu. Parçalar ayrı kayıt olur.
     private struct Rec
     {
-        public Vector3 pos; public MarbleKind kind; public bool gone, lost, ice, whole; public float scale, mass; public int worth, pair;
+        public Vector3 pos; public MarbleKind kind; public bool gone, lost, ice, whole, popped; public float scale, mass; public int worth, pair;
     }
     private struct Candidate { public Vector3 start, dir; public float power; public string label; }
     private struct Outcome { public List<Rec> state; public int gained; public int iceBreaks, splits; public float value; }
@@ -79,18 +79,34 @@ public static class MemleketPhysicsVerify
     // Zorluk "kusursuz oyuncu" tavanına göre değil, normal bir insanın geçme oranına göre
     // ayarlansın diye (kullanıcı Park'ı özel misketsiz geçemedi). Skor dağılımı TSV'de:
     // hedef düşürülünce oran yeniden ölçmeden hesaplanır. -humanLevels 0,5,20 ile bir kısmı.
+    // Editör açıkken (unity CLI): MemleketPhysicsVerify.ScheduleHuman("120,121") — bir sonraki
+    // editör karesinde başlar, bitince log'a HUMAN_SCHEDULED_DONE yazar. Sonuç Logs/HumanSome*.
+    public static void ScheduleHuman(string levels)
+    {
+        UnityEditor.EditorApplication.delayCall += () =>
+        {
+            var list = new List<int>(); foreach (var p in levels.Split(',')) list.Add(int.Parse(p));
+            try { RunHuman(list, -1, ""); } finally { Debug.Log("HUMAN_SCHEDULED_DONE"); }
+        };
+    }
+
     public static void BatchHuman()
     {
         var list = new List<int>(); var args = Environment.GetCommandLineArgs();
         for (int i = 0; i < args.Length - 1; i++)
             if (args[i] == "-humanLevels") foreach (var p in args[i + 1].Split(',')) list.Add(int.Parse(p));
+        int bonusArg = -1; string tagArg = "";
+        for (int i = 0; i < args.Length - 1; i++) if (args[i] == "-humanBonus") bonusArg = int.Parse(args[i + 1]);
+        for (int i = 0; i < args.Length - 1; i++) if (args[i] == "-humanTag") tagArg = "_" + args[i + 1];
+        RunHuman(list, bonusArg, tagArg);
+    }
+
+    private static void RunHuman(List<int> list, int onlyBonus, string tag)
+    {
         CasualGames = 60; skipGreedy = true;
-        int onlyBonus = -1;   // -humanBonus N: sadece +N atışlı tur (ör. 2)
-        for (int i = 0; i < args.Length - 1; i++) if (args[i] == "-humanBonus") onlyBonus = int.Parse(args[i + 1]);
+        // onlyBonus (-humanBonus N): sadece +N atışlı tur (ör. 2); tag (-humanTag): dosya adı eki
         if (onlyBonus > 0)
         {
-            string tag = "";   // -humanTag ad: aynı +N turunun önceki dosyasının üstüne yazılmasın
-            for (int i = 0; i < args.Length - 1; i++) if (args[i] == "-humanTag") tag = "_" + args[i + 1];
             try { shotBonus = onlyBonus; Measure(list.ToArray(), "HumanPlus" + onlyBonus + tag + ".txt", false); }
             finally { CasualGames = 150; skipGreedy = false; shotBonus = 0; }
             return;
@@ -104,6 +120,51 @@ public static class MemleketPhysicsVerify
         }
         finally { CasualGames = 150; skipGreedy = false; shotBonus = 0; }
     }
+    // BAŞ MİSKET KARŞILAŞTIRMASI (2026-10-20): aynı rastgele atışlarla (nişan hatası dahil) ilk atışta
+    // ortalama kaç misket çıktığı. Eski (tırmanabilen) Baş Misket hedef; tırmanmayan sürümde kuvvet
+    // ona en yakın olacak şekilde seçilir. Log: BIG_COMPARE.
+    public static void BatchBigCompare()
+    {
+        marbleMat = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>("Assets/Materials/MarbleMaterialPhysics.asset");
+        groundMat = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>("Assets/Materials/GroundMaterialPhysics.asset");
+        var variants = new List<Variant> { Normal, new Variant { name = "ESKI(tirmanir) 2.3", scaleMul = 1.65f, massMul = 2f, impulseMul = 2.3f } };
+        foreach (float imp in new[] { 2.3f, 2.1f, 1.9f, 1.8f, 1.7f, 1.5f })
+            variants.Add(new Variant { name = "YENI " + imp.ToString("0.0"), scaleMul = 1.65f, massMul = 2f, impulseMul = imp, freezeY = true });
+        int[] levels = { 30, 40, 50, 59, 70, 85, 100, 115, 130, 145, 160, 175 };
+        var sums = new float[variants.Count]; int n = 0;
+        foreach (int g in levels)
+        {
+            level = Maps.Get(g);
+            Open();
+            try
+            {
+                var state = Initial();
+                var all = Candidates(state);
+                var rng = new System.Random(4242 + g);
+                var picks = new List<Candidate>();
+                for (int k = 0; k < 80 && all.Count > 0; k++)
+                {
+                    var c = all[rng.Next(all.Count)];
+                    c.dir = Quaternion.Euler(0, (float)(rng.NextDouble() * 2 - 1) * CasualAimNoise, 0) * c.dir;
+                    c.power = Mathf.Clamp01(c.power * (.85f + (float)rng.NextDouble() * .3f));
+                    picks.Add(c);
+                }
+                var row = new System.Text.StringBuilder("BIG_COMPARE #" + g);
+                for (int v = 0; v < variants.Count; v++)
+                {
+                    float sum = 0; foreach (var c in picks) sum += Play(state, c, variants[v]).gained;
+                    float avg = sum / Mathf.Max(1, picks.Count); sums[v] += avg;
+                    row.Append(" | " + variants[v].name + " " + avg.ToString("F2"));
+                }
+                n++; Debug.Log(row.ToString());
+            }
+            finally { Close(); }
+        }
+        var tot = new System.Text.StringBuilder("BIG_COMPARE_ORT");
+        for (int v = 0; v < variants.Count; v++) tot.Append(" | " + variants[v].name + " " + (sums[v] / n).ToString("F2"));
+        Debug.Log(tot.ToString());
+    }
+
     // Kuyruk/komut satırı: -memleketLevels 60,61,70
     public static void BatchSome()
     {
@@ -337,9 +398,13 @@ public static class MemleketPhysicsVerify
                 int parent = i;
                 b.gameObject.AddComponent<SplitMarble>().Split += (w, a, bb) => { pendingSplits.Add((parent, a, bb)); };
             }
+            if (recs[i].kind == MarbleKind.Catapat && !recs[i].popped) b.gameObject.AddComponent<Catapat>();
+            if (recs[i].kind == MarbleKind.Magnet) b.gameObject.AddComponent<LunaparkMagnet>();
             live.Add(b.gameObject); liveRec.Add(i); bodies.Add(b);
         }
         pendingSplits.Clear();
+        Catapat.ClearQueue();
+        Lunapark.ClearQueue();
         var mat = marbleMat;
         if (v.own)
         {
@@ -352,6 +417,7 @@ public static class MemleketPhysicsVerify
         }
         var start = c.start; start.y = MarbleScale * v.scaleMul * .5f;
         var shot = MakeMarble(start, MarbleScale * v.scaleMul, MarbleMass * v.massMul, MarbleDrag * v.dragMul, mat);
+        if (v.freezeY) shot.constraints |= RigidbodyConstraints.FreezePositionY;   // 1.2 Baş Misket: tırmanamaz
         live.Add(shot.gameObject); liveRec.Add(-1);
         shot.AddForce(c.dir * (MaxImpulse * v.impulseMul * c.power), ForceMode.Impulse);
 
@@ -364,6 +430,8 @@ public static class MemleketPhysicsVerify
         {
             GroundRules.Step(level, Vector3.zero, bodies, shot, Dt, b => lost.Add(b));
             physics.Simulate(Dt);
+            Catapat.FlushPending();   // oyundaki gibi: patlama bir sonraki adımdan önce uygulanır
+            Lunapark.FlushPending();  // Harita 4: tampon fırlatması
             if (pendingSplits.Count > 0)
             {
                 foreach (var s in pendingSplits)
@@ -399,6 +467,7 @@ public static class MemleketPhysicsVerify
             if (lost.Contains(b)) { r.lost = true; }
             else if (gone.ContainsKey(b)) { r.gone = true; gained += r.worth; }
             r.pos = b.position; r.pos.y = r.scale * .5f;
+            if (r.kind == MarbleKind.Catapat && !r.popped) { var cp = live[k].GetComponent<Catapat>(); if (cp != null && cp.Done) r.popped = true; }
             if (r.kind == MarbleKind.Ice && r.ice) { var ice = live[k].GetComponent<IceShell>(); if (ice != null && !ice.Intact) { r.ice = false; iceBreaks++; } }
             recs[ri] = r;
         }
@@ -437,7 +506,16 @@ public static class MemleketPhysicsVerify
         if (level.obstacles != null)
             foreach (var w in level.obstacles)
             {
-                var wall = Make(PrimitiveType.Cube, new Vector3(w.x, ObstacleY, w.z), new Vector3(Mathf.Max(.2f, w.width), ObstacleHeight, Mathf.Max(.2f, w.depth)));
+                // Lunapark tamponu: oyundakiyle aynı kurulum (görünümsüz).
+                if (w.kind == ObstacleKind.Bumper)
+                {
+                    var bp = Lunapark.BuildBumper(new Vector3(w.x, 0f, w.z), w.width, null, null, null);
+                    UnityEditor.SceneManagement.EditorSceneManager.MoveGameObjectToScene(bp, scene);
+                    continue;
+                }
+                // Şehir: alçak kaldırım (oyundakiyle aynı yükseklik).
+                float eh = SehirCampaign.IsCity(level) ? SehirCampaign.CurbHeight : ObstacleHeight;
+                var wall = Make(PrimitiveType.Cube, new Vector3(w.x, SehirCampaign.IsCity(level) ? eh * .5f : ObstacleY, w.z), new Vector3(Mathf.Max(.2f, w.width), eh, Mathf.Max(.2f, w.depth)));
                 wall.transform.rotation = Quaternion.Euler(0, w.angle, 0);
             }
     }

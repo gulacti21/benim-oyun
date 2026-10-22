@@ -57,8 +57,41 @@ public class MarbleArena : MonoBehaviour
         RefreshOutline();
     }
 
+    // 1.2 (ölçüldü 2026-10-19): çıkan misket yavaş çıktıysa sayıldığı yerde (çizginin hemen
+    // dışında) sürtünmeyle duruyor, öteki misketlerin yolunu kesiyordu. Sayılmış misket
+    // çizgiden ClearDistance uzaklaşana kadar dışarı doğru en az ClearSpeed ile yuvarlanır.
+    // Sayım ve sahadaki fizik değişmez: misket zaten çıkmış, sadece yoldan çekiliyor.
+    private const float ClearDistance = 1.2f;
+    private const float ClearSpeed = .7f;
+
+    private void RollScoredClear()
+    {
+        if (shape == ArenaShape.Line) return;
+        Vector3 c = transform.position;
+        float clear = size + exitMargin + ClearDistance;
+        for (int i = 0; i < spawnedMarbles.Count; i++)
+        {
+            var m = spawnedMarbles[i];
+            if (m == null || !m.IsScored || m.IsLost) continue;
+            var b = m.Body;
+            if (b == null || b.isKinematic) continue;
+            Vector3 r = b.position - c; r.y = 0f;
+            float d = r.magnitude;
+            if (d >= clear || d < .001f) continue;
+            Vector3 dir = r / d;
+            Vector3 v = b.linearVelocity;
+            float outV = Vector3.Dot(v, dir);
+            if (outV >= ClearSpeed) continue;
+            b.WakeUp();
+            b.linearVelocity = v + dir * (ClearSpeed - outV);
+        }
+    }
+
     private void FixedUpdate()
     {
+        Catapat.FlushPending();
+        Lunapark.FlushPending();   // Harita 4: tampona çarpan misketlerin fırlatılması
+        RollScoredClear();
         for (int i = activeMarbles.Count - 1; i >= 0; i--)
         {
             TargetMarble marble = activeMarbles[i];
@@ -121,16 +154,30 @@ public class MarbleArena : MonoBehaviour
     // Duello, misketleri dizilis sirasina gore sahiplendirmek icin listeye bakar.
     public IReadOnlyList<TargetMarble> SpawnedMarbles => spawnedMarbles;
 
-    public bool AllMarblesAtRest()
+    // 1.2: görünen çizgiyi geçmiş misket (sayılmış ya da sayılmak üzere). Bunlar frenlenmez,
+    // durdurulmaz; çizgide donup öteki misketlerin yolunu kesmesinler (kullanıcı isteği).
+    public bool IsPastLine(TargetMarble m)
+    {
+        if (m == null || m.Body == null) return false;
+        if (m.IsScored) return true;
+        if (shape != ArenaShape.Circle) return false;
+        Vector3 r = m.Body.position - transform.position; r.y = 0f;
+        return r.magnitude > size;
+    }
+
+    public bool AllMarblesAtRest(bool waitPastLine = true)
     {
         for (int i = 0; i < spawnedMarbles.Count; i++)
         {
             TargetMarble marble = spawnedMarbles[i];
 
-            if (marble == null || marble.Body == null)
+            if (marble == null || marble.Body == null || marble.IsScored)
             {
                 continue;
             }
+
+            // 1.2: ara turlarda çizgiyi geçmiş misket beklenmez; atıcı hemen başa döner.
+            if (!waitPastLine && IsPastLine(marble)) continue;
 
             if (marble.Body.linearVelocity.magnitude > restSpeedThreshold)
             {
@@ -443,6 +490,20 @@ public class MarbleArena : MonoBehaviour
             marble.Worth = SplitMarble.Worth;   // 1
             visual.SetOverride(SplitMarble.RindMaterial());
             instance.AddComponent<SplitMarble>().Split += OnSplit;
+        }
+        // HARİTA 3: çatapat vurulunca patlar, çevresindeki misketleri savurur (1 misket değerinde).
+        if (kind == MarbleKind.Catapat)
+        {
+            visual.SetOverride(Catapat.LiveMaterial());
+            instance.AddComponent<Catapat>();
+        }
+        // HARİTA 4: mıknatıs misket yakınından geçen misketleri kendine çeker (1 misket değerinde).
+        if (kind == MarbleKind.Magnet)
+        {
+            visual.SetOverride(Lunapark.MagnetMaterial());
+            instance.AddComponent<LunaparkMagnet>();
+            var chalk = GetComponent<LineRenderer>();
+            LunaparkMagnetRing.Attach(instance.transform, transform.position, Size + .25f, chalk != null ? chalk.sharedMaterial : null);
         }
     }
 

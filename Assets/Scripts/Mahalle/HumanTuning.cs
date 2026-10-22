@@ -117,11 +117,47 @@ public static class HumanTuning
     };
 
     // Her bölgenin Kesem bölümü (global numara).
-    public static readonly int[] KesemLevels = { 7, 20, 32, 42, 56, 66, 79, 89, 102, 115 };
+    // Şehir (120+) ve Lunapark (180+): her bölgenin 8. bölümü.
+    public static readonly int[] KesemLevels = { 7, 20, 32, 42, 56, 66, 79, 89, 102, 115, 127, 139, 151, 163, 175, 187, 199, 211, 223, 235 };
 
     // Doğrulama için (DifficultyOrderVerify): satır sayısı ve satırın beklenen değerleri.
     public static int RowCount => Rows.Length;
     public static (int g, int shots, int pass, char role) Row(int i) => Rows[i];
+
+    // 1.2 (kullanıcı kararı 2026-10-19): her bölümde 1, 2 ve 3 yıldız ayrı ayrı alınabilsin.
+    // Geçme eşiği (1 yıldızlıkta 1★, 2 yıldızlıkta 2★) HİÇ değişmez; sadece öteki hedefler ayrılır.
+    // Ayrılamıyorsa (1 yıldızlık bölümde eşik = toplam - 1): bölüm 2 yıldızla geçilir, 2★ = eski
+    // eşik (aynı misket sayısı, zorluk aynı), 1★ bir eksiği (teselli). Kullanıcı kararı, seçenek B.
+    // Bu bölümlerde eski kayıttaki 1 yıldız 2'ye çevrilir (MahalleProfile, version 4).
+    private static readonly System.Collections.Generic.HashSet<int> lifted = new System.Collections.Generic.HashSet<int>();
+    public static bool PassLifted(int globalIndex) { Maps.Get(globalIndex); return lifted.Contains(globalIndex); }
+
+    public static void SpreadStars(LevelData l, int globalIndex)
+    {
+        if (l == null) return;
+        int total = l.TotalMarbles();
+        if (l.threeStarTarget > total) l.threeStarTarget = total;
+        if (l.starsToPass >= 2)
+        {
+            if (l.oneStarTarget >= l.twoStarTarget) l.oneStarTarget = Mathf.Max(1, l.twoStarTarget - 1);
+            if (l.threeStarTarget <= l.twoStarTarget) l.threeStarTarget = Mathf.Min(total, l.twoStarTarget + 1);
+        }
+        else
+        {
+            int one = l.oneStarTarget, three = l.threeStarTarget;
+            if (three - one < 2)
+            {
+                if (one < 2 || three <= one) return;
+                l.starsToPass = 2;
+                l.twoStarTarget = one;
+                l.oneStarTarget = one - 1;
+                lifted.Add(globalIndex);
+                return;
+            }
+            if (l.twoStarTarget <= one) l.twoStarTarget = (one + three + 1) / 2;
+            if (l.twoStarTarget >= three) l.twoStarTarget = three - 1;
+        }
+    }
 
     public static void Apply(LevelData level, int globalIndex)
     {

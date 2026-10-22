@@ -247,6 +247,152 @@ public class MahalleTheme
                     "Fener Alayı","Lunapark","Gece Çukuru","Son Bayram","Büyük Buluşma","Ustalık Sınavı"
                 },
                 decor = new DecorPlacement[0]
+            },
+
+            // ===== HARİTA 3 — ŞEHİR (bölge 10-14) =====
+            // Görseller sonra gelecek; o zamana kadar bu renklerle çizilen zemin görünür.
+            // 10 — Şehir Merkezi · sabah trafiği, asfalt ve kaldırım
+            new MahalleTheme
+            {
+                title = "Şehir Merkezi", subtitle = "Sabah trafiği · asfalt ve kaldırım",
+                groundTop = C("#8C8D8B"), groundMid = C("#77787A"), groundBottom = C("#626467"),
+                vignette = C("#15191F", 0.42f), wash = C("#BFD8F0", 0.06f),
+                chalk = C("#FFFFFF"), lineAlpha = 0.6f, lineWidth = 9f, dashOn = 32f, dashOff = 38f, dustAlpha = 0.12f,
+                pebble = C("#5C5E60"), marks = GroundMarks.Tiles,
+                levelNames = new[]
+                {
+                    "Otobüs Durağı","Trafik Lambası","Site Kapısı","Kaldırım Taşı","Yaya Geçidi","Metro Çıkışı","Rögar Kapağı","Otopark","Alt Geçit","Gökdelen Önü","Şehir Buluşması","Ustalık Sınavı"
+                },
+                decor = new DecorPlacement[0]
+            },
+            // 11 — Sanayi · öğle paydosu, beton ve yağ lekesi
+            new MahalleTheme
+            {
+                title = "Sanayi", subtitle = "Öğle paydosu · beton ve yağ",
+                groundTop = C("#9A968D"), groundMid = C("#848077"), groundBottom = C("#6E6A62"),
+                vignette = C("#1E1A14", 0.44f), wash = C("#FFC27A", 0.06f),
+                chalk = C("#F6F2E8"), lineAlpha = 0.55f, lineWidth = 9.5f, dashOn = 30f, dashOff = 40f, dustAlpha = 0.14f,
+                pebble = C("#6A665D"), marks = GroundMarks.Cracks,
+                levelNames = new[]
+                {
+                    "Sanayi Girişi","Oto Tamirci","Lastikçi","Kaynakçı","Depo Önü","Forklift Yolu","Hurdalık","Vinç Altı","Konteyner","Yağ Lekesi","Sanayi Buluşması","Ustalık Sınavı"
+                },
+                decor = new DecorPlacement[0]
+            },
+            // 12 — Liman · martı sesleri, ıslak rıhtım
+            new MahalleTheme
+            {
+                title = "Liman", subtitle = "Martı sesleri · ıslak rıhtım",
+                groundTop = C("#7F8C93"), groundMid = C("#6B7880"), groundBottom = C("#57646C"),
+                vignette = C("#0E1C26", 0.46f), wash = C("#9CD3E8", 0.08f),
+                chalk = C("#FFFFFF"), lineAlpha = 0.6f, lineWidth = 9f, dashOn = 34f, dashOff = 38f, dustAlpha = 0.12f,
+                pebble = C("#4F5B62"), marks = GroundMarks.Cobble,
+                levelNames = new[]
+                {
+                    "Liman Girişi","Vapur İskelesi","Martı Yeri","Balıkçı Teknesi","Halat Yığını","Fener Altı","Rıhtım","Gümrük","Dalgakıran","Son Vapur","Liman Buluşması","Ustalık Sınavı"
+                },
+                decor = new DecorPlacement[0]
+            },
+            // 13 — AVM · hafta sonu kalabalığı, parlak karo
+            new MahalleTheme
+            {
+                title = "AVM", subtitle = "Hafta sonu kalabalığı · parlak karo",
+                groundTop = C("#C9C3B8"), groundMid = C("#B5AEA2"), groundBottom = C("#A0998D"),
+                vignette = C("#2A2420", 0.36f), wash = C("#FFE7B0", 0.06f),
+                chalk = C("#FFFFFF"), lineAlpha = 0.55f, lineWidth = 9f, dashOn = 36f, dashOff = 36f, dustAlpha = 0.1f,
+                pebble = C("#9A9386"), marks = GroundMarks.Tiles,
+                levelNames = new[]
+                {
+                    "AVM Kapısı","Yürüyen Merdiven","Vitrin Önü","Yemek Katı","Sinema Sırası","Oyun Salonu","Fıskiye","Asansör","Otopark Katı","Kapanış Saati","AVM Buluşması","Ustalık Sınavı"
+                },
+                decor = new DecorPlacement[0]
+            },
+            // 14 — Gökdelenler · gece ışıkları, büyük final
+            new MahalleTheme
+            {
+                title = "Gökdelenler", subtitle = "Gece ışıkları · büyük final",
+                groundTop = C("#5C5F6B"), groundMid = C("#4B4E5A"), groundBottom = C("#3B3E49"),
+                vignette = C("#10102A", 0.5f), wash = C("#7A8CFF", 0.1f),
+                chalk = C("#F4F2FF"), lineAlpha = 0.55f, lineWidth = 9.5f, dashOn = 38f, dashOff = 34f, dustAlpha = 0.14f,
+                pebble = C("#40434E"), marks = GroundMarks.Tiles,
+                levelNames = new[]
+                {
+                    "Plaza Önü","Cam Kule","Çatı Katı","Helikopter Pisti","Rüzgâr Tüneli","Gece Işıkları","Köprü Yolu","Kule Gölgesi","Son Kat","Şehir Manzarası","Büyük Final","Ustalık Sınavı"
+                },
+                decor = new DecorPlacement[0]
+            },
+
+            // ===== HARİTA 4 — LUNAPARK (bölge 15-19) =====
+            // Görseller gelene kadar bu renklerle çizilen zemin görünür.
+            // 15 — Giriş Kapısı · Balonlar ve pamuk şeker
+            new MahalleTheme
+            {
+                title = "Giriş Kapısı", subtitle = "Balonlar ve pamuk şeker",
+                groundTop = C("#B88E73"), groundMid = C("#A47C63"), groundBottom = C("#8F6B54"),
+                vignette = C("#2A1A14", 0.4f), wash = C("#FFD8A8", 0.08f),
+                chalk = C("#FFFFFF"), lineAlpha = 0.58f, lineWidth = 9f, dashOn = 34f, dashOff = 36f, dustAlpha = 0.12f,
+                pebble = C("#7E5E4A"), marks = GroundMarks.Cobble,
+                levelNames = new[]
+                {
+                    "Bilet Gişesi","Balon Arabası","Pamuk Şekerci","Giriş Kemeri","Patlamış Mısır","Konfeti Yağmuru","Hediyelik Dükkân","Tren İstasyonu","Fotoğraf Köşesi","Işıklı Yol","Giriş Buluşması","Ustalık Sınavı"
+                },
+                decor = new DecorPlacement[0]
+            },
+            // 16 — Çarpışan Arabalar · Lastik duvarlar · sert çarpışma
+            new MahalleTheme
+            {
+                title = "Çarpışan Arabalar", subtitle = "Lastik duvarlar · sert çarpışma",
+                groundTop = C("#4A4A50"), groundMid = C("#3E3E44"), groundBottom = C("#323238"),
+                vignette = C("#100E14", 0.46f), wash = C("#FF6A5A", 0.08f),
+                chalk = C("#FFFFFF"), lineAlpha = 0.58f, lineWidth = 9f, dashOn = 34f, dashOff = 36f, dustAlpha = 0.12f,
+                pebble = C("#2A2A30"), marks = GroundMarks.Tiles,
+                levelNames = new[]
+                {
+                    "Jeton Makinesi","Pist Kenarı","Kırmızı Araba","Lastik Duvar","Çarpışma Köşesi","Yarış Şeridi","Dönemeç","Kaza Yeri","Sıra Bekleme","Son Tur","Arabalar Buluşması","Ustalık Sınavı"
+                },
+                decor = new DecorPlacement[0]
+            },
+            // 17 — Dönme Dolap · Ahşap iskele · gün batımı
+            new MahalleTheme
+            {
+                title = "Dönme Dolap", subtitle = "Ahşap iskele · gün batımı",
+                groundTop = C("#B0895E"), groundMid = C("#9A774F"), groundBottom = C("#846542"),
+                vignette = C("#2A1A10", 0.42f), wash = C("#FFB070", 0.1f),
+                chalk = C("#FFF8EC"), lineAlpha = 0.58f, lineWidth = 9f, dashOn = 34f, dashOff = 36f, dustAlpha = 0.12f,
+                pebble = C("#6E5438"), marks = GroundMarks.Tiles,
+                levelNames = new[]
+                {
+                    "Dolap Altı","Atlıkarınca Yanı","Gondol","Yürüyen Yol","Dondurmacı","Tepe Noktası","Kabin Sırası","Kızıl Gökyüzü","Işıklı Tekerlek","Bank Başı","Dolap Buluşması","Ustalık Sınavı"
+                },
+                decor = new DecorPlacement[0]
+            },
+            // 18 — Oyun Sokağı · Halka atma ve peluş ödüller
+            new MahalleTheme
+            {
+                title = "Oyun Sokağı", subtitle = "Halka atma ve peluş ödüller",
+                groundTop = C("#A88A62"), groundMid = C("#937752"), groundBottom = C("#7E6444"),
+                vignette = C("#24180E", 0.44f), wash = C("#FFC27A", 0.08f),
+                chalk = C("#FFFFFF"), lineAlpha = 0.58f, lineWidth = 9f, dashOn = 34f, dashOff = 36f, dustAlpha = 0.12f,
+                pebble = C("#6A5238"), marks = GroundMarks.Cracks,
+                levelNames = new[]
+                {
+                    "Ördek Havuzu","Halka Atma","Ödül Rafı","Güç Kulesi","Kutu Devirme","Peluş Ayı","Pençe Makinesi","Büyük Ödül","Langırt","Kapanış","Oyun Buluşması","Ustalık Sınavı"
+                },
+                decor = new DecorPlacement[0]
+            },
+            // 19 — Sirk Çadırı · Spot ışıkları · büyük gösteri
+            new MahalleTheme
+            {
+                title = "Sirk Çadırı", subtitle = "Spot ışıkları · büyük gösteri",
+                groundTop = C("#8A2A2A"), groundMid = C("#742222"), groundBottom = C("#5E1B1B"),
+                vignette = C("#1A0608", 0.5f), wash = C("#FFD27A", 0.1f),
+                chalk = C("#FFF4E0"), lineAlpha = 0.58f, lineWidth = 9f, dashOn = 34f, dashOff = 36f, dustAlpha = 0.12f,
+                pebble = C("#4A1414"), marks = GroundMarks.None,
+                levelNames = new[]
+                {
+                    "Çadır Kapısı","Palyaço","Cambaz İpi","Hokkabaz","Tek Teker","Aslan Kafesi","Davul Sesi","Işık Hüzmesi","Akrobat","Son Gösteri","Sirk Buluşması","Ustalık Sınavı"
+                },
+                decor = new DecorPlacement[0]
             }
         };
     }

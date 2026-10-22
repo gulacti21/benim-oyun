@@ -10,20 +10,28 @@ public static class Campaign
     public static readonly string[] Descriptions = {
         "İlk çizgi, ilk atış. Mahalle seni bekliyor.", "Teneffüs başladı. Şimdi sıra sende.",
         "Taşların arasından kendi yolunu bul.", "Geniş saha, yeni dizilimler, büyük atışlar.", "Bütün yollar bu meydana çıkar." };
-    public static readonly string[] SkinNames = { "Bal Köpüğü", "Deniz Camı", "Kedi Gözü", "Gün Batımı", "Galaksi", "Usta İncisi", "Ağır Misket", "İnce Misket", "Sekici Misket", "Kaygan Misket" };
+    public static readonly string[] SkinNames = { "Bal Köpüğü", "Deniz Camı", "Kedi Gözü", "Gün Batımı", "Galaksi", "Usta İncisi", "Ağır Misket", "İnce Misket", "Sekici Misket", "Kaygan Misket", "Pespembe" };   // 1.2: 10 = Pespembe (klasik, sona eklendi)
     public static readonly Color[] SkinColors = {
         new Color(.96f,.62f,.19f), new Color(.08f,.72f,.76f), new Color(.34f,.69f,.28f),
         new Color(.96f,.34f,.29f), new Color(.46f,.34f,.83f), new Color(.82f,.88f,.96f),
-        new Color(.34f,.29f,.22f), new Color(.12f,.56f,.75f), new Color(.62f,.22f,.77f), new Color(.10f,.52f,.35f) };
-    public static readonly int[] SkinPrices = { 0, 40, 80, 110, 140, 180, 400, 400, 400, 400 };
+        new Color(.34f,.29f,.22f), new Color(.12f,.56f,.75f), new Color(.62f,.22f,.77f), new Color(.10f,.52f,.35f),
+        new Color(1f,.42f,.70f) };
+    public static readonly int[] SkinPrices = { 0, 40, 80, 110, 140, 180, 400, 400, 400, 400, 220 };
     public static int SkinCount => SkinNames.Length;
     public static readonly string[] PowerNames = { "Baş Misket", "Demir Misket", "Usta Gözü", "Yerinde Kal" };
+    // GÜÇ PAKETLERİ (1.2, kullanıcı isteği): boncukla toplu hak, tek tek almaktan ~%25 ucuz.
+    // Alınan haklar Data.stock'a eklenir (bölümler arası saklanır, önce harcanır).
+    public static readonly int[] PackPower = { 0, 1, 2, 3 };
+    public static readonly int[] PackCount = { 10, 10, 10, 5 };
+    public static readonly int[] PackPrice = { 195, 105, 75, 150 };
+    public static int PackFullPrice(int i) => PowerPrices[PackPower[i]] * PackCount[i];
+    public static int PackDiscount(int i) => Mathf.RoundToInt(100f * (1f - PackPrice[i] / (float)PackFullPrice(i)));
     public static readonly string[] PowerDescriptions = {
         "Bir sonraki atışta büyür. Sık kümeleri dağıtır.",
         "Küçük ve ağır. Dar aralıktan sert vurur.",
         "İlk temas noktasını gösterir. Hassas nişan al.",
-        "Bu atıştan sonra çizgiye dönmezsin. Misketin durduğu yerden devam edersin, sadece bir tur." };
-    public static readonly int[] PowerPrices = { 16, 14, 10, 32 };
+        "Durduğun yerden bir atış daha, üstelik hakkından düşmez." };
+    public static readonly int[] PowerPrices = { 26, 14, 10, 40 };   // 1.2: Yerinde Kal 32 -> 40 (ikinci atış artık haktan düşmüyor); Baş Misket 16 -> 26 (kullanıcı, 2026-10-20)
     private static LevelDatabase cached;
 
     public static LevelDatabase Database
@@ -77,6 +85,7 @@ public static class Campaign
             for (int i = 0; i < Count; i++) LevelBook.Apply(cached.levels[i], i);
             // İnsan ayarı: atış hakkı ve geçme hedefi sıradan oyuncuya göre (HumanTuning).
             for (int i = 0; i < Count; i++) HumanTuning.Apply(cached.levels[i], i);
+            for (int i = 0; i < Count; i++) HumanTuning.SpreadStars(cached.levels[i], i);
             return cached;
         }
     }

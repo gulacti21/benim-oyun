@@ -11,7 +11,7 @@ public static class SpecialMarblesVerify
         MahalleProfile.TestMode=true;
         try
         {
-            Check(Campaign.SkinCount==10&&Campaign.SkinPrices.Length==10,"Ten valid marbles");
+            Check(Campaign.SkinCount==11&&Campaign.SkinPrices.Length==11&&Campaign.SkinColors.Length==11,"Eleven valid marbles (1.2: Pespembe)");
             for(int skin=6;skin<10;skin++)
             {
                 var d=new MahalleSave();MahalleProfile.SetTestData(d);d.beads=399;
@@ -60,7 +60,7 @@ public static class SpecialMarblesVerify
             }
             var legacy=new MahalleSave{version=2,beads=37,selectedSkin=9};legacy.skins[6]=legacy.skins[9]=true;
             MahalleProfile.SetTestData(legacy);
-            Check(legacy.version==3&&legacy.beads==1237&&!legacy.skins[6]&&!legacy.skins[9]&&legacy.selectedSkin==0,"Team purchase refunds and removes old equipment");
+            Check(legacy.version>=3&&legacy.beads==1237&&!legacy.skins[6]&&!legacy.skins[9]&&legacy.selectedSkin==0,"Team purchase refunds and removes old equipment");
             MahalleProfile.SetTestData(legacy);Check(legacy.beads==1237,"Migration refund occurs once");
             for(int i=24;i<36;i++)
             {

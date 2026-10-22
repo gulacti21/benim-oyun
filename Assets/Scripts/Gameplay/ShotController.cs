@@ -60,6 +60,8 @@ public class ShotController : MonoBehaviour
     public bool AnchorUsedStock => anchorUsedStock;
     // Misket çemberin içinde beklerken çizgiye dokunarak yer değiştirilemez.
     public bool PositionLocked => positionLocked;
+    // 1.2: son atış "Yerinde Kal" ile durulan yerden mi yapıldı? Bu atış atış hakkından düşmez.
+    public bool LastShotFromHold { get; private set; }
     public float Power { get; private set; }
     // Duello kendi atis gucunu kullanir. Kampanyada 1 kalir.
     public float DuelImpulseScale { get; set; } = 1f;
@@ -190,8 +192,12 @@ public class ShotController : MonoBehaviour
         if (power <= 0 || !MahalleProfile.Consume(fired, out usedStock)) return;
         keepsPosition = fired == MarblePower.Anchor;
         anchorUsedStock = usedStock;
+        LastShotFromHold = positionLocked;
         positionLocked = false;
-        float multiplier = SelectedPower == MarblePower.Big ? 2.3f : SelectedPower == MarblePower.Iron ? 2.5f : 1f;
+        // 1.2 (ölçüldü, MemleketPhysicsVerify.BatchBigCompare): Baş Misket 2.3'te normalin ~3.5 katı misket
+        // çıkarıyordu (kullanıcı "fazla güçlü"). 2.0 ≈ normalin 2 katı. 2026-10-20: kullanıcı "çok hafif
+        // daha güçsüz" dedi → 1.9.
+        float multiplier = SelectedPower == MarblePower.Big ? 1.9f : SelectedPower == MarblePower.Iron ? 2.5f : 1f;
         pendingWearSkin=special.ActiveSkin;pendingWearPower=fired;
         pendingImpulse = direction * (maxShotImpulse * DuelImpulseScale * power * multiplier * special.ImpulseMultiplier); hasPendingImpulse = true;
         if (SfxPlayer.Instance != null) SfxPlayer.Instance.PlayShot(power);

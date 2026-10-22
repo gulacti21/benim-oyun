@@ -39,14 +39,15 @@ public static class DistrictRewardVerify
             var legacy=new MahalleSave { version=1, districtRewards=null, beads=321 };
             legacy.stars[11]=1;legacy.skins[1]=true;
             MahalleProfile.SetTestData(legacy);
-            Check(legacy.version==3&&legacy.districtRewards[0]&&legacy.beads==321&&legacy.skins[1],"Legacy rewards migrate without charging or losing items");
+            Check(legacy.version>=3&&legacy.districtRewards[0]&&legacy.beads==321&&legacy.skins[1],"Legacy rewards migrate without charging or losing items");
             for(int i=0;i<11;i++)legacy.stars[i]=MahalleProfile.Required(i);
             reward=MahalleProfile.Finish(11,2,1);
             Check(!reward.newBadge&&reward.districtBonus==0,"Legacy final payment never duplicated");
             var run=new MahalleSave();MahalleProfile.SetTestData(run);
             int bonus=0;
             for(int i=0;i<36;i++) bonus+=MahalleProfile.Finish(i,MahalleProfile.Required(i),1).districtBonus;
-            Check(run.beads==478&&bonus==105,"Minimum first-three-district income is 478 before spending and missions");
+            // 1.2: 3 bölüm (4,6,7) artık 2 yıldızla geçiliyor (aynı misket sayısı), en az gelir 478 -> 487.
+            Check(run.beads==487&&bonus==105,"Minimum first-three-district income is 487 before spending and missions");
             return count;
         }
         finally { MahalleProfile.SetTestData(previous);MahalleProfile.TestMode=wasTest; }

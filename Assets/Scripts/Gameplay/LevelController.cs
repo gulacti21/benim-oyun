@@ -20,6 +20,7 @@ public class LevelController : MonoBehaviour
 
     private int shotsUsed;
     private bool waitingForSettle;
+    private readonly System.Collections.Generic.HashSet<Rigidbody> pastLine = new System.Collections.Generic.HashSet<Rigidbody>();
     private float settleTimer;
     private int scoreAtShot;
     // ÇIKIŞ SÜRESİ: çemberden çıkan misket bu kadar saniye sonra durdurulur.
@@ -59,7 +60,7 @@ public class LevelController : MonoBehaviour
     public bool IsPaused { get; private set; }
     public int LevelIndex { get; private set; }
     // Sonraki bölüm aynı haritada olmalı: haritanın son bölümünden sonrakine otomatik geçilmez.
-    public bool HasNextLevel => Maps.Valid(LevelIndex + 1) && Maps.MapOf(LevelIndex + 1) == Map;
+    public bool HasNextLevel => Maps.Ready(LevelIndex + 1) && Maps.MapOf(LevelIndex + 1) == Map;
     public LevelData Level => level;
     public int ShotsUsed => shotsUsed;
     public int ShotsLeft => level != null ? Mathf.Max(0, level.shotCount + bonusShots - shotsUsed) : 0;
@@ -237,7 +238,8 @@ public class LevelController : MonoBehaviour
 
     private void HandleShotFired()
     {
-        shotsUsed++;
+        // 1.2: "Yerinde Kal" ile durulan yerden yapılan ikinci atış hak yemez (kullanıcı kararı).
+        if (shooter == null || !shooter.LastShotFromHold) shotsUsed++;
         scoreAtShot = Score;
         shooterOutsideTime = 0f;
         shotElapsed = 0f;
@@ -258,9 +260,15 @@ public class LevelController : MonoBehaviour
         bool sonTur = !GameSession.EndlessMode &&
                       (ShotsLeft <= 0 || (arena != null && arena.RemainingMarbles == 0));
         StopMarblesOutside();
+        // 1.2: çizgiyi geçmiş misketler frenlenmez/durdurulmaz, doğal yuvarlanır (kullanıcı isteği):
+        // çizgide donup öteki misketlerin çıkmasını engellemesinler.
+        pastLine.Clear();
+        if (arena != null)
+            foreach (var sm in arena.SpawnedMarbles)
+                if (arena.IsPastLine(sm)) pastLine.Add(sm.Body);
         if (shotElapsed > (GameSession.EndlessMode ? EndlessLevel.SettleCutoff : 12f))
         {
-            foreach (var b in FindObjectsByType<Rigidbody>(FindObjectsSortMode.None)) { b.linearVelocity = Vector3.zero; b.angularVelocity = Vector3.zero; b.Sleep(); }
+            foreach (var b in FindObjectsByType<Rigidbody>(FindObjectsSortMode.None)) { if (pastLine.Contains(b)) continue; b.linearVelocity = Vector3.zero; b.angularVelocity = Vector3.zero; b.Sleep(); }
         }
         // Bekleme kısaltma: önce yumuşak frenleme, sonra tam durdurma.
         // Hızlı misketlere dokunulmaz, sonuç değişmez.
@@ -269,7 +277,7 @@ public class LevelController : MonoBehaviour
             float k = Mathf.Pow(DampFactor, Time.deltaTime * 60f);
             foreach (var b in FindObjectsByType<Rigidbody>(FindObjectsSortMode.None))
             {
-                if (b.isKinematic) continue;
+                if (b.isKinematic || pastLine.Contains(b)) continue;
                 float hiz = b.linearVelocity.magnitude;
                 if (hiz >= DampSpeed) continue;
                 // Son turda gec ve daha dusuk esikte durdur: cemberden cikmak
@@ -289,7 +297,8 @@ public class LevelController : MonoBehaviour
         bool shooterResting = shooter == null || shooter.AtRest;
         // SONSUZ ÇEMBER: hedeflerin durmasını bekleme. Atıcı durunca sıra biter,
         // diğer misketler yuvarlanmaya devam ederken yeni atış yapılabilir.
-        bool marblesResting = GameSession.EndlessMode || arena == null || arena.AllMarblesAtRest();
+        // 1.2: ara turlarda çizgiyi geçmiş misket beklenmez; son turda sayılmak üzere olan beklenir.
+        bool marblesResting = GameSession.EndlessMode || arena == null || arena.AllMarblesAtRest(sonTur);
 
         if (!shooterResting || !marblesResting)
         {
@@ -327,23 +336,7 @@ public class LevelController : MonoBehaviour
         }
         else shooterOutsideTime = 0f;
 
-        // Çıkan hedef: hareket ettiği sürece sayaç işler, 1.5 sn dolunca
-        // yerinde durdurulur. Çarpışması açık kalır; atıcı çarparsa misket
-        // yine kayar ve sayaç baştan başlar.
-        var list = arena.SpawnedMarbles;
-        for (int i = 0; i < list.Count; i++)
-        {
-            var m = list[i];
-            if (m == null || !m.IsScored || m.Body == null) continue;
-            if (m.Body.IsSleeping() || m.Body.linearVelocity.magnitude < 0.05f) { scoredTimes.Remove(m); continue; }
-            scoredTimes.TryGetValue(m, out float t);
-            t += dt;
-            if (t < OutsideStopDelay) { scoredTimes[m] = t; continue; }
-            m.Body.linearVelocity = Vector3.zero;
-            m.Body.angularVelocity = Vector3.zero;
-            m.Body.Sleep();
-            scoredTimes.Remove(m);
-        }
+        // 1.2: çıkan hedefler artık 1,5 sn sonra donmuyor (çizgide durup yolu kesiyorlardı).
     }
 
     private void EvaluateTurn()
@@ -352,7 +345,10 @@ public class LevelController : MonoBehaviour
         if (GameSession.TutorialMode) { EvaluateTutorialTurn(); return; }
         MahalleProfile.RecordShot(Score - scoreAtShot);
         bool allMarblesOut = arena != null && arena.RemainingMarbles == 0;
-        bool outOfShots = ShotsLeft <= 0;
+        // 1.2: son atış Yerinde Kal ile yapıldıysa ve misket işe yarar yerde durduysa,
+        // bedava ikinci atış hâlâ duruyor; bölüm bitmez.
+        bool freeHoldShot = shooter != null && shooter.KeepsPosition && AnchorWorthwhile();
+        bool outOfShots = ShotsLeft <= 0 && !freeHoldShot;
 
         if (allMarblesOut || outOfShots)
         {
@@ -570,16 +566,19 @@ public class LevelController : MonoBehaviour
     {
         if (!shooter.KeepsPosition) { shooter.ResetTo(level.shooterStartPosition); return; }
 
-        Vector3 centre = arena != null ? arena.transform.position : Vector3.zero;
-        float fromLine = Vector3.Distance(centre, level.shooterStartPosition);
-        float fromRest = Vector3.Distance(centre, shooter.transform.position);
-        bool worthwhile = fromRest < fromLine - .15f;
-
-        if (worthwhile) { shooter.HoldPosition(); return; }
+        if (AnchorWorthwhile()) { shooter.HoldPosition(); return; }
 
         MahalleProfile.Refund(MarblePower.Anchor, shooter.AnchorUsedStock);
         AnchorRefunded?.Invoke();
         shooter.ResetTo(level.shooterStartPosition);
+    }
+
+    private bool AnchorWorthwhile()
+    {
+        Vector3 centre = arena != null ? arena.transform.position : Vector3.zero;
+        float fromLine = Vector3.Distance(centre, level.shooterStartPosition);
+        float fromRest = Vector3.Distance(centre, shooter.transform.position);
+        return fromRest < fromLine - .15f;
     }
 
     public event Action AnchorRefunded;

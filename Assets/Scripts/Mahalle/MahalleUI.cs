@@ -173,6 +173,17 @@ public class MahalleUI : MonoBehaviour
         var wallet=Panel(page,"Boncuk",805,35,225,76,Ink);
         Art(wallet.transform,"Boncuk simgesi",MahalleGraphic.Shape.Marble,18,16,44,44,Gold);
         beadsLabel=Text(wallet.transform,MahalleProfile.Beads.ToString(),78,0,130,76,36,Cream);
+        WalletOpensKesem(wallet);
+    }
+    // 1.2 (kullanıcı isteği): menülerde boncuk sayısına dokunmak Kesem'i (boncuk kesesi + koleksiyon) açar.
+    // Oyun içindeki boncuk sayısında yok: bölümün ortasında oyundan çıkarmasın.
+    private void WalletOpensKesem(MahalleGraphic wallet)
+    {
+        wallet.raycastTarget=true;
+        var b=wallet.gameObject.AddComponent<Button>();b.targetGraphic=wallet;
+        var c=b.colors;c.pressedColor=new Color(.85f,.85f,.85f);c.highlightedColor=Color.white;c.selectedColor=Color.white;b.colors=c;
+        b.onClick.AddListener(()=>{if(tab==1)return;if(SfxPlayer.Instance!=null)SfxPlayer.Instance.PlayUiTap();tab=1;ShowHome();});
+        wallet.gameObject.AddComponent<MahalleTap>();
     }
     private void Nav()
     {
@@ -383,6 +394,7 @@ public class MahalleUI : MonoBehaviour
         wallet.radius = 44; wallet.colorB = CardBgB; wallet.shadow = 8;
         Art(wallet.transform, "Boncuk simgesi", MahalleGraphic.Shape.Marble, 20, 16, 56, 56, Gold);
         beadsLabel = Text(wallet.transform, MahalleProfile.Beads.ToString(), 84, 0, 200, 88, 34, Cream);
+        WalletOpensKesem(wallet);
 
         // Menu yigini ekranin altina yaslanir: uzun telefonlarda tasmaz,
         // kisa telefonlarda da alt guvenli alanin uzerinde kalir.
@@ -678,7 +690,8 @@ public class MahalleUI : MonoBehaviour
         mine.gameObject.AddComponent<MahalleTap>();
         var art=Art(mine.transform,"Misket",MahalleGraphic.Shape.Marble,16,17,44,44,Campaign.SkinColors[skin]);
         art.accent=SpecialMarbles.Accent(skin);
-        Text(mine.transform,Campaign.SkinNames[skin],76,0,238,78,28,Krem);
+        var mineName=Text(mine.transform,Campaign.SkinNames[skin],76,0,238,78,28,Krem);
+        string mineNick=MahalleProfile.Nickname(skin);if(!string.IsNullOrEmpty(mineNick))mineName.text=mineNick;
 
         // Ust siranin ortasinda mahallenin yildiz ilerlemesi.
         int stars=0;
@@ -696,6 +709,7 @@ public class MahalleUI : MonoBehaviour
         wallet.colorB=new Color(.086f,.172f,.145f);wallet.radius=39;wallet.shadow=8;wallet.highlight=false;
         Art(wallet.transform,"Boncuk simgesi",MahalleGraphic.Shape.Marble,16,17,44,44,Amber);
         beadsLabel=Text(wallet.transform,MahalleProfile.Beads.ToString(),76,0,140,78,36,Krem);
+        WalletOpensKesem(wallet);
 
         var prev=Button(head.transform,"Onceki mahalle",48,144,96,96,new Color(.906f,.878f,.816f),()=>{district=CycleDistrict(-1);ShowHome();});
         prev.GetComponent<MahalleGraphic>().radius=30;prev.gameObject.AddComponent<MahalleTap>();
@@ -716,9 +730,12 @@ public class MahalleUI : MonoBehaviour
         var etiketYazi=Text(etiket.transform,L.Up(L.T(Maps.Names[shownMap])),0,0,150,48,22,Komur,TextAlignmentOptions.Center);
         etiketYazi.fontStyle=FontStyles.Bold;etiketYazi.enableAutoSizing=true;etiketYazi.fontSizeMin=14;etiketYazi.fontSizeMax=22;
         Art(isim.transform,"Harita oku",MahalleGraphic.Shape.Chevron,690,60,40,40,new Color(Komur.r,Komur.g,Komur.b,.55f));
-        var baslik=Text(isim.transform,theme.title,0,18,752,64,48,Komur,TextAlignmentOptions.Center);
-        baslik.fontStyle=FontStyles.Bold;
-        Text(isim.transform,theme.subtitle,0,82,752,44,26,new Color(Komur.r,Komur.g,Komur.b,.62f),TextAlignmentOptions.Center);
+        // Uzun bölge adı (Çarpışan Arabalar) soldaki harita etiketine biniyordu (2026-10-20): yazı etiketin
+        // sağından başlar, ortalı kalsın diye iki yandan aynı pay bırakılır; sığmazsa küçülür.
+        var baslik=Text(isim.transform,theme.title,180,18,392,64,48,Komur,TextAlignmentOptions.Center);
+        baslik.fontStyle=FontStyles.Bold;baslik.enableAutoSizing=true;baslik.fontSizeMin=30;baslik.fontSizeMax=48;
+        var altYazi=Text(isim.transform,theme.subtitle,180,82,392,44,26,new Color(Komur.r,Komur.g,Komur.b,.62f),TextAlignmentOptions.Center);
+        altYazi.enableAutoSizing=true;altYazi.fontSizeMin=18;altYazi.fontSizeMax=26;
 
         for(int i=0;i<5;i++)
         {
@@ -737,26 +754,45 @@ public class MahalleUI : MonoBehaviour
         var box=Modal("Haritalar",h);
         var face=box.GetComponent<MahalleGraphic>();if(face!=null){face.color=Krem;face.colorB=Krem;face.highlight=false;}
         var baslik=Text(box,"HARİTALAR",36,40,912,80,52,Komur,TextAlignmentOptions.Center);baslik.fontStyle=FontStyles.Bold;
-        Text(box,"Her haritanın kendi 60 bölümü var. Dokun, geç.",36,118,912,60,26,new Color(Komur.r,Komur.g,Komur.b,.62f),TextAlignmentOptions.Center);
+        Text(box,"Her harita yepyeni bir dünya: 60 bölüm, bir sürü sürpriz!",36,118,912,60,26,new Color(Komur.r,Komur.g,Komur.b,.62f),TextAlignmentOptions.Center);
         int current=Maps.MapOfDistrict(district);
         for(int m=0;m<Maps.Count;m++)
         {
             int map=m;float y=210+m*(CardH+Gap);
             bool open=MahalleProfile.MapUnlocked(map);
+            // Seçili harita: kartın etrafında turuncu çerçeve (fotoğraflı kart, 2026-10-20). Kartın arkasında, kardeş olarak.
+            if(map==current){var sec=Art(box,"Seçili çerçeve",MahalleGraphic.Shape.Panel,30,y-6,924,CardH+12,Amber);sec.radius=42;sec.highlight=false;}
             var card=Button(box,"Harita "+map,36,y,912,CardH,open?Orman:new Color(Komur.r,Komur.g,Komur.b,.82f),()=>
             {
                 if(!MahalleProfile.MapUnlocked(map)){Toast(L.F("{0} haritası, {1} haritasının son bölümünü geçince açılır.",L.T(Maps.Names[map]),L.T(Maps.Names[Mathf.Max(0,map-1)])));return;}
                 RememberMap(map);district=MahalleProfile.NextLevelIn(map)/Campaign.PerDistrict;tab=0;CloseModal(false);ShowHome();
             });
             var cf=card.GetComponent<MahalleGraphic>();cf.radius=36;cf.shadow=10;cf.highlight=false;
-            // Seçili harita kartı tamamen turuncu görünür (kullanıcı bu hali istedi, 2026-09-25).
-            if(map==current){var sec=Art(card.transform,"Seçili çerçeve",MahalleGraphic.Shape.Panel,-6,-6,924,CardH+12,Amber);sec.radius=42;sec.transform.SetAsFirstSibling();}
+            // FOTOĞRAFLI KART (kullanıcı isteği 2026-10-20): haritanın ilk bölgesinin görselinden yatay bir
+            // şerit. Oyunda zaten olan görsel kullanılır, boyut artmaz. Kart maskesi köşeleri yuvarlar,
+            // koyu katman yazıyı okunur tutar (kilitli kartta daha koyu).
+            // Kart için her haritanın en dolu görseli ve kesiti (kullanıcı: Mahalle/Şehir'in ilk bölge
+            // görselinde ortadaki boş yol düşüyordu). Mahalle = Park'ın oyun alanı, Şehir = Gökdelenler'in ışıkları.
+            int[] kartBolge={2,5,14,17};float[] kartUst={.995f,.80f,.995f,.995f};
+            int kb=map<kartBolge.Length?kartBolge[map]:Maps.FirstDistrict(map);float ust=map<kartUst.Length?kartUst[map]:.80f;
+            var foto=MahalleMapView.MapPhoto(kb);
+            if(foto!=null)
+            {
+                card.gameObject.AddComponent<Mask>().showMaskGraphic=true;
+                var fr=Rect("Harita fotoğrafı",(RectTransform)card.transform);Stretch(fr);
+                var img=fr.gameObject.AddComponent<RawImage>();img.texture=foto;img.raycastTarget=false;
+                float uvH=Mathf.Clamp01((float)foto.width/foto.height*CardH/912f);
+                img.uvRect=new Rect(0f,Mathf.Max(0f,ust-uvH),1f,uvH);
+                var kat=Panel(card.transform,"Karartma",0,0,912,CardH,open?new Color(Orman.r,Orman.g,Orman.b,.50f):new Color(Komur.r,Komur.g,Komur.b,.80f));
+                kat.colorB=open?new Color(Orman.r,Orman.g,Orman.b,.82f):new Color(Komur.r,Komur.g,Komur.b,.92f);
+                kat.radius=36;kat.highlight=false;kat.raycastTarget=false;
+            }
             card.gameObject.AddComponent<MahalleTap>();
             var ad=Text(card.transform,L.Up(L.T(Maps.Names[map])),40,34,560,70,50,Krem);ad.fontStyle=FontStyles.Bold;
             Text(card.transform,Maps.Subtitles[map],40,104,820,50,28,new Color(Krem.r,Krem.g,Krem.b,.72f));
             if(open)
             {
-                int stars=MahalleProfile.MapStars(map),full=Maps.PerMap*3;
+                int stars=MahalleProfile.MapStars(map),full=Maps.ReadyCount(map)*3;
                 Art(card.transform,"Yıldız",MahalleGraphic.Shape.Star,40,190,44,44,Amber);
                 Text(card.transform,L.F("{0} / {1} yıldız",stars,full),96,188,400,48,30,Krem);
                 var track=Panel(card.transform,"Yol",40,262,832,14,new Color(Krem.r,Krem.g,Krem.b,.18f));track.radius=7;track.highlight=false;
@@ -981,33 +1017,56 @@ public class MahalleUI : MonoBehaviour
     private void Collection()
     {
         const float shift=930;    // 1.1: koleksiyonun üstünde boncuk kesesi (bakiye sayfa başlığında zaten var)
-        var content=HomeScroll(2840+shift);
-        BeadShopBody(content,48,186,984,ShowHome);
-        var col=Rect("Koleksiyon",content);Place(col,0,shift,1080,2840);content=col;
+        const float extra=302;    // 1.2: Pespembe ile klasikler 4 sıra
+        // 1.2: güç paketleri boncuk kesesinin hemen altında; koleksiyon onların altından başlar.
+        float packs=PacksHeight();
+        var content=HomeScroll(2840+shift+extra+packs+80);
+        float hs=BeadShopBody(content,48,186,984,ShowHome);
+        float py=186+hs+40;
+        PowerPacksBody(content,48,py,984,ShowHome);
+        float colY=Mathf.Max(shift,py+packs+40-182);
+        var col=Rect("Koleksiyon",content);Place(col,0,colY,1080,2840+extra);content=col;
         Text(content,"Misket koleksiyonun",48,182,984,65,47,Ink);
-        Text(content,"Klasik misketler aşınmaz. Özellikli misketler aşağıda.",48,256,984,76,30,Muted);
-        for(int i=0;i<SpecialMarbles.FirstSkin;i++) CollectionCard(content,i,363+(i/2)*302);
+        Text(content,"Klasik misketler aşınmaz. Aldığın misketlere isim verebilirsin.",48,256,984,76,30,Muted);
+        // Klasikler: 0-5 ve sona eklenen Pespembe (indeks 10). Kart sırası k, sütun k%2.
+        var klasik=new System.Collections.Generic.List<int>();
+        for(int i=0;i<SpecialMarbles.FirstSkin;i++)klasik.Add(i);
+        if(SpecialMarbles.Pink<Campaign.SkinCount)klasik.Add(SpecialMarbles.Pink);
+        for(int k=0;k<klasik.Count;k++) CollectionCard(content,klasik[k],363+(k/2)*302,k%2);
 
-        Text(content,"ÖZELLİKLİ MİSKETLER",48,1300,984,58,38,Ink);
-        Text(content,L.F("{0} boncuk · {1} atış ömür · Tam yenileme {2} boncuk.",SpecialMarbles.PurchasePrice,SpecialMarbles.MaxLife,SpecialMarbles.RepairPrice),48,1368,984,82,29,Muted);
-        for(int i=SpecialMarbles.FirstSkin;i<Campaign.SkinCount;i++)
-            CollectionCard(content,i,1478+((i-SpecialMarbles.FirstSkin)/2)*532);
+        Text(content,"ÖZELLİKLİ MİSKETLER",48,1300+extra,984,58,38,Ink);
+        Text(content,L.F("{0} boncuk · {1} atış ömür · Tam yenileme {2} boncuk.",SpecialMarbles.PurchasePrice,SpecialMarbles.MaxLife,SpecialMarbles.RepairPrice),48,1368+extra,984,82,29,Muted);
+        for(int i=SpecialMarbles.FirstSkin;i<SpecialMarbles.FirstSkin+SpecialMarbles.Count;i++)
+            CollectionCard(content,i,1478+extra+((i-SpecialMarbles.FirstSkin)/2)*532,(i-SpecialMarbles.FirstSkin)%2);
 
-        Text(content,"Normal misket her zaman ücretsiz ve aşınmaz.",48,2610,984,76,29,Muted,TextAlignmentOptions.Center);
+        Text(content,"Normal misket her zaman ücretsiz ve aşınmaz.",48,2610+extra,984,76,29,Muted,TextAlignmentOptions.Center);
         var settings=LabelButton(page,"AYARLAR",48,0,984,86,new Color(.88f,.85f,.76f),Ink,Settings,28);
         Bottom((RectTransform)settings.transform,48,160,984,86);
     }
 
-    private void CollectionCard(RectTransform content,int skin,float y)
+    private void CollectionCard(RectTransform content,int skin,float y,int column)
     {
         bool special=SpecialMarbles.IsSpecial(skin),owned=MahalleProfile.Data.skins[skin];
         bool selected=MahalleProfile.EffectiveSkin==skin,worn=special&&owned&&MahalleProfile.RemainingLife(skin)==0;
-        var card=Panel(content,Campaign.SkinNames[skin],48+(skin%2)*508,y,476,special?508:278,selected?Ink:Cream);
+        var card=Panel(content,Campaign.SkinNames[skin],48+column*508,y,476,special?508:278,selected?Ink:Cream);
         var marble=Art(card.transform,"Cam misket",MahalleGraphic.Shape.Marble,24,24,150,150,Campaign.SkinColors[skin]);marble.accent=SpecialMarbles.Accent(skin);
-        Text(card.transform,Campaign.SkinNames[skin],193,32,265,90,33,selected?Cream:Ink);
+        // Oyuncunun verdiği isim varsa başlık o olur (çevrilmez), orijinal ad altında küçük yazar.
+        string nick=owned?MahalleProfile.Nickname(skin):null;
+        if(string.IsNullOrEmpty(nick)) Text(card.transform,Campaign.SkinNames[skin],193,32,265,90,33,selected?Cream:Ink);
+        else
+        {
+            var baslik=Text(card.transform,"",193,22,265,62,33,selected?Cream:Ink);baslik.text=nick;baslik.fontStyle=FontStyles.Bold;
+            Text(card.transform,Campaign.SkinNames[skin],193,78,265,40,22,selected?new Color(Cream.r,Cream.g,Cream.b,.7f):Muted);
+        }
+        // İSİM VER: sadece sahip olunan misketler. Özellikli kartta ömür yazısının yanında.
+        if(owned)
+        {
+            var isim=LabelButton(card.transform,"İSİM VER",special?330:193,126,special?128:180,48,selected?new Color(.27f,.39f,.31f):new Color(.89f,.85f,.72f),selected?Gold:Ink,()=>NameMarble(skin),20);
+            isim.name="İsim ver";
+        }
         if(special)
         {
-            Text(card.transform,owned?L.F("{0} / {1} ATIŞ",MahalleProfile.RemainingLife(skin),SpecialMarbles.MaxLife):L.F("{0} BONCUK",SpecialMarbles.PurchasePrice),193,126,265,48,26,selected?Gold:Muted);
+            Text(card.transform,owned?L.F("{0} / {1} ATIŞ",MahalleProfile.RemainingLife(skin),SpecialMarbles.MaxLife):L.F("{0} BONCUK",SpecialMarbles.PurchasePrice),193,126,owned?132:265,48,owned?22:26,selected?Gold:Muted);
             Text(card.transform,SpecialMarbles.Descriptions[skin-SpecialMarbles.FirstSkin],24,184,428,70,26,selected?Cream:Muted);
         }
         string label=worn?"AŞINDI":selected?"KUŞANILDI":owned?"KUŞAN":L.F("{0} BONCUK · AL",Campaign.SkinPrices[skin]);
@@ -1020,6 +1079,28 @@ public class MahalleUI : MonoBehaviour
             Text(card.transform,"Özel güç atışında özelliği durur, ömrü azalmaz.",24,426,428,62,23,selected?Cream:Muted,TextAlignmentOptions.Center);
         }
     }
+    // MİSKETE İSİM VER (1.2, kullanıcı isteği): klavyeyle en fazla 14 harf. Boş bırakılırsa orijinal ada döner.
+    private void NameMarble(int skin)
+    {
+        var box=Modal("Misket ismi",560);
+        var face=box.GetComponent<MahalleGraphic>();if(face!=null){face.color=Krem;face.colorB=Krem;face.highlight=false;}
+        var baslik=Text(box,"MİSKETİNE İSİM VER",36,40,912,70,44,Komur,TextAlignmentOptions.Center);baslik.fontStyle=FontStyles.Bold;
+        var m=Art(box,"Misket",MahalleGraphic.Shape.Marble,432,122,120,120,Campaign.SkinColors[skin]);m.accent=SpecialMarbles.Accent(skin);
+        var alan=Panel(box,"İsim kutusu",96,268,792,104,Color.white);alan.radius=26;alan.highlight=false;alan.raycastTarget=true;
+        var input=alan.gameObject.AddComponent<TMP_InputField>();
+        var vp=Rect("Metin alanı",alan.transform);Stretch(vp);vp.offsetMin=new Vector2(30,8);vp.offsetMax=new Vector2(-30,-8);
+        vp.gameObject.AddComponent<RectMask2D>();
+        var yazi=Text(vp,"",0,0,732,88,40,Komur,TextAlignmentOptions.Center);Stretch(yazi.rectTransform);yazi.text="";
+        var ipucu=Text(vp,"Bir isim yaz",0,0,732,88,36,new Color(Komur.r,Komur.g,Komur.b,.35f),TextAlignmentOptions.Center);Stretch(ipucu.rectTransform);
+        input.textViewport=vp;input.textComponent=yazi;input.placeholder=ipucu;input.targetGraphic=alan;
+        input.fontAsset=yazi.font;input.pointSize=40;input.characterLimit=MahalleProfile.NicknameMax;
+        input.lineType=TMP_InputField.LineType.SingleLine;input.richText=false;
+        input.text=MahalleProfile.Nickname(skin)??"";
+        Text(box,L.F("En fazla {0} harf. Boş bırakırsan eski adı geri gelir.",MahalleProfile.NicknameMax),36,384,912,48,24,new Color(Komur.r,Komur.g,Komur.b,.6f),TextAlignmentOptions.Center);
+        LabelButton(box,"VAZGEÇ",36,450,440,88,new Color(.89f,.85f,.72f),Komur,()=>CloseModal(false),29);
+        LabelButton(box,"KAYDET",508,450,440,88,Komur,Krem,()=>{MahalleProfile.SetNickname(skin,input.text);CloseModal(false);ShowHome();},29);
+    }
+
     // İSTATİSTİK: üç kart. Rekor ve mahalle sayımı bu sürümle başladı.
     private void Stats()
     {
@@ -1269,21 +1350,29 @@ public class MahalleUI : MonoBehaviour
     // çukur) oyuncunun karşısına İLK çıktığı bölümde, oyun başlamadan tek tek anlatılır.
     // Kayıtta bit olarak tutulur; bir kez gösterilir. Test yapısında da gösterilir
     // (telefonda denenebilsin diye) — Ayarlar'daki sıfırlama tekrar gösterir.
-    public static readonly string[] MechanicTitles = { "KUM", "ÇAMUR", "EĞİM", "BUZLU MİSKET", "KARPUZ MİSKET", "ÇUKUR" };
+    public static readonly string[] MechanicTitles = { "KUM", "ÇAMUR", "EĞİM", "BUZLU MİSKET", "KARPUZ MİSKET", "ÇUKUR", "KALDIRIM TAŞI", "RÖGAR KAPAĞI", "ÇATAPAT", "TAMPON", "YÜRÜYEN BANT", "MIKNATIS MİSKET" };
     public static readonly string[] MechanicTexts = {
         "Kumun içinden geçen misket çabuk yavaşlar. Kumun ötesine ulaşmak için sert at.",
         "Çamura giren misket saplanıp kalır. Hedefleri çamura değil, çemberin dışına it.",
         "Burası yokuş: yuvarlanan misketler okların gösterdiği yöne kayar. Yavaş misket daha çok kayar.",
         "Buzlu misket kıpırdamaz. Önce sert bir atışla buzunu kır, sonra dışarı çıkar. Hafif vuruş işe yaramaz.",
         "Sert vurursan ikiye bölünür. İki yarısı birlikte 1 misket sayılır: ikisini de çemberin dışına çıkar.",
-        "Yavaş yuvarlanan misket çukura düşer ve kaybolur, sayılmaz. Hızlı misket çukurun üstünden geçer." };
+        "Yavaş yuvarlanan misket çukura düşer ve kaybolur, sayılmaz. Hızlı misket çukurun üstünden geçer.",
+        "Kaldırım alçaktır. Yavaş yuvarlanan misket takılıp geri seker, sert atılan misket üstünden atlar.",
+        "Rögar kapağı kaygandır. Üstünden geçen misket yavaşlamadan kayar. Hafif bir atış bile uzağa gider.",
+        "Kırmızı çatapat misketi vurunca patlar, çevresindeki misketleri savurur. Yakındaki çatapatlar da patlar.",
+        "Tampona çarpan misket çok daha hızlı fırlar. Misketleri tampona doğru vur: tampon onları çemberin dışına atar.",
+        "Bant, üstüne gelen misketi okların yönünde taşır. Dışarı bakan banda misket it, bant çıkarsın. İçeri bakan bant misketi geri getirir.",
+        "Mıknatıs misket, kırmızı halkasının içinden geçen misketleri kendine çeker: vurduğun misket kaçamaz, geri döner. Önce mıknatısı çıkar." };
     public static int MechanicsIn(LevelData l)
     {
         int m=0;
         if(l==null)return 0;
-        if(l.zones!=null)foreach(var z in l.zones){if(z.kind==ZoneKind.Sand)m|=1;else if(z.kind==ZoneKind.Mud)m|=2;else if(z.kind==ZoneKind.Pit)m|=32;}
+        if(l.zones!=null)foreach(var z in l.zones){if(z.kind==ZoneKind.Sand)m|=1;else if(z.kind==ZoneKind.Mud)m|=2;else if(z.kind==ZoneKind.Pit)m|=32;else if(z.kind==ZoneKind.Slick)m|=128;else if(z.kind==ZoneKind.Belt)m|=1024;}
+        // Harita 3 (Şehir): engeller kaldırım taşı olarak anlatılır. Eski haritalarda kart yok.
+        if(l.district>=Maps.FirstDistrict(2)&&l.obstacles!=null)foreach(var o in l.obstacles){if(o.kind==ObstacleKind.Bumper)m|=512;else m|=64;}
         if(l.slope.sqrMagnitude>1e-6f)m|=4;
-        if(l.marbles!=null)foreach(var s in l.marbles){if(s.kind==MarbleKind.Ice)m|=8;else if(s.kind==MarbleKind.Split)m|=16;}
+        if(l.marbles!=null)foreach(var s in l.marbles){if(s.kind==MarbleKind.Ice)m|=8;else if(s.kind==MarbleKind.Split)m|=16;else if(s.kind==MarbleKind.Catapat)m|=256;else if(s.kind==MarbleKind.Magnet)m|=2048;}
         return m;
     }
     private void ShowNewMechanics()
@@ -1324,6 +1413,52 @@ public class MahalleUI : MonoBehaviour
                 Art(box,"Ok",MahalleGraphic.Shape.Chevron,cx-50,cy-30,60,60,Komur);
                 var a=Art(box,"Yarım",MahalleGraphic.Shape.Marble,cx+40,cy-75,84,84,SplitMarble.Flesh);a.accent=SplitMarble.Seed;
                 var b=Art(box,"Yarım",MahalleGraphic.Shape.Marble,cx+110,cy+5,84,84,SplitMarble.Flesh);b.accent=SplitMarble.Seed;
+                break;
+            }
+            case 6:
+            {
+                var tas=Art(box,"Kaldırım taşı",MahalleGraphic.Shape.Panel,cx-150,cy-30,300,70,new Color(.66f,.66f,.63f));tas.radius=10;tas.highlight=false;
+                Art(box,"Misket",MahalleGraphic.Shape.Marble,cx-160,cy+60,70,70,Campaign.SkinColors[1]);
+                var ok=Art(box,"Ok",MahalleGraphic.Shape.Chevron,cx+60,cy+60,60,60,Amber);ok.rectTransform.localEulerAngles=new Vector3(0,0,45);
+                break;
+            }
+            case 7:
+                Art(box,"Rögar",MahalleGraphic.Shape.Circle,cx-110,cy-110,220,220,new Color(.30f,.32f,.34f));
+                Art(box,"Rögar halkası",MahalleGraphic.Shape.Ring,cx-80,cy-80,160,160,new Color(.55f,.57f,.6f));
+                Art(box,"Misket",MahalleGraphic.Shape.Marble,cx+70,cy-40,80,80,Campaign.SkinColors[2]);
+                break;
+            case 8:
+            {
+                var c=Art(box,"Çatapat",MahalleGraphic.Shape.Marble,cx-60,cy-60,120,120,Catapat.Body);c.accent=Catapat.Band;
+                for(int i=0;i<6;i++)
+                {
+                    float a=i*60f*Mathf.Deg2Rad;
+                    var ok=Art(box,"Patlama",MahalleGraphic.Shape.Chevron,cx+Mathf.Cos(a)*120-24,cy-Mathf.Sin(a)*120-24,48,48,Amber);
+                    ok.rectTransform.pivot=new Vector2(.5f,.5f);ok.rectTransform.localEulerAngles=new Vector3(0,0,i*60f);
+                }
+                break;
+            }
+            case 9:
+            {
+                var t=Art(box,"Tampon",MahalleGraphic.Shape.Circle,cx-70,cy-70,140,140,Lunapark.BumperRed);
+                Art(t.transform,"Tampon başı",MahalleGraphic.Shape.Circle,38,38,64,64,Lunapark.BumperWhite);
+                Art(box,"Misket",MahalleGraphic.Shape.Marble,cx+110,cy-20,70,70,Campaign.SkinColors[1]);
+                var ok=Art(box,"Ok",MahalleGraphic.Shape.Chevron,cx+200,cy-10,56,56,Amber);
+                break;
+            }
+            case 10:
+            {
+                var bant=Art(box,"Bant",MahalleGraphic.Shape.Panel,cx-200,cy-60,400,120,Lunapark.BeltColor);bant.radius=24;bant.highlight=false;
+                for(int i=0;i<4;i++)Art(box,"Ok",MahalleGraphic.Shape.Chevron,cx-170+i*90,cy-28,56,56,Amber);
+                Art(box,"Misket",MahalleGraphic.Shape.Marble,cx-40,cy-110,70,70,Campaign.SkinColors[2]);
+                break;
+            }
+            case 11:
+            {
+                var mg=Art(box,"Mıknatıs",MahalleGraphic.Shape.Marble,cx-60,cy-60,120,120,Lunapark.MagnetBody);mg.accent=Lunapark.MagnetBand;
+                Art(box,"Çekim halkası",MahalleGraphic.Shape.Ring,cx-150,cy-150,300,300,new Color(Lunapark.MagnetBand.r,Lunapark.MagnetBand.g,Lunapark.MagnetBand.b,.5f));
+                var m1=Art(box,"Misket",MahalleGraphic.Shape.Marble,cx+130,cy-90,64,64,Campaign.SkinColors[3]);
+                var ok=Art(box,"Ok",MahalleGraphic.Shape.Chevron,cx+70,cy-60,48,48,Amber);ok.mirror=true;
                 break;
             }
             default: Art(box,"Çukur",MahalleGraphic.Shape.Circle,cx-110,cy-90,220,180,pit); Art(box,"Misket",MahalleGraphic.Shape.Marble,cx-160,cy-110,70,70,Campaign.SkinColors[2]); break;
@@ -1469,7 +1604,7 @@ public class MahalleUI : MonoBehaviour
         // Öğreticide 4. adımda kese anlatılır; 5. adımdan sonra gerçek kese açılır.
         if(GameSession.TutorialMode&&tutStep!=4){if(tutStep==5)TutorialKesemInfo(()=>SetTutStep(6));return;}
         if(controller.WaitingForSettle||controller.State!=LevelController.LevelState.Playing){Toast("Atışın tamamlanmasını bekle.");return;}
-        controller.SetPaused(true);var box=Modal("Misket kesen",1130);
+        controller.SetPaused(true);var box=Modal("Misket kesen",1350);
         Text(box,"Kesen",36,28,810,65,49,Ink);
         Text(box,"Seçim ücretsiz. Bir kullanım yalnızca atışta harcanır.",36,108,912,74,28,Muted);
         var powerColors=new[]{Gold,Campaign.SkinColors[5],Campaign.SkinColors[1],Campaign.SkinColors[3]};
@@ -1486,7 +1621,60 @@ public class MahalleUI : MonoBehaviour
             string cost=MahalleProfile.Data.stock[i]>0?L.F("ÜCRETSİZ HAK: {0}",MahalleProfile.Data.stock[i]):L.F("{0} BONCUK / ATIŞ",Campaign.PowerPrices[i]);
             Text(b.transform,selected?"SEÇİLİ · DOKUNARAK VAZGEÇ":cost,145,119,740,33,24,selected?Gold:usable?Ink:Muted);
         }
-        LabelButton(box,"OYUNA DÖN",30,1009,924,87,Ink,Cream,()=>CloseModal(),30);
+        // 1.2: boncuk yetmezse buradan reklamla/parayla boncuk ya da indirimli paket alınır; geri dönüş keseye.
+        // Reklam düğmesi kazancı yazar ("REKLAM İZLE · +10 BONCUK") ve doğrudan reklamı açar (kullanıcı isteği).
+        int adLeft=MahalleProfile.AdsLeftToday;bool adReady=adLeft>0&&Monetization.AdReady;
+        if(adLeft>0)WatchAdButton(box,OpenBag);
+        string adText=adLeft<=0?L.T("BUGÜNLÜK REKLAM HAKKIN BİTTİ"):adReady?L.F("REKLAM İZLE · +{0} BONCUK",Monetization.AdRewardBeads):AdWaitText(false);
+        var adBtn=LabelButton(box,adText,30,975,924,92,adReady?Orman:new Color(.88f,.83f,.69f),adReady?Krem:Muted,()=>WatchAd(OpenBag),28);
+        if(adReady)Art(adBtn.transform,"Oynat",MahalleGraphic.Shape.Play,30,26,40,40,Amber);
+        LabelButton(box,"BONCUK AL",30,1083,454,92,new Color(.88f,.83f,.69f),Ink,()=>BeadShop(OpenBag),27);
+        LabelButton(box,"GÜÇ PAKETLERİ",500,1083,454,92,Gold,Ink,()=>PacksModal(OpenBag),27);
+        Text(box,L.F("Kesende {0} boncuk var.",MahalleProfile.Beads),30,1186,924,46,26,Muted,TextAlignmentOptions.Center);
+        LabelButton(box,"OYUNA DÖN",30,1240,924,87,Ink,Cream,()=>CloseModal(),30);
+    }
+    // GÜÇ PAKETLERİ penceresi (oyun içinden ya da Kesem'den).
+    private void PacksModal(Action back)
+    {
+        float body=PacksHeight();
+        var box=Modal("Güç paketleri",150+body+130);
+        Text(box,"Güç Paketleri",36,30,600,72,48,Komur).fontStyle=FontStyles.Bold;
+        BalanceChip(box,948,40);
+        PowerPacksBody(box,36,150,912,()=>PacksModal(back));
+        LabelButton(box,"GERİ",36,150+body+16,912,90,new Color(.88f,.83f,.69f),Ink,()=>{if(back!=null)back();else CloseModal();},30);
+    }
+    private float PacksHeight()=>50+Campaign.PackPrice.Length*(132+16);
+    // Paket satırları: güç rengi misketler, "10 × Baş Misket", üstü çizili tam fiyat, indirim rozeti, AL.
+    private float PowerPacksBody(RectTransform box,float x,float y,float w,Action refresh)
+    {
+        float y0=y;
+        var b=Text(box,"GÜÇ PAKETLERİ",x+4,y,w,36,23,Muted);b.fontStyle=FontStyles.Bold;b.characterSpacing=8;
+        y+=50;
+        var colors=new[]{Gold,Campaign.SkinColors[5],Campaign.SkinColors[1],Campaign.SkinColors[3]};
+        for(int i=0;i<Campaign.PackPrice.Length;i++)
+        {
+            int pack=i;int pw=Campaign.PackPower[i];
+            var row=Panel(box,"Paket "+i,x,y,w,132,Krem);row.radius=28;row.shadow=6;row.highlight=false;
+            for(int k=2;k>=0;k--)Art(row.transform,"Misket "+k,MahalleGraphic.Shape.Marble,26+k*20,26+k*5,70-k*6,70-k*6,colors[pw]);
+            // 2026-10-20 (kullanıcı): altta sadece indirim, fiyat düğmede "195 BONCUK · AL".
+            var ad=Text(row.transform,"",138,20,w-138-310,46,30,Komur);ad.text=Campaign.PackCount[i]+" × "+L.T(Campaign.PowerNames[pw]);ad.fontStyle=FontStyles.Bold;
+            ad.enableAutoSizing=true;ad.fontSizeMin=22;ad.fontSizeMax=30;
+            var fiyat=Text(row.transform,"",138,70,w-138-310,40,25,YesilYazi);
+            fiyat.text=L.F("%{0} indirim",Campaign.PackDiscount(i));fiyat.fontStyle=FontStyles.Bold;
+            bool afford=MahalleProfile.Beads>=Campaign.PackPrice[i];
+            var al=LabelButton(row.transform,L.F("{0} BONCUK · AL",Campaign.PackPrice[i]),w-290,30,266,72,afford?Komur:new Color(.88f,.83f,.69f),afford?Krem:Muted,()=>
+            {
+                if(!MahalleProfile.BuyPack(pack)){Toast("Yeterli boncuk yok. Reklam izleyerek ya da paket alarak boncuk kazanabilirsin.");return;}
+                MahalleFeedback.Tap();
+                refresh?.Invoke();
+                int pp=Campaign.PackPower[pack];
+                PurchaseCard(L.F("{0} × {1} kesene eklendi",Campaign.PackCount[pack],L.T(Campaign.PowerNames[pp])),
+                             L.F("Hakkın: {0}",MahalleProfile.Data.stock[pp]),colors[pp]);
+            },26);
+            ((MahalleGraphic)al.targetGraphic).radius=36;
+            y+=132+16;
+        }
+        return y-y0;
     }
     private void Pause()
     {
@@ -1540,10 +1728,10 @@ public class MahalleUI : MonoBehaviour
         else LabelButton(box,passed?"HARİTAYA DÖN":"TEKRAR DENE",36,669,912,98,Ink,Cream,()=>{if(passed)controller.OpenLevelSelect();else{CloseModal();controller.RestartLevel();ShowGame();}});
         LabelButton(box,passed?"REKORUNU GELİŞTİR":"HARİTAYA DÖN",36,791,912,86,new Color(.88f,.83f,.69f),Ink,()=>{if(passed){CloseModal();controller.RestartLevel();ShowGame();}else controller.OpenLevelSelect();},30);
         if(passed&&controller.HasNextLevel)LabelButton(box,"MAHALLE HARİTASI",36,898,912,76,Paper,Muted,()=>controller.OpenLevelSelect(),27);
-        // Oyuncu iyi bir anda: 3 yıldızla geçtiyse ve yeterince oynadıysa iOS'un kendi puanlama
-        // penceresi açılır. 1.1: sürüm başına bir kez (eskiden ömür boyu bir kezdi). Apple yılda
-        // en fazla 3 kez gösterir, gerisini kendisi susturur.
-        if(passed&&controller.Stars==3&&MahalleProfile.Data.reviewAskedVersion!=Application.version&&MahalleProfile.MasteryPoints>=200)
+        // Oyuncu en mutlu anda: bir mahalleyi (bölgeyi) ilk kez tamamlayınca iOS'un kendi puanlama
+        // penceresi açılır (1.2, kullanıcı kararı 2026-10-22). ÖDÜL YOK — ödüllü puan isteği Apple
+        // 5.6.1'e göre ret sebebi. Apple yılda en fazla 3 kez gösterir, gerisini kendisi susturur.
+        if(passed&&controller.LastReward.newBadge)
         {
             MahalleProfile.Data.reviewAsked=true;MahalleProfile.Data.reviewAskedVersion=Application.version;MahalleProfile.Save();
             StartCoroutine(AskReview());
@@ -2102,7 +2290,7 @@ public class MahalleUI : MonoBehaviour
     {
         if(!Monetization.StoreReady){Toast("Mağaza şu an kullanılamıyor, biraz sonra dene.");return;}
         Monetization.Buy(p,(ok,why)=>{
-            if(ok){Toast(L.F("+{0} BONCUK · TEŞEKKÜRLER!",p.beads));MahalleFeedback.Tap();refresh?.Invoke();}
+            if(ok){MahalleFeedback.Tap();refresh?.Invoke();PurchaseCard(L.F("+{0} boncuk kesene eklendi",p.beads),L.F("Kesende {0} boncuk var.",MahalleProfile.Beads),Campaign.SkinColors[0]);}
             else if(!string.IsNullOrEmpty(why))Toast(why);
         });
     }
@@ -2154,6 +2342,35 @@ public class MahalleUI : MonoBehaviour
         LabelButton(box,"SIFIRLA",504,322,444,100,new Color(.72f,.32f,.24f),Cream,()=>{MahalleProfile.Reset();if(controller!=null)controller.OpenLevelSelect();else{district=tab=0;ShowHome();}},31);
     }
     private void Toast(string message) {StartCoroutine(ToastRoutine(message));}
+    // SATIN ALMA ONAYI (2026-10-21, kullanıcı: "güç paketinden alınca anlaşılmıyor"): ekranın ortasında, her
+    // pencerenin üstünde amber kart. Büyüyerek açılır, 2 sn'de ya da dokununca kapanır. Eski alt şerit (Toast)
+    // Kesem'de alttaki koyu düğmelere karışıyordu.
+    private void PurchaseCard(string line1,string line2,Color marble){StartCoroutine(PurchaseCardRoutine(line1,line2,marble));}
+    private IEnumerator PurchaseCardRoutine(string line1,string line2,Color marble)
+    {
+        var holder=Rect("Satın alma onayı",root);Stretch(holder);holder.SetAsLastSibling();
+        var shade=Panel(holder,"Perde",0,0,1080,2600,new Color(0,0,0,.35f),true);shade.radius=0;Stretch(shade.rectTransform);
+        shade.rectTransform.offsetMin=new Vector2(-2000,-2000);shade.rectTransform.offsetMax=new Vector2(2000,2000);
+        var card=Panel(holder,"Kart",0,0,760,430,Amber,true);card.radius=44;card.highlight=false;card.shadow=14;
+        var cr=card.rectTransform;cr.anchorMin=cr.anchorMax=new Vector2(.5f,.5f);cr.pivot=new Vector2(.5f,.5f);cr.anchoredPosition=Vector2.zero;cr.sizeDelta=new Vector2(760,430);
+        for(int k=2;k>=0;k--)Art(card.transform,"Misket "+k,MahalleGraphic.Shape.Marble,250+k*52,34+k*8,120-k*10,120-k*10,marble);
+        var t=Text(card.transform,"SATIN ALINDI!",0,178,760,70,50,Komur,TextAlignmentOptions.Center);t.fontStyle=FontStyles.Bold;
+        var a1=Text(card.transform,"",30,252,700,56,32,Komur,TextAlignmentOptions.Center);a1.text=line1;a1.enableAutoSizing=true;a1.fontSizeMin=22;a1.fontSizeMax=32;
+        var a2=Text(card.transform,"",30,312,700,50,28,new Color(Komur.r,Komur.g,Komur.b,.72f),TextAlignmentOptions.Center);a2.text=line2;
+        bool closed=false;
+        foreach(var g in new[]{shade,card}){var b=g.gameObject.AddComponent<Button>();b.targetGraphic=g;b.onClick.AddListener(()=>closed=true);}
+        if(SfxPlayer.Instance!=null)SfxPlayer.Instance.PlayUiTap();
+        float time=0f;
+        while(holder!=null&&!closed&&time<2.2f)
+        {
+            time+=Time.unscaledDeltaTime;
+            float k=Mathf.Clamp01(time/.25f);
+            float s=1f+2.4f*Mathf.Pow(k-1f,3f)+1.4f*Mathf.Pow(k-1f,2f);   // hafif taşarak büyür
+            cr.localScale=Vector3.one*Mathf.LerpUnclamped(.6f,1f,s);
+            yield return null;
+        }
+        if(holder!=null)Destroy(holder.gameObject);
+    }
     private IEnumerator ToastRoutine(string message)
     {
         var g=Panel(root,"Bilgi",48,0,984,116,Ink,true);Bottom(g.rectTransform,48,276,984,116);

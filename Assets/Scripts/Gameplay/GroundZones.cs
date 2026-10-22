@@ -70,22 +70,24 @@ public class GroundZones : MonoBehaviour
     private static readonly Color SandColor = new Color(.90f, .80f, .58f, .88f);
     private static readonly Color MudColor = new Color(.30f, .22f, .15f, .90f);
     private static readonly Color PitColor = new Color(.42f, .32f, .22f, .92f);
+    private static readonly Color SlickColor = new Color(.30f, .32f, .34f, .96f);
 
     private GameObject Disc(ZoneSpot z, Vector3 center)
     {
         var mat = ZoneMaterial();
         // Görünüm önce, collider sonra (BİLİNEN TUZAKLAR). Quad: Cylinder kullanılmıyor.
         var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
-        go.name = z.kind == ZoneKind.Sand ? "Kum" : z.kind == ZoneKind.Mud ? "Çamur" : "Çukur";
+        go.name = z.kind == ZoneKind.Sand ? "Kum" : z.kind == ZoneKind.Mud ? "Çamur" : z.kind == ZoneKind.Slick ? "Rögar" : z.kind == ZoneKind.Belt ? "Yürüyen bant" : "Çukur";
         go.transform.SetParent(transform, true);
         go.transform.position = new Vector3(center.x + z.x, .012f + (int)z.kind * .002f, center.z + z.z);
-        go.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+        // Bant: desenin +x yönü bandın yönüne bakar (açı +x'ten +z'ye doğru, Y dönüşü ters işaretli).
+        go.transform.rotation = Quaternion.Euler(90f, z.kind == ZoneKind.Belt ? -z.angle : 0f, 0f);
         go.transform.localScale = new Vector3(z.radius * 2f, z.radius * 2f, 1f);
         var r = go.GetComponent<Renderer>();
         if (mat != null)
         {
             var own = new Material(mat) { hideFlags = HideFlags.HideAndDontSave };
-            own.SetColor("_Color", z.kind == ZoneKind.Sand ? SandColor : z.kind == ZoneKind.Mud ? MudColor : PitColor);
+            own.SetColor("_Color", z.kind == ZoneKind.Sand ? SandColor : z.kind == ZoneKind.Mud ? MudColor : z.kind == ZoneKind.Slick ? SlickColor : z.kind == ZoneKind.Belt ? Lunapark.BeltColor : PitColor);
             own.SetFloat("_Kind", (int)z.kind);
             r.sharedMaterial = own;
         }

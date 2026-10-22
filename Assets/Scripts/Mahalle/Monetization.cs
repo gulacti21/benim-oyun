@@ -27,7 +27,7 @@ public static class Monetization
 {
     // DENGE (kullanıcı kararı 2026-10-15): az boncuk, çok reklam. 10 × 8 = günde en fazla 80 boncuk
     // (ilk taslak 20 × 5 = 100'dü; satın almayı cazip tutmak için düşürüldü). Sonsuz artık boncuk vermiyor.
-    public const int AdRewardBeads = 10, AdDailyLimit = 8;
+    public const int AdRewardBeads = 10, AdDailyLimit = 8;   // 1.2: 12 denendi; kullanıcı 2026-10-21 "8 kalsın" (site ve mağaza metniyle tutarlı)
     // Günün ödülü ×2 için arka arkaya izlenecek reklam (bedeli olsun diye 2; kullanıcı kararı 2026-10-15).
     public const int DailyX2Ads = 2;
     // Reklam ağı hazır mı (boncuk reklamı sınırından bağımsız: devam ve ×2 için).

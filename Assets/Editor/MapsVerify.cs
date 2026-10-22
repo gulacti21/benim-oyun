@@ -44,6 +44,13 @@ public static class MapsVerify
             Check(theme.levelNames != null && theme.levelNames.Length == 12, "Maps: 12 level names " + d);
         }
         Check(Maps.DistrictName(5) == "Sahil" && Maps.DistrictName(9) == "Bayram Yeri", "Maps: Memleket districts 5-9");
+        Check(Maps.DistrictName(10) == "Şehir Merkezi" && Maps.DistrictName(14) == "Gökdelenler", "Maps: Şehir districts 10-14");
+        // Şehir yavaş yavaş açılıyor: hazır olmayan bölüm hiçbir durumda açılmaz, sıradaki onu göstermez.
+        for (int g = 0; g < Maps.TotalLevels; g++)
+            if (!Maps.Ready(g)) Check(!MahalleProfile.Unlocked(g), "Maps: not-ready level stays locked " + g);
+        Check(MahalleProfile.NextLevelIn(2) < Maps.First(2) + Maps.ReadyCount(2), "Maps: next level never points past ready levels");
+        foreach (var t in SehirCampaign.Descriptions) Check(L.Has(t), "Maps: EN description " + t);
+        Check(L.Has("Bu bölüm çok yakında geliyor."), "Maps: EN coming soon");
         // Yeni haritalarda bölüm adı tekrarı olmasın (Ustalık Sınavı hariç), Harita 1 adlarıyla
         // da çakışmasın. (Harita 1'in kendi iç tekrarları eski, dokunulmadı.)
         var seen = new System.Collections.Generic.HashSet<string>();
@@ -64,7 +71,7 @@ public static class MapsVerify
             foreach (var n in theme.levelNames) Check(L.Has(n), "Maps: EN level name " + n);
         }
         foreach (var t in MemleketCampaign.Descriptions) Check(L.Has(t), "Maps: EN description " + t);
-        foreach (var t in new[] { "HARİTALAR", "BURADASIN", "{0} / {1} yıldız", "Her haritanın kendi 60 bölümü var. Dokun, geç.",
+        foreach (var t in new[] { "HARİTALAR", "BURADASIN", "{0} / {1} yıldız", "Her harita yepyeni bir dünya: 60 bölüm, bir sürü sürpriz!",
                                   "{0} haritasını bitir, bu harita açılsın.", "{0} açıldı! Haritalar'dan geçebilirsin.",
                                   "{0} haritası, {1} haritasının son bölümünü geçince açılır.",
                                   "{0} TAMAMLANDI", "YENİ HARİTA AÇILDI", "HADİ GİDELİM", "SONRA",
@@ -72,8 +79,9 @@ public static class MapsVerify
             Check(L.Has(t), "Maps: EN map screen text " + t);
 
         // --- yeni özellik kartları: her özellik ilk kez kendi öğretme bölümünde çıkar ---
-        int[] firstExpected = { 60, 72, 84, 86, 97, 108 };   // kum, çamur, eğim, buz, karpuz, çukur
-        for (int bit = 0; bit < 6; bit++)
+        int[] firstExpected = { 60, 72, 84, 86, 97, 108, 120, 122, 124, 180, 182, 184 };   // + çatapat, tampon, bant, mıknatıs   // kum, çamur, eğim, buz, karpuz, çukur, kaldırım taşı, rögar
+        Check(firstExpected.Length == MahalleUI.MechanicTitles.Length && MahalleUI.MechanicTexts.Length == MahalleUI.MechanicTitles.Length, "Maps: every mechanic has a card and a teaching level");
+        for (int bit = 0; bit < MahalleUI.MechanicTitles.Length; bit++)
         {
             int first = -1;
             for (int g = 0; g < Maps.TotalLevels && first < 0; g++) if ((MahalleUI.MechanicsIn(Maps.Get(g)) & (1 << bit)) != 0) first = g;

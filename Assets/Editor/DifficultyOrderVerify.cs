@@ -90,6 +90,14 @@ public static class DifficultyOrderVerify
             if (l.starsToPass == 2) Must(l.twoStarTarget < l.threeStarTarget, "HumanTuning: kilit ve ustalik ayri: #" + r.g);
         }
         Must(HumanTuning.KesemLevels.Length == Maps.TotalDistricts, "Her bolgede bir Kesem bolumu");
+        // 1.2 (kullanıcı kuralı): oynanabilen HER bölümde 1, 2 ve 3 yıldız ayrı alınabilsin.
+        for (int g = 0; g < Maps.TotalLevels; g++)
+        {
+            if (!Maps.Ready(g)) continue;
+            var l = Maps.Get(g);
+            Must(l.oneStarTarget < l.twoStarTarget && l.twoStarTarget < l.threeStarTarget && l.threeStarTarget <= l.TotalMarbles(),
+                 "1/2/3 yildiz ayri alinmali: #" + g + " " + l.oneStarTarget + "/" + l.twoStarTarget + "/" + l.threeStarTarget);
+        }
         for (int d = 0; d < HumanTuning.KesemLevels.Length; d++)
         {
             int k = HumanTuning.KesemLevels[d];
