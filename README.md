@@ -1,4 +1,27 @@
-# MİSKETR · Mahalle
+# Misko: Misket Oyunu
+
+Geleneksel Türk sokak oyunu misketi temel alan, gerçek fizikli bir mobil oyun. Tek geliştirici: Ahmet Furkan Gülaçtı.
+A physics game based on misket, a traditional Turkish street marble game. Solo developer: Ahmet Furkan Gülaçtı.
+
+## Current state / Güncel durum (branch `surum-1.2`)
+
+| | |
+|---|---|
+| App | Misko: Misket Oyunu · Apple ID 6817696906 · `com.gulacti.misko` |
+| Engine | Unity 6.3 LTS (6000.3.23f1), URP |
+| Versions | 1.0 (Oct 2026, 2 maps / 120 levels) · 1.1 (rewarded ads + bead packs) · **1.2 build 21** (4 maps / 240 levels: Mahalle, Memleket, Şehir, Lunapark) |
+| Ads | Unity LevelPlay (rewarded only, optional, max 8/day) |
+| In-app purchases | StoreKit via Unity IAP (3 consumable bead packs) |
+| Rating prompt | `SKStoreReviewController` only (`UnityEngine.iOS.Device.RequestStoreReview`), after a district is completed, no reward — see `Assets/Scripts/Mahalle/MahalleUI.cs` (`AskReview`) |
+| Level data | `Assets/Scripts/Mahalle/LevelBook.cs`, `MemleketBook.cs`, `SehirBook.cs`, `LunaparkBook.cs` |
+
+Build 21 (the version submitted for App Review as 1.2) corresponds to commit `c490fb4` on this branch.
+Older branches: `yayin/1.0`, `yayin/1.1` (released versions), `main` (= 1.1 + Android).
+
+---
+
+## Development history (early notes, pre-1.0)
+
 
 Unity 6.3 LTS (6000.3.23f1) için mevcut `gulacti21/benim-oyun` projesinin geliştirme sürümü.
 
