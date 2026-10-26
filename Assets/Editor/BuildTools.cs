@@ -13,7 +13,7 @@ public static class BuildTools
     private const string Version = "1.2";
     private const string BuildNumber = "21";
     // ANDROID: versionCode her Play yüklemesinde bir artar (iOS build numarasından bağımsız).
-    private const int AndroidVersionCode = 2;
+    private const int AndroidVersionCode = 3;
     // İmza anahtarı repo DIŞINDA: ~/.misko-android/keystore.properties (şifre burada, commit edilmez).
     private static readonly string KeystoreProps =
         Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.Personal), ".misko-android", "keystore.properties");
